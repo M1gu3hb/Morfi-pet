@@ -11,8 +11,10 @@ eye, the small yaw / pitch that puts the projected pupil centre on the
 reference pupil (Gauss-Newton on the projection, no rendering needed). The
 offsets go to config/morfi.json -> "view_gaze"; render_views.py and
 render_hero.py apply them through scene.eyes_look. The hero shot is left out
-by default: there the pupil offset comes from the head pose (it would need one
-eye turned 20 degrees and the other 10, i.e. a squint).
+by default: its pupils are only fitted (--views hero) once the head pose of
+the hero shot matches the master image (lens centres and head outline; with a
+wrong head turn the fit asks for a 20 degree squint). The body-base sheet (14)
+is fitted with its calibrated part camera.
 """
 import argparse
 import json
@@ -30,7 +32,8 @@ from morfi import scene  # noqa: E402
 
 W, H = 1145, 1374
 REFS = {'front': '02_Morfi_frente', 'three_quarter_front': '06_Morfi_tres_cuartos_frontal',
-        'hero': '00_Morfi_master_wordmark'}
+        'hero': '00_Morfi_master_wordmark', 'cuerpo_base': '14_Morfi_cuerpo_base'}
+PART_SHEETS = {'cuerpo_base'}  # product sheets with a face: their calibrated part camera
 
 
 def ref_pupils(path):
@@ -64,7 +67,7 @@ def pupil_px(sc, cam, eye, R):
 def main():
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     ap = argparse.ArgumentParser()
-    ap.add_argument('--views', default='front,three_quarter_front')
+    ap.add_argument('--views', default='front,three_quarter_front,cuerpo_base')
     a = ap.parse_args(argv)
     cfg_p = os.path.join(ROOT, 'config', 'morfi.json')
     cfg = json.load(open(cfg_p))
@@ -83,6 +86,18 @@ def main():
             render_hero.place_laptop(rig)
             cam = bpy.data.objects.get('Cam_hero') or scene.make_camera('Cam_hero', -33.0, cfg, sc.collection)
             scene.place_camera(cam, cfg['camera_views']['hero'])
+        elif view in PART_SHEETS:
+            import render_parts
+            rig.animation_data.action = bpy.data.actions['Pose_Neutral']
+            sc.frame_set(1)
+            cam = bpy.data.objects.get('Cam_part_gaze')
+            if cam is None:
+                cd = bpy.data.cameras.new('Cam_part_gaze')
+                cam = bpy.data.objects.new('Cam_part_gaze', cd)
+                sc.collection.objects.link(cam)
+            cam.data.sensor_fit = 'HORIZONTAL'
+            cam.data.sensor_width = 36.0
+            render_parts.place_calibrated(cam, cfg['part_cameras'][view])
         else:
             cam = scene.view_camera(view, cfg)
             rig.animation_data.action = bpy.data.actions.get('Ref_' + view) or bpy.data.actions['Pose_Neutral']
@@ -135,7 +150,8 @@ def main():
     vg.update(out)
     vg['_doc'] = ('Desvio de la mirada por toma y por ojo [giro, inclinacion] en grados, tras mirar a la camara; '
                   'ajustado a la posicion de las pupilas de cada referencia con scripts/fit_gaze.py '
-                  '(la toma hero no se corrige: alli la diferencia viene de la pose de la cabeza)')
+                  '(la toma hero se ajusta aparte, despues de calzar la pose de la cabeza con los lentes de la imagen 00; '
+                  'cuerpo_base = lamina 14 con su camara de producto)')
     cfg['view_gaze'] = vg
     open(cfg_p, 'w').write(json.dumps(cfg, indent=1, ensure_ascii=False) + '\n')
     json.dump(report, open(os.path.join(ROOT, 'docs', 'gaze_fit.json'), 'w'), indent=1)

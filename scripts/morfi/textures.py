@@ -74,6 +74,19 @@ def squiggle(n, f0, width=0.07, seed=0):
     return np.exp(-(dist / (width * n / f0)) ** 2)
 
 
+def modulated(L, f0, lo, seed=0):
+    """Vary the strength of a line mask over the tile (lo..1).
+
+    The references' felt shows the lines everywhere, but with a contrast that
+    comes and goes over a few line spacings (some loops crisp, others almost
+    gone), not the uniform maze a plain zero set gives."""
+    n = L.shape[0]
+    m = fourier_noise(n, 1.5, seed + 7, fmin=4, fmax=f0 / 1.5)
+    m = (m - m.mean()) / m.std()
+    t = np.clip((m + 1.2) / 2.2, 0, 1)
+    return L * (lo + (1 - lo) * t * t * (3 - 2 * t))
+
+
 def sample_wrap(img, u, v):
     """Bilinear sample of a periodic (H, W[, C]) array at UV (v up, row 0 = top)."""
     H, W = img.shape[:2]
@@ -179,9 +192,12 @@ def configure(cfg_tex):
 
 def skin_lines(n=1024, seed=21):
     t = TEX['skin']
-    key = ('skin', n, t['f0'], t['width'])
+    key = ('skin', n, t['f0'], t['width'], t.get('mod_lo'))
     if key not in CACHE:
-        CACHE[key] = squiggle(n, t['f0'], t['width'], seed)
+        L = squiggle(n, t['f0'], t['width'], seed)
+        if t.get('mod_lo') is not None:
+            L = modulated(L, t['f0'], t['mod_lo'], seed)
+        CACHE[key] = L
     return CACHE[key]
 
 
@@ -199,6 +215,8 @@ def hoodie_tile(n=1024, color='#212227', seed=31):
     """Fleece with the raised labyrinth pattern (lighter lines)."""
     t = TEX['hoodie']
     lines = squiggle(n, t['f0'], t['width'], seed)
+    if t.get('mod_lo') is not None:
+        lines = modulated(lines, t['f0'], t['mod_lo'], seed)
     _, fl = fleece(n, seed + 1)
     h = (1 - t['relief']) * fl + t['relief'] * lines
     base = _srgb(color)

@@ -86,6 +86,7 @@ def make_cyclic(act):
 
 # head of the hero pose (degrees about world Z = turn, Y = tilt, X = nod); config "hero_pose" -> "head"
 HERO_HEAD = {'turn': -22.0, 'tilt': -8.0, 'nod': 0.0}
+HERO_SPINE_TILT = [-1.5]  # degrees about world Y; config "hero_pose" -> "spine_tilt"
 
 
 def pose_hero(rig):
@@ -93,7 +94,7 @@ def pose_hero(rig):
     R.reset_pose(rig)
     bpy.context.view_layer.update()
     set_rot(rig, 'hips', ((0, 0, 1), -4.0), ((0, 1, 0), 1.5))
-    set_rot(rig, 'spine', ((0, 1, 0), -1.5))
+    set_rot(rig, 'spine', ((0, 1, 0), HERO_SPINE_TILT[0]))
     bpy.context.view_layer.update()
     # head turned toward the hero camera (-33 deg) and tilted, as in the master image
     set_rot(rig, 'head', ((1, 0, 0), HERO_HEAD['nod']), ((0, 0, 1), HERO_HEAD['turn']), ((0, 1, 0), HERO_HEAD['tilt']))
@@ -173,8 +174,20 @@ def main():
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', default=bpy.data.filepath)
+    ap.add_argument('--hero', default='', help='JSON overriding config "hero_pose" (tests)')
+    ap.add_argument('--poses', default='', help='JSON {view: {bone: [x, y, z]}} overriding config "view_poses" (tests)')
     a = ap.parse_args(argv)
     cfg = json.load(open(os.path.join(ROOT, 'config', 'morfi.json')))
+    if a.hero:
+        hp = cfg.setdefault('hero_pose', {})
+        for k, v in json.loads(a.hero).items():
+            if isinstance(v, dict):
+                hp.setdefault(k, {}).update(v)
+            else:
+                hp[k] = v
+    if a.poses:
+        for view, bones in json.loads(a.poses).items():
+            cfg.setdefault('view_poses', {}).setdefault(view, {}).update(bones)
     col = bpy.data.collections.get('Morfi') or bpy.context.scene.collection
     root = bpy.data.objects.get('Morfi_Root')
     old = bpy.data.objects.get('Morfi_Rig')
@@ -190,16 +203,21 @@ def main():
             continue
         R.skin_object(ob, rig, cfg, J)
         print('[rig] skinned', n, len(ob.data.vertices))
-    # rigid followers
-    R.bone_parent(bpy.data.objects['Head'], rig, 'head')
+    # rigid followers: parent them all, then put every one back where it was
+    # (parenting one object re-evaluates the armature and could move a follower
+    # parented just before, which turned one eye 90 degrees in partial builds)
+    followers = [(bpy.data.objects.get('Head'), 'head'), (bpy.data.objects.get('Pixels'), 'pixels')]
     for side in ('L', 'R'):
-        R.bone_parent(bpy.data.objects['Shoe_' + side], rig, 'foot.' + side)
-        e = bpy.data.objects.get('Eye_' + side)
-        if e:
-            R.bone_parent(e, rig, 'eye.' + side)
-    pix = bpy.data.objects.get('Pixels')
-    if pix:
-        R.bone_parent(pix, rig, 'pixels')
+        followers += [(bpy.data.objects.get('Shoe_' + side), 'foot.' + side),
+                      (bpy.data.objects.get('Eye_' + side), 'eye.' + side)]
+    followers = [(o, b) for o, b in followers if o is not None]  # partial builds (--skip shoes) lack some
+    saved = [o.matrix_world.copy() for o, _ in followers]
+    for o, b in followers:
+        R.bone_parent(o, rig, b)
+    bpy.context.view_layer.update()
+    for (o, _), mw in zip(followers, saved):
+        o.matrix_world = mw
+    bpy.context.view_layer.update()
     # actions
     sc = bpy.context.scene
     sc.render.fps = FPS
@@ -208,6 +226,7 @@ def main():
     key_all(rig, 1)
     new_action(rig, 'Pose_Hero')
     HERO_HEAD.update(cfg.get('hero_pose', {}).get('head', {}))
+    HERO_SPINE_TILT[0] = cfg.get('hero_pose', {}).get('spine_tilt', HERO_SPINE_TILT[0])
     pose_hero(rig)
     key_all(rig, 1)
     anim_idle(rig, 48)

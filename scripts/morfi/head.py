@@ -10,6 +10,8 @@ the celeste face mask, mouth and lid lines align with the geometry with no
 decals and no z-fighting.
 """
 import math
+import os
+
 import numpy as np
 
 from .sdf import smoothstep, rrect2d
@@ -270,6 +272,13 @@ class HeadShape:
         img = np.ones((size, size, 3)) * skin
         rough = np.ones((size, size)) * 0.78
         f = self.f
+        trace = None
+        if f.get('trace'):
+            # celeste zones traced from a reference image (see facetrace.py)
+            from .facetrace import FaceTrace
+            root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            trace = FaceTrace(cfg, self, root)
+            print('[head] face traced from', f['trace'].get('ref'), 'landmark residual px', round(trace.residual, 1))
         for face, (u0, v0, s) in TILES.items():
             px0 = int(round(u0 * size))
             npx = int(round(s * size))
@@ -289,10 +298,21 @@ class HeadShape:
             thr = self.frontness_threshold(z)
             lower = smoothstep(thr - 0.06, thr + 0.06, nf) * smoothstep(-0.045, -0.085, z)
             nose = smoothstep(-soft, soft, self.nose_sdf(x, z))
-            cel = np.maximum(patch * frontish, lower) * nose
+            if trace is not None and face in ('front', 'left', 'right', 'bottom', 'top'):
+                if trace.views:
+                    cel = trace.sample_multi(P, n)
+                else:
+                    cel = trace.sample(P) * smoothstep(0.10, 0.30, nf)
+                # crisp edge: where the head curves away from the cameras the
+                # soft edge of the traced mask is stretched into a ragged band
+                sh = f['trace'].get('sharpen')
+                if sh:
+                    cel = smoothstep(0.5 - sh, 0.5 + sh, cel)
+            else:
+                cel = np.maximum(patch * frontish, lower) * nose
             c = skin[None, :] * (1 - cel[:, None]) + cele[None, :] * cel[:, None]
             # the nose wedge reads as a lighter mid-blue (between skin and celeste)
-            nose_in = (1 - nose) * smoothstep(0.07, 0.035, z) * frontish
+            nose_in = (1 - nose) * smoothstep(0.07, 0.035, z) * frontish * (trace is None)
             nose_c = skin * (1 - f.get('nose_tint', 0.32)) + cele * f.get('nose_tint', 0.32)
             c = c * (1 - nose_in[:, None]) + nose_c[None, :] * nose_in[:, None]
             if lines is not None:
@@ -301,7 +321,7 @@ class HeadShape:
                 uu = np.where(ax == 0, y, x) * line_scale
                 vv = np.where(ax == 2, y, z) * line_scale
                 L = sample_wrap(lines, uu, vv)
-                k = line_dark * (1.0 - 0.7 * cel)
+                k = line_dark * (1.0 - f.get('line_celeste_cut', 0.7) * cel)
                 c = c * (1 - (k * L)[:, None])
             # upper lid lines
             for side in (-1, 1):

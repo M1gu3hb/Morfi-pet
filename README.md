@@ -16,13 +16,13 @@ Los binarios (`*.blend`, `*.glb`, `*.mp4`) se versionan con **Git LFS** (`.gitat
 
 ## Qué incluye el personaje
 
-- **Cabeza** paramétrica (superelipse ajustada a los contornos de las referencias) con atlas de color/rugosidad horneado: zona celeste facial (no máscara blanca), cuña de "nariz", boca con cavidad real y lengua, línea de párpado.
+- **Cabeza** paramétrica (superelipse ajustada a los contornos de las referencias) con atlas de color/rugosidad horneado: zona celeste facial **calcada de las referencias** por proyección desde sus cámaras calibradas (lámina 14 de frente; perfiles 03/05 y 3/4 06 para los lados), cuña de "nariz", boca con cavidad real y lengua, línea de párpado.
 - **Ojos** esféricos reales con iris y pupila, córnea transparente y brillo puntual; miran a cámara en las vistas frontales (se puede desactivar con `--no-eyes-follow`).
 - **Lentes** de montura negra cuadrada-redondeada, cristales delgados, bisagras y patillas.
 - **Tres cubos** en la cabeza (grande izquierda, mediano arriba-derecha, pequeño abajo-derecha).
 - **Cuerpo base** de una pieza: piernas, brazos y manos con **pulgar + 3 dedos**.
 - **Playera** gris jaspeada con la **M** azul en relieve (solo en la playera).
-- **Sudadera abierta** negra con capucha, bolsillos, cierre metálico de dos hileras, jalador, cordones con puntas metálicas, puños y dobladillo acanalados; tela con grosor real y holgura respecto al cuerpo.
+- **Sudadera abierta** negra con capucha (colgando en la espalda con volumen, como en 04/05/07; para la foto de producto 08 hay un segundo estado con la capucha levantada, `Hoodie_Product`), bolsillos, cierre metálico de dos hileras, jalador, cordones con puntas metálicas, puños y dobladillo acanalados; tela con grosor real y holgura respecto al cuerpo.
 - **Tenis** blancos izquierdo/derecho con suela, puntera, lengüeta, dos correas con ojales y talón azul.
 - **Laptop** cerrada con **dos cuadrados azules**; aparece en la pose Hero, sujeta por la mano derecha.
 - **Textura fina** tipo laberinto (la que se ve en piel, sudadera y playera de las referencias) como mapas de color + normal tileables, idénticos en Cycles y en glTF.
@@ -86,7 +86,9 @@ python3 scripts/fit_cameras.py                        # camera_views en config/m
 blender -b source/morfi_master.blend --python scripts/dump_skin.py -- --out work/calib/skin.npz
 python3 scripts/fit_view_poses.py                     # view_poses (+ retoque de cámara, giro de los cubos)
 # después: rig_model.py crea las acciones Ref_<vista> y render_views.py las usa
-blender -b source/morfi_master.blend --python scripts/fit_gaze.py   # view_gaze: mirada por toma (pupilas)
+blender -b source/morfi_master.blend --python scripts/fit_gaze.py   # view_gaze: mirada por toma (pupilas; también la lámina 14)
+python3 scripts/hero_landmarks.py references/00_Morfi_master_wordmark.png renders/hero_wordmark.png   # lentes y cabeza de la toma hero
+blender -b source/morfi_master.blend --python scripts/fit_gaze.py -- --views hero   # mirada hero, una vez calzada la pose de la cabeza
 blender -b source/morfi_master.blend --python scripts/dump_points.py -- --pose neutral --keep-laptop --out work/calib/points_parts.npz
 python3 scripts/fit_part_cameras.py                   # part_cameras: cámara de cada lámina 08–14
 python3 scripts/eval_silhouettes.py work/calib/points_neutral.npz   # IoU rápido sin renderizar

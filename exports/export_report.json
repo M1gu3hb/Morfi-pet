@@ -1,6 +1,6 @@
 {
  "master": {
-  "triangles": 924864,
+  "triangles": 924858,
   "objects": [
    {
     "name": "Body_Base",
@@ -54,7 +54,7 @@
    },
    {
     "name": "Tshirt",
-    "triangles": 24000,
+    "triangles": 23996,
     "materials": 1
    },
    {
@@ -74,7 +74,7 @@
    },
    {
     "name": "Hoodie_Hem",
-    "triangles": 24000,
+    "triangles": 23998,
     "materials": 1
    },
    {
@@ -150,7 +150,7 @@
   ]
  },
  "web": {
-  "triangles": 215844,
+  "triangles": 215842,
   "objects": [
    {
     "name": "Body_Base",
@@ -224,7 +224,7 @@
    },
    {
     "name": "Hoodie_Hem",
-    "triangles": 6000,
+    "triangles": 5998,
     "materials": 1
    },
    {

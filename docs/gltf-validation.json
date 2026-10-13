@@ -5,8 +5,8 @@
   "infos": 37,
   "hints": 0,
   "info": {
-   "triangles": 924864,
-   "vertices": 531056,
+   "triangles": 924858,
+   "vertices": 533341,
    "materials": 21,
    "animations": 12,
    "extensionsUsed": [
@@ -26,8 +26,8 @@
   "infos": 37,
   "hints": 0,
   "info": {
-   "triangles": 215844,
-   "vertices": 145910,
+   "triangles": 215842,
+   "vertices": 146956,
    "materials": 21,
    "animations": 12,
    "extensionsUsed": [
@@ -48,7 +48,7 @@
   "hints": 0,
   "info": {
    "triangles": 40000,
-   "vertices": 22989,
+   "vertices": 22968,
    "materials": 1,
    "animations": 0,
    "extensionsUsed": [
@@ -84,7 +84,7 @@
   "hints": 0,
   "info": {
    "triangles": 218592,
-   "vertices": 113134,
+   "vertices": 113126,
    "materials": 5,
    "animations": 0,
    "extensionsUsed": [
@@ -103,8 +103,8 @@
   "infos": 4,
   "hints": 0,
   "info": {
-   "triangles": 113496,
-   "vertices": 78968,
+   "triangles": 113494,
+   "vertices": 80719,
    "materials": 5,
    "animations": 0,
    "extensionsUsed": [
@@ -168,7 +168,7 @@
   "hints": 0,
   "info": {
    "triangles": 19000,
-   "vertices": 13596,
+   "vertices": 13684,
    "materials": 2,
    "animations": 0,
    "extensionsUsed": [

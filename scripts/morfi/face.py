@@ -170,7 +170,7 @@ def surface_hits(head, xz_world, y_from=-1.5):
 
 def build_brows(cfg, shape, head, col):
     f = cfg['face']
-    m = mats.flat('M_Brow', cfg['colors']['brow'], rough=0.55, sheen=0.4,
+    m = mats.flat('M_Brow', cfg['colors']['brow'], rough=0.6, sheen=0.0, spec=0.06,
                   bump=dict(scale=140.0, strength=0.05, distance=0.0008))
     L = f['brow_length']
     th = f['brow_thickness']

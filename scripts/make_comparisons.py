@@ -148,12 +148,23 @@ def main():
     parts = [('sudadera', '08_Morfi_sudadera'), ('playera', '09_Morfi_playera'), ('tenis', '10_Morfi_tenis'),
              ('lentes', '11_Morfi_lentes'), ('cubos', '12_Morfi_tres_cubos'), ('laptop', '13_Morfi_laptop'),
              ('cuerpo_base', '14_Morfi_cuerpo_base')]
+    metrics['parts'] = {}
     for key, ref in parts:
         pp = os.path.join(ROOT, 'renders', 'parts', key + '.png')
         if not os.path.exists(pp):
             continue
         r = Image.open(os.path.join(REF, ref + '.png')).convert('RGB')
         p_ = Image.open(pp).convert('RGB')
+        tp = os.path.join(ROOT, 'renders', 'parts', 'transparent', key + '.png')
+        if os.path.exists(tp):
+            # same measures as the views: the part sheets are shot with their calibrated camera
+            mr = ref_mask(os.path.join(REF, ref + '.png'), r.size)
+            mv = ndi.binary_fill_holes(alpha_mask(tp, r.size))  # clear lenses count, as in the sheets' masks
+            iou = float((mr & mv).sum() / max((mr | mv).sum(), 1))
+            de_med, _ = delta_e(r, p_.resize(r.size), mr & mv)
+            metrics['parts'][key] = {'reference': ref + '.png', 'silhouette_iou': round(iou, 4),
+                                     'color_delta_e_median': round(de_med, 2)}
+            print('part', key, 'IoU', round(iou, 4), 'dE median', round(de_med, 2))
         H = 700
         r = r.resize((int(r.width * H / r.height), H), Image.LANCZOS)
         p_ = p_.resize((int(p_.width * H / p_.height), H), Image.LANCZOS)

@@ -44,7 +44,7 @@
    0.086
   ],
   "brow_length": 0.084,
-  "brow_thickness": 0.025,
+  "brow_thickness": 0.029,
   "mouth_center_z": -0.127,
   "mouth_half_width": 0.047,
   "mouth_top_sag": 0.008,
@@ -55,11 +55,11 @@
    -0.017,
    0.0075
   ],
-  "brow_arch": 0.027,
+  "brow_arch": 0.015,
   "brow_height": 0.008,
-  "nose_amp": 0.0045,
+  "nose_amp": 0.01,
   "nose_tint": 0.45,
-  "nose_tip_z": -0.084,
+  "nose_tip_z": -0.062,
   "celeste_wrap": [
    0.66,
    0.36
@@ -72,13 +72,26 @@
    ],
    "radius": 0.0105,
    "strength": 2.5
-  }
+  },
+  "trace": {
+   "ref": "14_Morfi_cuerpo_base",
+   "camera": "cuerpo_base",
+   "_doc": "Zonas celestes de la cara calcadas de la lamina 14 (sin lentes) por proyeccion con su camara calibrada + correccion afin en ojos, lados de la cabeza y coronilla (scripts/morfi/facetrace.py). Ronda 8: la 3/4 06 tambien proyecta su mascara (con su camara y pose de cabeza) donde la lamina ve la cabeza de refilon; cada texel pesa cada toma por lo de frente que la ve. Los perfiles 03/05 no se usan: en ellos la cara esta girada hacia la camara (trampa) y su celeste quedaba flotando en el costado. sharpen = borde nitido.",
+   "views": [
+    "three_quarter_front"
+   ],
+   "prior_weight": 0.03,
+   "sharpen": 0.2
+  },
+  "line_celeste_cut": 0.78,
+  "nose_half_width": 0.036,
+  "brow_slope": 0.01
  },
  "colors": {
   "skin": "#014EF0",
   "skin_dark": "#013FD3",
   "celeste": "#89BAF9",
-  "brow": "#050B1C",
+  "brow": "#081633",
   "lid_line": "#081230",
   "mouth_interior": "#3A1512",
   "tongue": "#9A4038",
@@ -232,9 +245,9 @@
  },
  "clothes": {
   "sleeve_start": [
-   0.18,
+   0.2,
    0.004,
-   0.433
+   0.405
   ],
   "sleeve_r": [
    0.055,
@@ -249,10 +262,10 @@
    ],
    "half": [
     0.226,
-    0.166,
+    0.156,
     0.163
    ],
-   "p_h": 2.7,
+   "p_h": 3.4,
    "q_top": 2.7,
    "q_bot": 2.5
   },
@@ -302,7 +315,7 @@
    "cz": 0.29,
    "hw": 0.048,
    "hh": 0.049,
-   "raise": 0.0015,
+   "raise": 0.0045,
    "r_in": 0.035
   },
   "cord": {
@@ -314,9 +327,9 @@
    "aglet_r": 0.007
   },
   "shirt_hem_z": 0.222,
-  "blouse": 0.01,
+  "blouse": 0.004,
   "sleeve_folds": 0.0035,
-  "sleeve_blend": 0.018,
+  "sleeve_blend": 0.014,
   "shirt_collar": {
    "c": [
     0.0,
@@ -340,7 +353,99 @@
    ],
    "r": 0.046,
    "tilt": 12.0
-  }
+  },
+  "hood_rim": {
+   "c": [
+    0.0,
+    0.05,
+    0.47
+   ],
+   "R": [
+    0.15,
+    0.12
+   ],
+   "r": [
+    0.04,
+    0.05
+   ],
+   "tilt": 14.0,
+   "squash": 1.1
+  },
+  "hood_layer": {
+   "_doc": "Capucha colgando en la espalda (04/05/07): contorno en U (ancho w_top bajo el cuello, punta en z_tip), bolsa abultada: t_tip en la punta, t_peak a s_peak de la altura (sobresale ~7 cm en el perfil 05), t_top hacia el cuello; x_puff = cuanto se abomba al centro",
+   "z_top": 0.48,
+   "z_tip": 0.345,
+   "w_top": 0.2,
+   "tip_power": 0.5,
+   "t_tip": 0.014,
+   "t_peak": 0.07,
+   "s_peak": 0.4,
+   "t_top": 0.045,
+   "x_puff": 0.55,
+   "round": 0.012,
+   "y_min": 0.06
+  },
+  "shoulder_slope": [
+   0.478,
+   0.11,
+   0.25,
+   0.02
+  ],
+  "top_cut": [
+   0.512,
+   0.05,
+   0.14,
+   0.28
+  ],
+  "open_x_top": 0.092,
+  "open_x_bot": 0.066,
+  "rim_blend": 0.004,
+  "hood_rolls": [
+   [
+    0.092,
+    -0.118,
+    0.432
+   ],
+   [
+    0.15,
+    -0.03,
+    0.468
+   ],
+   0.045
+  ],
+  "hood_up": {
+   "c": [
+    0,
+    0.06,
+    0.48
+   ],
+   "r": [
+    0.18,
+    0.11,
+    0.115
+   ],
+   "thick": 0.016,
+   "open_tilt": 35,
+   "open_c": [
+    0,
+    0.01,
+    0.5
+   ],
+   "z_min": 0.43,
+   "rim_R": [
+    0.15,
+    0.11
+   ],
+   "rim_r": 0.024,
+   "_doc": "Capucha levantada: solo para la foto de producto 08 (objeto Hoodie_Product, coleccion ProductShots, no se exporta)"
+  },
+  "product_arm": {
+   "_doc": "Lamina 08: la sudadera vacia se muestra con las mangas separadas y algo adelantadas (maniqui invisible); grados sobre el hombro",
+   "abduct": 0.0,
+   "forward": 22.0,
+   "extend": 1.08
+  },
+  "shirt_arm_r": 0.043
  },
  "laptop_place": {
   "loc": [
@@ -392,9 +497,9 @@
     0.036
    ],
    "r": [
-    0.06,
-    0.105,
-    0.034
+    0.085,
+    0.125,
+    0.04
    ],
    "rz": -6.0
   },
@@ -456,7 +561,12 @@
    ],
    "thumb_len": 0.03864,
    "thumb_r": 0.01886
-  }
+  },
+  "arm_r": [
+   0.05,
+   0.046,
+   0.041
+  ]
  },
  "lights": {
   "world_glossy": 0.3,
@@ -486,76 +596,76 @@
  },
  "camera_views": {
   "front": {
-   "az": -0.14931,
-   "height": 0.74972,
-   "distance": 2.44937,
+   "az": 0.19558,
+   "height": 0.72123,
+   "distance": 2.45278,
    "lens": 65.23437,
    "target": [
-    0.00464,
+    0.00508,
     0.0,
-    0.52279
+    0.52334
    ],
-   "roll": -0.16049
+   "roll": -0.21792
   },
   "profile_left": {
-   "az": 90.53059,
-   "height": 0.39813,
-   "distance": 2.51116,
+   "az": 91.7329,
+   "height": 0.30693,
+   "distance": 2.51613,
    "lens": 65.23368,
    "target": [
-    0.01628,
+    0.02515,
     0.0,
-    0.52498
+    0.52106
    ],
-   "roll": 0.2136
+   "roll": -0.15319
   },
   "back": {
-   "az": 180.42018,
-   "height": 0.71736,
-   "distance": 2.50294,
+   "az": 180.06259,
+   "height": 0.7189,
+   "distance": 2.49413,
    "lens": 65.19958,
    "target": [
-    -0.00103,
+    -0.00032,
     0.0,
-    0.51971
+    0.51961
    ],
-   "roll": 0.52867
+   "roll": 0.46181
   },
   "profile_right": {
-   "az": -90.32482,
-   "height": 1.09338,
-   "distance": 2.49559,
+   "az": -90.24543,
+   "height": 0.4,
+   "distance": 2.55408,
    "lens": 65.03673,
    "target": [
-    0.01802,
+    0.02635,
     0.0,
-    0.51053
+    0.5248
    ],
-   "roll": 0.35219
+   "roll": 1.41999
   },
   "three_quarter_front": {
-   "az": 20.04267,
-   "height": 0.5761,
-   "distance": 2.55962,
+   "az": 21.76271,
+   "height": 0.5247,
+   "distance": 2.55053,
    "lens": 65.05038,
    "target": [
-    -0.00453,
+    -0.00359,
     0.0,
-    0.50118
+    0.50346
    ],
-   "roll": 0.14535
+   "roll": 0.10242
   },
   "three_quarter_back": {
-   "az": -148.45581,
-   "height": 0.44224,
-   "distance": 2.50555,
+   "az": -146.12559,
+   "height": 0.41344,
+   "distance": 2.50391,
    "lens": 65.06512,
    "target": [
-    -0.00909,
+    -0.00254,
     0.0,
-    0.50671
+    0.51236
    ],
-   "roll": 2.23206
+   "roll": 1.97906
   },
   "hero": {
    "az": -28.44768,
@@ -572,20 +682,22 @@
   "_doc": "Camara calibrada por vista contra la silueta de cada referencia (scripts/fit_cameras.py). Las referencias son renders independientes con encuadres distintos."
  },
  "textures": {
-  "_doc": "Laberinto fino medido en parches planos de 02_frente (espaciado y contraste del relieve). f0 = ciclos por tile; width = medio ancho de linea / periodo; gain = cambio de color en la linea (+ mas claro); relief = peso en el mapa de alturas (+ cresta).",
+  "_doc": "Laberinto fino medido en parches planos de 02_frente (espaciado y contraste del relieve). f0 = ciclos por tile; width = medio ancho de linea / periodo; gain = cambio de color en la linea (+ mas claro); relief = peso en el mapa de alturas (+ cresta). Ronda 8: lineas mas separadas y finas (f0 34, width 0.058) con contraste variable (mod_lo = minimo de la modulacion), como el fieltro de 02_frente visto de cerca.",
   "skin": {
-   "f0": 56.0,
-   "width": 0.12,
+   "f0": 38.0,
+   "width": 0.05,
    "gain": 0.35,
    "relief": 0.8,
    "fine": 0.25,
-   "normal": 0.95
+   "normal": 0.62,
+   "mod_lo": 0.2
   },
   "hoodie": {
-   "f0": 30.0,
-   "width": 0.1,
-   "gain": 0.9,
-   "relief": 0.55
+   "f0": 40.0,
+   "width": 0.06,
+   "gain": 0.45,
+   "relief": 0.55,
+   "mod_lo": 0.3
   },
   "tshirt": {
    "f0": 44.0,
@@ -598,194 +710,194 @@
   "_doc": "Pose por toma (grados, ejes del mundo en la cabeza de cada hueso en reposo), ajustada a la silueta de cada referencia con scripts/fit_view_poses.py",
   "front": {
    "head": [
-    0.443,
-    0.167,
-    1.271
+    -1.407,
+    0.383,
+    1.332
    ],
    "upper_arm.L": [
-    2.293,
-    -2.734,
+    -1.618,
+    -1.831,
     0.0
    ],
    "upper_arm.R": [
-    1.767,
-    2.212,
+    -0.436,
+    2.177,
     0.0
    ],
    "forearm.L": [
-    -0.711,
+    -2.553,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -0.775,
+    -1.541,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    2.173
+    0.458
    ]
   },
   "profile_left": {
    "head": [
-    -0.253,
-    3.809,
-    1.574
+    -1.341,
+    3.76,
+    1.925
    ],
    "upper_arm.L": [
-    -6.541,
-    -2.459,
+    -1.989,
+    18.0,
     0.0
    ],
    "upper_arm.R": [
-    0.49,
-    -0.208,
+    4.191,
+    -0.498,
     0.0
    ],
    "forearm.L": [
-    0.021,
+    4.064,
     0.0,
     0.0
    ],
    "forearm.R": [
-    0.0,
+    0.676,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    81.788
+    46.2
    ]
   },
   "back": {
    "head": [
-    -1.013,
-    0.367,
-    -2.026
+    -0.822,
+    0.432,
+    -1.867
    ],
    "upper_arm.L": [
-    -20.329,
-    -1.219,
+    -22.596,
+    -0.977,
     0.0
    ],
    "upper_arm.R": [
-    -21.586,
-    1.901,
+    -17.26,
+    1.698,
     0.0
    ],
    "forearm.L": [
-    -3.981,
+    -1.291,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -3.333,
+    -2.771,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    5.38
+    -1.178
    ]
   },
   "profile_right": {
    "head": [
-    -1.75,
-    4.791,
-    -3.4
+    -2.685,
+    -6.586,
+    -2.813
    ],
    "upper_arm.L": [
-    -0.282,
-    -0.107,
+    1.126,
+    -0.408,
     0.0
    ],
    "upper_arm.R": [
-    1.107,
-    12.283,
+    -4.881,
+    -18.0,
     0.0
    ],
    "forearm.L": [
-    -0.106,
+    0.458,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -1.747,
+    5.983,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    -81.393
+    -46.633
    ]
   },
   "three_quarter_front": {
    "head": [
-    4.125,
-    -2.43,
-    3.167
+    2.696,
+    -2.702,
+    4.495
    ],
    "upper_arm.L": [
-    0.582,
-    11.266,
+    -14.386,
+    9.165,
     0.0
    ],
    "upper_arm.R": [
-    -7.385,
-    0.666,
+    -6.606,
+    2.395,
     0.0
    ],
    "forearm.L": [
-    2.192,
+    0.115,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -5.286,
+    -2.877,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    -28.342
+    -26.858
    ]
   },
   "three_quarter_back": {
    "head": [
-    0.76,
-    0.784,
-    -2.237
+    1.993,
+    3.05,
+    -1.254
    ],
    "upper_arm.L": [
-    1.13,
-    -5.311,
+    4.104,
+    -8.206,
     0.0
    ],
    "upper_arm.R": [
-    21.803,
-    0.295,
+    16.667,
+    0.429,
     0.0
    ],
    "forearm.L": [
-    -2.883,
+    -3.931,
     0.0,
     0.0
    ],
    "forearm.R": [
-    5.443,
+    4.019,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    -104.542
+    -108.615
    ]
   }
  },
@@ -873,16 +985,16 @@
     1312,
     1199
    ],
-   "az": -23.537,
-   "el": 19.9872,
-   "distance": 1.47821,
-   "lens": 71.5371,
+   "az": -16.0374,
+   "el": 8.4997,
+   "distance": 1.4057,
+   "lens": 67.6205,
    "target": [
-    -0.00984,
-    0.02413,
-    0.32307
+    6e-05,
+    0.02033,
+    0.3547
    ],
-   "roll": 7.9982,
+   "roll": -0.2077,
    "place": {}
   },
   "playera": {
@@ -988,32 +1100,53 @@
  "view_gaze": {
   "front": {
    "L": [
-    -4.521,
-    -0.228
+    -4.082,
+    2.204
    ],
    "R": [
-    3.129,
-    1.019
+    3.204,
+    3.875
    ]
   },
   "three_quarter_front": {
    "L": [
-    -7.55,
-    0.74
+    -7.176,
+    2.361
    ],
    "R": [
-    -7.55,
-    0.74
+    -7.176,
+    2.361
    ]
   },
-  "_doc": "Desvio de la mirada por toma y por ojo [giro, inclinacion] en grados, tras mirar a la camara; ajustado a la posicion de las pupilas de cada referencia con scripts/fit_gaze.py (la toma hero no se corrige: alli la diferencia viene de la pose de la cabeza)"
+  "_doc": "Desvio de la mirada por toma y por ojo [giro, inclinacion] en grados, tras mirar a la camara; ajustado a la posicion de las pupilas de cada referencia con scripts/fit_gaze.py (la toma hero se ajusta aparte, despues de calzar la pose de la cabeza con los lentes de la imagen 00; cuerpo_base = lamina 14 con su camara de producto)",
+  "cuerpo_base": {
+   "L": [
+    -5.606,
+    4.483
+   ],
+   "R": [
+    6.489,
+    4.01
+   ]
+  },
+  "hero": {
+   "L": [
+    4.632,
+    2.806
+   ],
+   "R": [
+    8.757,
+    1.772
+   ]
+  }
  },
  "hero_pose": {
   "head": {
-   "turn": -22.0,
-   "tilt": -14.5,
-   "nod": 0.0
+   "turn": -13.0,
+   "tilt": -20.0,
+   "nod": 6.0
   },
-  "_doc": "Cabeza de la pose hero (grados: turn = giro Z, tilt = inclinacion Y, nod = cabeceo X). La inclinacion se midio con la linea de los lentes: 10.7 grados en la imagen maestra 00 (antes 4.9 en el render, ahora ~10)."
+  "_doc": "Pose hero (grados: turn = giro Z, tilt = inclinacion Y, nod = cabeceo X; spine_tilt = inclinacion lateral de la columna). Ronda 8: ajustada midiendo en la imagen maestra 00 los centros de los lentes y el contorno de la cabeza (work/hero_ref_landmarks.py): lentes a menos de 9 px, contorno a menos de 7 px, inclinacion de los lentes -12 grados como en 00.",
+  "spine_tilt": 2.0
  }
 }

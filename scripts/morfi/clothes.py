@@ -43,6 +43,7 @@ DEFAULT = {
 
 class Garments:
     def __init__(self, cfg):
+        self.variant = 'worn'  # 'product': hood up, for the product sheet (08)
         self.body = BodySDF(cfg)
         p = dict(DEFAULT)
         p.update(cfg.get('clothes', {}))
@@ -54,7 +55,18 @@ class Garments:
     def arm(self, side):
         b = self.b
         s = np.array([side, 1, 1])
-        return (np.array(b['shoulder']) * s, np.array(b['elbow']) * s, np.array(b['wrist']) * s)
+        sh, el, wr = (np.array(b['shoulder']) * s, np.array(b['elbow']) * s, np.array(b['wrist']) * s)
+        pa = self.p.get('product_arm')
+        if self.variant == 'product' and pa:
+            # product sheet 08: the empty hoodie is shown with the sleeves held
+            # out and a little forward (as on an invisible mannequin)
+            a, f = math.radians(-side * pa.get('abduct', 0.0)), math.radians(pa.get('forward', 0.0))
+            Ry = np.array([[math.cos(a), 0, math.sin(a)], [0, 1, 0], [-math.sin(a), 0, math.cos(a)]])
+            Rx = np.array([[1, 0, 0], [0, math.cos(f), -math.sin(f)], [0, math.sin(f), math.cos(f)]])
+            R = Rx @ Ry
+            e = pa.get('extend', 1.0)  # the empty sleeves hang longer than on the arm
+            el, wr = sh + e * (R @ (el - sh)), sh + e * (R @ (wr - sh))
+        return sh, el, wr
 
     def cuff_axis(self, side):
         sh, el, wr = self.arm(side)
@@ -86,7 +98,10 @@ class Garments:
             L = np.linalg.norm(n)
             n /= L
             end = sh + n * L * p['shirt_sleeve_frac']
-            sl = S.sd_round_cone(P, sh - n * 0.01, end, b['arm_r'][0] + p['shirt_offset'] + 0.003, b['arm_r'][0] + p['shirt_offset'])
+            # the sleeve keeps its own radius: it must stay inside the hoodie
+            # sleeve even when the arm under it is made thicker (sheet 14)
+            ar = p.get('shirt_arm_r', b['arm_r'][0])
+            sl = S.sd_round_cone(P, sh - n * 0.01, end, ar + p['shirt_offset'] + 0.003, ar + p['shirt_offset'])
             sl = np.maximum(sl, (P[0] - end[0]) * n[0] + (P[1] - end[1]) * n[1] + (P[2] - end[2]) * n[2])
             d = S.smin(d, sl, 0.025)
         return d
@@ -103,6 +118,13 @@ class Garments:
         tilt = math.tan(math.radians(col['tilt']))
         zc = col['c'][2] + (P[1] - col['c'][1]) * tilt
         d = np.maximum(d, P[2] - zc)
+        sl = p.get('shoulder_slope')
+        if sl:
+            # under the hoodie, outside the front opening, keep the shirt below
+            # the hoodie's sloping shoulder line so it never peeks out
+            z_top = sl[0] - sl[2] * np.maximum(np.abs(P[0]) - sl[1], 0.0) - 0.008
+            hidden = (np.abs(P[0]) > 0.11) | (P[1] > 0.0)
+            d = np.where(hidden, np.maximum(d, P[2] - z_top), d)
         return d
 
     def shirt_collar(self, P):
@@ -175,10 +197,90 @@ class Garments:
         d = S.smin(d, ring, 0.035)
         return d
 
+    def hood_rim(self, P):
+        """Thick rolled hood edge around the neck: an elliptical ring, tilted so
+        the back is higher, thicker at the back (where it becomes the hood)."""
+        c = self.p['hood_rim']
+        Rm = S.rot_matrix(-c.get('tilt', 10.0), 0, 0)
+        x, y, z = S.to_local(P, c['c'], Rm)
+        Rx, Ry = c['R']
+        q = np.sqrt((x / Rx) ** 2 + (y / Ry) ** 2) * min(Rx, Ry) - min(Rx, Ry)
+        w = np.clip((y / Ry + 1.0) / 2.0, 0.0, 1.0)
+        r = c['r'][0] + (c['r'][1] - c['r'][0]) * w
+        d = np.sqrt(q * q + (z / c.get('squash', 1.0)) ** 2) - r
+        rolls = self.p.get('hood_rolls')
+        if rolls:
+            # front of the hood opening: a soft roll on each side that rises
+            # from the drawstring eyelet toward the back of the neck
+            a, b, rr = np.array(rolls[0]), np.array(rolls[1]), rolls[2]
+            for side in (-1, 1):
+                sx = np.array([side, 1, 1])
+                d = S.smin(d, S.sd_capsule(P, a * sx, b * sx, rr), 0.02)
+        return d
+
+    def hood_up(self, P):
+        """Hood standing up (product sheet 08): a dome shell behind the neck,
+        open toward the front and up, with a rolled edge in the opening plane."""
+        u = self.p['hood_up']
+        E = S.sd_ellipsoid(P, u['c'], u['r'])
+        d = np.maximum(E, -(E + u['thick']))
+        a = math.radians(u['open_tilt'])
+        n = np.array([0.0, -math.cos(a), math.sin(a)])
+        eu = np.array([0.0, math.sin(a), math.cos(a)])
+        o = np.array(u['open_c'])
+        Q = [P[i] - o[i] for i in range(3)]
+        ln = Q[0] * n[0] + Q[1] * n[1] + Q[2] * n[2]
+        lu = Q[0] * eu[0] + Q[1] * eu[1] + Q[2] * eu[2]
+        lx = Q[0]
+        d = np.maximum(d, ln)  # cut the front: the opening
+        d = np.maximum(d, u['z_min'] - P[2])
+        Rx, Ru = u['rim_R']
+        m = min(Rx, Ru)
+        q = np.sqrt((lx / Rx) ** 2 + (lu / Ru) ** 2) * m - m
+        rim = np.sqrt(q * q + ln * ln) - u['rim_r']
+        rim = np.maximum(rim, u['z_min'] - 0.02 - P[2])
+        return S.smin(d, rim, 0.01)
+
+    def hood_layer(self, P, outer):
+        """Hood hanging on the back: within a U-shaped outline (wide at the
+        neck, rounded point at the tip) the back is thickened by t(x, z).
+
+        With 't_peak' the hood is a puffy bag as in the references (04, 05,
+        07): thin at the tip, standing furthest off the back a little above
+        it (s_peak of the way up), thinner again toward the neck, and puffed
+        across (fullest on the centre line, x_puff); its lower part faces
+        down, so it casts the shadow that makes the hood read from behind."""
+        h = self.p['hood_layer']
+        x, y, z = P
+        zt, zb = h['z_top'], h['z_tip']
+        sz = np.clip((z - zb) / (zt - zb), 0.0, 1.0)
+        w = h['w_top'] * sz ** h.get('tip_power', 0.55)
+        d2 = np.maximum(np.abs(x) - w, np.maximum(zb - z, z - zt - 0.05))
+        if 't_peak' in h:
+            sp = h.get('s_peak', 0.4)
+            up = np.sin(0.5 * math.pi * np.clip(sz / sp, 0.0, 1.0))
+            dn = np.clip((sz - sp) / (1.0 - sp), 0.0, 1.0) ** 2
+            tz = np.where(sz < sp, h['t_tip'] + (h['t_peak'] - h['t_tip']) * up,
+                          h['t_peak'] + (h['t_top'] - h['t_peak']) * dn)
+            across = np.sqrt(np.clip(1.0 - (x / np.maximum(w, 1e-3)) ** 2, 0.0, 1.0))
+            k = h.get('x_puff', 0.5)
+            t = h['t_tip'] + (tz - h['t_tip']) * (1.0 - k + k * across)
+        else:
+            t = h['t_tip'] + (h['t_top'] - h['t_tip']) * sz
+        d = S.smax(d2, outer - t, h.get('round', 0.010))
+        d = np.maximum(d, -(outer + self.p['hood_thick']))
+        return np.maximum(d, h.get('y_min', 0.06) - y)
+
     def hoodie_outer(self, P):
         p = self.p
         d = self.body.torso(P) - 0.030
         d = S.smin(d, self.box(P), 0.03)
+        sl = p.get('shoulder_slope')
+        if sl:
+            # shoulders fall away from the neck (references), so the hood roll
+            # sits on top of them instead of being buried in a flat top
+            z_top = sl[0] - sl[2] * np.maximum(np.abs(P[0]) - sl[1], 0.0)
+            d = S.smax(d, P[2] - z_top, sl[3])
         # fabric bloused over the gathered waistband
         z1 = self.hem_z('z1', P[1])
         roll = np.exp(-((P[2] - (z1 + 0.018)) / 0.016) ** 2)
@@ -192,14 +294,28 @@ class Garments:
         outer = self.hoodie_outer(P)
         d = np.maximum(outer, -(outer + p['hood_thick']))
         # hood (solid lump, kept off the neck)
-        hb = self.hood_body(P)
+        if p.get('hood_rim'):
+            hb = self.hood_rim(P)
+        else:
+            hb = self.hood_body(P)
         hb = np.maximum(hb, -(self.body.torso(P) - 0.012))
+        if self.variant == 'product' and p.get('hood_up'):
+            # no neck inside the empty hoodie: the raised hood is not cut by it
+            hb = S.smin(hb, self.hood_up(P), 0.015)
         # cut the neck opening & everything that would reach into the head
         neck_hole = np.sqrt(P[0] ** 2 + ((P[1] - 0.015) / 0.95) ** 2) - 0.104
         cut_neck = np.maximum(neck_hole, 0.42 - P[2])
         d = np.maximum(d, -cut_neck)
-        d = S.smin(d, hb, 0.012)
-        d = np.maximum(d, P[2] - 0.512)
+        d = S.smin(d, hb, p.get('rim_blend', 0.012))
+        if p.get('hood_layer') and self.variant == 'worn':
+            # the hood itself, lying on the back: a layer of fabric over the
+            # back panel with a visible edge (hard union = a real step)
+            d = np.minimum(d, self.hood_layer(P, outer))
+        # top: just under the head, rising behind it where the head curves up
+        tc = p.get('top_cut', [0.512, 0.0, 0.14, 0.28])
+        if self.variant == 'worn':
+            d = np.maximum(d, P[2] - (tc[0] + tc[1] * S.smoothstep(tc[2], tc[3], P[1])))
+        # product variant: no head, nothing to clear
         # front opening (both front panels end at the zipper edges)
         xo = self.open_x(P[2])
         cut_open = np.maximum(np.abs(P[0]) - xo, P[1] + 0.03)
@@ -224,7 +340,8 @@ class Garments:
             patch = np.maximum(patch, -(outer + 0.004))
             d = np.minimum(d, patch)
         # centre-back seam groove (hood + back)
-        groove = np.maximum(np.abs(P[0]) - 0.0016, -(np.minimum(outer, hb)) - 0.003)
+        # (3 mm deep under whatever is the surface there: back, rim or hood)
+        groove = np.maximum(np.abs(P[0]) - 0.0016, -np.minimum(d, hb) - 0.003)
         groove = np.maximum(groove, -P[1])
         d = np.maximum(d, -groove)
         return d
@@ -438,11 +555,41 @@ def build(cfg, col, parent, tex_dir, h, quality):
     out.update(Tshirt=ts, Tshirt_Collar=collar, Tshirt_Logo=logo)
 
     # --- Hoodie shell (+hood, pockets)
-    hv, hf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.17), (0.40, 0.26, 0.53), hh)
+    hv, hf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.17), (0.40, 0.26, 0.58), hh)
     hd = mu.fast_mesh_object('Hoodie', hv, hf, collection=col, parent=parent)
     mu.assign_material(hd, M['hoodie'])
     mu.cube_project_uv(hd, 3.5)
     out['Hoodie'] = hd
+    product_cuffs = []
+    if p.get('hood_up'):
+        # second state of the same hoodie, hood up, only for the product sheet:
+        # kept out of the Morfi collection (not exported, not rigged, not rendered)
+        g.variant = 'product'
+        pv, pf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.17), (0.40, 0.30, 0.76), hh)
+        g.variant = 'worn'
+        pcol = mu.get_collection('ProductShots')
+        hp = mu.fast_mesh_object('Hoodie_Product', pv, pf, collection=pcol)
+        hp.matrix_world = parent.matrix_world.copy() if parent is not None else hp.matrix_world
+        mu.assign_material(hp, M['hoodie'])
+        mu.cube_project_uv(hp, 3.5)
+        hp.hide_render = True
+        if p.get('product_arm'):
+            # the product sleeves are held out: their cuffs move with them
+            g.variant = 'product'
+            for name, side in (('Hoodie_Product_Cuff_R', -1), ('Hoodie_Product_Cuff_L', 1)):
+                cs, ce, n = g.cuff_axis(side)
+                L = p['cuff_len']
+                cv, cf = S.polygonize(g.cuff_local, (-0.07, -0.07, -0.01), (0.07, 0.07, L + 0.01), hh * 0.7)
+                cu = mu.fast_mesh_object(name, cv, cf, collection=pcol)
+                _place_local(cu, cs, n)
+                cu.parent = hp
+                cu.matrix_parent_inverse = hp.matrix_world.inverted()
+                mu.assign_material(cu, M['rib'])
+                bpy.context.view_layer.update()
+                cylindrical_uv(cu, cs, n, 2.0, 18.0)
+                cu.hide_render = True
+                product_cuffs.append(cu)
+            g.variant = 'worn'
 
     # --- hem band
     hb = mu.fast_mesh_object('Hoodie_Hem', *S.polygonize(g.hem_band, (-0.26, -0.22, 0.165), (0.26, 0.21, 0.26), hh * 0.8),

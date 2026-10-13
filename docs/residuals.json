@@ -1,58 +1,17 @@
 {
  "front": {
-  "iou": 0.945,
+  "iou": 0.9439,
   "partes": {
    "cabeza": {
-    "solo_3d": 0.36,
-    "solo_ref": 0.39
+    "solo_3d": 0.26,
+    "solo_ref": 0.58
    },
    "cubos": {
-    "solo_3d": 0.63,
-    "solo_ref": 0.04
+    "solo_3d": 0.56,
+    "solo_ref": 0.05
    },
    "sudadera": {
-    "solo_3d": 1.24,
-    "solo_ref": 0.3
-   },
-   "playera": {
-    "solo_3d": 0.0,
-    "solo_ref": 0.0
-   },
-   "brazos": {
-    "solo_3d": 0.0,
-    "solo_ref": 0.0
-   },
-   "manos": {
-    "solo_3d": 0.54,
-    "solo_ref": 0.35
-   },
-   "cuerpo": {
-    "solo_3d": 0.12,
-    "solo_ref": 0.0
-   },
-   "piernas": {
-    "solo_3d": 0.12,
-    "solo_ref": 0.07
-   },
-   "tenis": {
-    "solo_3d": 0.88,
-    "solo_ref": 0.45
-   }
-  }
- },
- "profile_left": {
-  "iou": 0.9432,
-  "partes": {
-   "cabeza": {
-    "solo_3d": 0.33,
-    "solo_ref": 0.79
-   },
-   "cubos": {
-    "solo_3d": 0.81,
-    "solo_ref": 0.67
-   },
-   "sudadera": {
-    "solo_3d": 0.91,
+    "solo_3d": 1.08,
     "solo_ref": 0.6
    },
    "playera": {
@@ -64,78 +23,37 @@
     "solo_ref": 0.0
    },
    "manos": {
-    "solo_3d": 0.0,
-    "solo_ref": 0.0
+    "solo_3d": 0.71,
+    "solo_ref": 0.16
    },
    "cuerpo": {
-    "solo_3d": 0.0,
-    "solo_ref": 0.01
-   },
-   "piernas": {
-    "solo_3d": 0.09,
-    "solo_ref": 0.07
-   },
-   "tenis": {
-    "solo_3d": 1.35,
-    "solo_ref": 0.04
-   }
-  }
- },
- "back": {
-  "iou": 0.9474,
-  "partes": {
-   "cabeza": {
-    "solo_3d": 0.6,
-    "solo_ref": 0.49
-   },
-   "cubos": {
-    "solo_3d": 0.38,
-    "solo_ref": 0.1
-   },
-   "sudadera": {
-    "solo_3d": 0.72,
-    "solo_ref": 0.32
-   },
-   "playera": {
-    "solo_3d": 0.0,
-    "solo_ref": 0.0
-   },
-   "brazos": {
-    "solo_3d": 0.0,
-    "solo_ref": 0.0
-   },
-   "manos": {
-    "solo_3d": 0.54,
-    "solo_ref": 0.05
-   },
-   "cuerpo": {
-    "solo_3d": 0.31,
+    "solo_3d": 0.14,
     "solo_ref": 0.0
    },
    "piernas": {
-    "solo_3d": 0.28,
-    "solo_ref": 0.05
+    "solo_3d": 0.13,
+    "solo_ref": 0.08
    },
    "tenis": {
-    "solo_3d": 0.73,
-    "solo_ref": 0.68
+    "solo_3d": 0.84,
+    "solo_ref": 0.42
    }
   }
  },
- "profile_right": {
-  "iou": 0.9124,
+ "profile_left": {
+  "iou": 0.938,
   "partes": {
    "cabeza": {
-    "solo_3d": 0.73,
-    "solo_ref": 1.09
+    "solo_3d": 0.21,
+    "solo_ref": 1.53
    },
    "cubos": {
-    "solo_3d": 0.96,
-    "solo_ref": 0.01
+    "solo_3d": 0.71,
+    "solo_ref": 0.89
    },
    "sudadera": {
-    "solo_3d": 1.59,
-    "solo_ref": 1.46
+    "solo_3d": 0.87,
+    "solo_ref": 1.18
    },
    "playera": {
     "solo_3d": 0.0,
@@ -147,36 +65,118 @@
    },
    "manos": {
     "solo_3d": 0.06,
+    "solo_ref": 0.05
+   },
+   "cuerpo": {
+    "solo_3d": 0.0,
+    "solo_ref": 0.01
+   },
+   "piernas": {
+    "solo_3d": 0.08,
+    "solo_ref": 0.04
+   },
+   "tenis": {
+    "solo_3d": 0.45,
+    "solo_ref": 0.1
+   }
+  }
+ },
+ "back": {
+  "iou": 0.9419,
+  "partes": {
+   "cabeza": {
+    "solo_3d": 0.88,
+    "solo_ref": 0.42
+   },
+   "cubos": {
+    "solo_3d": 0.53,
+    "solo_ref": 0.07
+   },
+   "sudadera": {
+    "solo_3d": 0.71,
+    "solo_ref": 0.47
+   },
+   "playera": {
+    "solo_3d": 0.0,
+    "solo_ref": 0.0
+   },
+   "brazos": {
+    "solo_3d": 0.0,
+    "solo_ref": 0.0
+   },
+   "manos": {
+    "solo_3d": 0.78,
+    "solo_ref": 0.04
+   },
+   "cuerpo": {
+    "solo_3d": 0.31,
+    "solo_ref": 0.0
+   },
+   "piernas": {
+    "solo_3d": 0.28,
+    "solo_ref": 0.05
+   },
+   "tenis": {
+    "solo_3d": 0.72,
+    "solo_ref": 0.54
+   }
+  }
+ },
+ "profile_right": {
+  "iou": 0.9302,
+  "partes": {
+   "cabeza": {
+    "solo_3d": 0.64,
+    "solo_ref": 1.53
+   },
+   "cubos": {
+    "solo_3d": 0.86,
+    "solo_ref": 0.27
+   },
+   "sudadera": {
+    "solo_3d": 1.17,
+    "solo_ref": 1.13
+   },
+   "playera": {
+    "solo_3d": 0.0,
+    "solo_ref": 0.0
+   },
+   "brazos": {
+    "solo_3d": 0.0,
+    "solo_ref": 0.0
+   },
+   "manos": {
+    "solo_3d": 0.04,
     "solo_ref": 0.0
    },
    "cuerpo": {
     "solo_3d": 0.0,
-    "solo_ref": 0.0
+    "solo_ref": 0.04
    },
    "piernas": {
-    "solo_3d": 0.02,
-    "solo_ref": 0.0
+    "solo_3d": 0.04,
+    "solo_ref": 0.11
    },
    "tenis": {
-    "solo_3d": 2.31,
-    "solo_ref": 0.53
+    "solo_3d": 0.75,
+    "solo_ref": 0.39
    }
   }
  },
  "three_quarter_front": {
-  "iou": 0.9037,
+  "iou": 0.9027,
   "partes": {
    "cabeza": {
-    "solo_3d": 1.72,
-    "solo_ref": 0.95
+    "solo_3d": 1.77,
+    "solo_ref": 0.96
    },
    "cubos": {
-    "solo_3d": 0.67,
-    "solo_ref": 0.4
+    "solo_3d": 0.68,
+    "solo_ref": 0.5
    },
    "sudadera": {
-    "solo_3d": 1.04,
-    "solo_ref": 0.19
+    "solo_3d": 0.9,
+    "solo_ref": 0.29
    },
    "playera": {
     "solo_3d": 0.0,
@@ -187,37 +187,37 @@
     "solo_ref": 0.0
    },
    "manos": {
-    "solo_3d": 1.46,
-    "solo_ref": 0.08
+    "solo_3d": 1.75,
+    "solo_ref": 0.09
    },
    "cuerpo": {
-    "solo_3d": 0.02,
-    "solo_ref": 0.02
+    "solo_3d": 0.04,
+    "solo_ref": 0.01
    },
    "piernas": {
-    "solo_3d": 0.21,
-    "solo_ref": 0.03
+    "solo_3d": 0.23,
+    "solo_ref": 0.02
    },
    "tenis": {
-    "solo_3d": 0.92,
-    "solo_ref": 1.92
+    "solo_3d": 0.88,
+    "solo_ref": 1.62
    }
   }
  },
  "three_quarter_back": {
-  "iou": 0.9028,
+  "iou": 0.8962,
   "partes": {
    "cabeza": {
-    "solo_3d": 3.07,
-    "solo_ref": 0.4
+    "solo_3d": 2.95,
+    "solo_ref": 0.69
    },
    "cubos": {
-    "solo_3d": 0.56,
-    "solo_ref": 0.49
+    "solo_3d": 0.47,
+    "solo_ref": 0.68
    },
    "sudadera": {
-    "solo_3d": 0.49,
-    "solo_ref": 0.43
+    "solo_3d": 0.42,
+    "solo_ref": 0.63
    },
    "playera": {
     "solo_3d": 0.0,
@@ -228,20 +228,20 @@
     "solo_ref": 0.0
    },
    "manos": {
-    "solo_3d": 0.97,
-    "solo_ref": 0.37
+    "solo_3d": 1.02,
+    "solo_ref": 0.23
    },
    "cuerpo": {
-    "solo_3d": 0.11,
+    "solo_3d": 0.27,
     "solo_ref": 0.0
    },
    "piernas": {
-    "solo_3d": 0.16,
-    "solo_ref": 0.11
+    "solo_3d": 0.56,
+    "solo_ref": 0.18
    },
    "tenis": {
-    "solo_3d": 1.09,
-    "solo_ref": 1.48
+    "solo_3d": 1.27,
+    "solo_ref": 0.99
    }
   }
  }

@@ -123,6 +123,10 @@ def main():
     for key, (names, az, el) in PARTS.items():
         if a.only and key not in a.only.split(','):
             continue
+        if key == 'sudadera' and bpy.data.objects.get('Hoodie_Product'):
+            names = ['Hoodie_Product'] + [n for n in names if n != 'Hoodie']  # hood up, as in sheet 08
+            if bpy.data.objects.get('Hoodie_Product_Cuff_L'):  # sleeves held out, cuffs with them
+                names = [n.replace('Hoodie_Cuff', 'Hoodie_Product_Cuff') for n in names]
         visible_set(names)
         undo = None
         if key in pcams:
@@ -133,12 +137,19 @@ def main():
             place_calibrated(cam, pc)
             undo = apply_placement(pc.get('place'))
             unturn = scene.turn_lights(pc['az'])  # product shot: lights keep their place relative to the camera
+            gz = cfg.get('view_gaze', {}).get(key)
+            if gz:  # sheet with a face (14): eyes as in the sheet (scripts/fit_gaze.py)
+                bpy.context.view_layer.update()
+                unlook = scene.eyes_look(cam.matrix_world.translation, 1.0, gaze=gz)
+            else:
+                unlook = lambda: None
             for transparent in (False, True):
                 scene.set_transparent_output(transparent)
                 sub = 'transparent' if transparent else ''
                 sc.render.filepath = os.path.join(a.out, sub, f'{key}.png')
                 bpy.ops.render.render(write_still=True)
                 print('[parts]', key, transparent, 'calibrated')
+            unlook()
             unturn()
             undo()
             continue

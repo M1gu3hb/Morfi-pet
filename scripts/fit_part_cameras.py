@@ -28,7 +28,7 @@ from scipy.optimize import minimize
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-HOODIE = ['Hoodie', 'Hoodie_Hem', 'Hoodie_Cuff_L', 'Hoodie_Cuff_R', 'Hoodie_Zipper', 'Hoodie_Drawstrings']
+HOODIE = ['Hoodie_Product', 'Hoodie_Hem', 'Hoodie_Cuff_L', 'Hoodie_Cuff_R', 'Hoodie_Zipper', 'Hoodie_Drawstrings']
 PARTS = {
     # key: (sheet, objects, movable objects, rigid mode)
     'sudadera': ('08_Morfi_sudadera', HOODIE, [], None),
@@ -42,6 +42,7 @@ PARTS = {
 # garments are hollow without the body: a high camera would look into them, so
 # their elevation is capped near the sheets' near-frontal view
 EL_MAX = {'playera': 18.0, 'sudadera': 20.0}
+EL_MIN = {'sudadera': 8.0}  # the sheet looks slightly down into the raised hood
 # parts whose sheet shows their front (logo, face, zipper): their outline is
 # nearly the same from behind, so the camera stays in the front half
 FRONT_ONLY = {'playera', 'sudadera', 'cuerpo_base', 'lentes'}
@@ -115,6 +116,8 @@ def main():
     for key, (sheet, objs, movable, mode) in PARTS.items():
         if a.only and key not in a.only.split(','):
             continue
+        if key == 'sudadera' and 'Hoodie_Product_Cuff_L' in names:  # sleeves held out (product pose)
+            objs = [o.replace('Hoodie_Cuff', 'Hoodie_Product_Cuff') for o in objs]
         labs = [names.index(o) for o in objs if o in names]
         sel = np.isin(L_all, labs)
         P, L = P_all[sel], L_all[sel]
@@ -141,7 +144,7 @@ def main():
 
             def loss(x):
                 cam, rx = unpack(x)
-                if not (0.2 < cam['distance'] < 30 and 15 < cam['lens'] < 400 and -10 < cam['el'] < EL_MAX.get(key, 85)
+                if not (0.2 < cam['distance'] < 30 and 15 < cam['lens'] < 400 and EL_MIN.get(key, -10) < cam['el'] < EL_MAX.get(key, 85)
                         and (key not in FRONT_ONLY or abs(cam['az']) < 80)
                         and abs(cam['roll']) < 8):
                     return 1.0
@@ -158,7 +161,7 @@ def main():
         coarse = make_loss(R4, 0.25, 1.0, sub_c)
         cands = []
         for az in [a for a in AZ_GRID if key not in FRONT_ONLY or abs(a) < 80]:
-            for el in [e for e in EL_GRID if e < EL_MAX.get(key, 85)] or [EL_MAX[key] - 5]:
+            for el in [e for e in EL_GRID if EL_MIN.get(key, -10) < e < EL_MAX.get(key, 85)] or [EL_MAX[key] - 5]:
                 x0 = np.array([az, el, dist0, lens0, 0.0, 0.0, 0.0] + [0.0] * nm)
                 cands.append((coarse(x0), x0))
         cands.sort(key=lambda t: t[0])

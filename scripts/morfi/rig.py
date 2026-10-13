@@ -38,7 +38,9 @@ def joint_table(cfg):
     hs = HeadShape(cfg)
     for (sx, sfx), E in zip(((-1, 'R'), (1, 'L')), hs.eye_centers):
         Ew = np.array(hc) + E
-        J['eye.' + sfx] = (tuple(Ew), tuple(Ew + np.array([0, -0.08, 0])))
+        # not exactly along -Y: a bone pointing straight down -Y has an ambiguous
+        # (180 deg flip) rest matrix, which could turn an eye on bone parenting
+        J['eye.' + sfx] = (tuple(Ew), tuple(Ew + np.array([0, -0.08, 0.006])))
     for side, sfx in ((1, 'L'), (-1, 'R')):
         s = np.array([side, 1, 1])
         sh = np.array(b['shoulder']) * s

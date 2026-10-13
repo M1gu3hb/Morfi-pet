@@ -25,6 +25,7 @@ def main():
     ap.add_argument('--transparent', action='store_true')
     ap.add_argument('--hide', default='', help='comma separated object/collection names to hide')
     ap.add_argument('--suffix', default='')
+    ap.add_argument('--eye-look', default='', help='JSON {view: k} overriding scene.EYE_LOOK (tests)')
     ap.add_argument('--engine', default='CYCLES', choices=['CYCLES', 'WORKBENCH', 'EEVEE'])
     ap.add_argument('--res', default='', help='WxH override')
     ap.add_argument('--shared-camera', dest='calibrated', action='store_false',
@@ -84,7 +85,8 @@ def main():
             bpy.context.view_layer.update()
         sc.render.filepath = os.path.join(a.out, v + a.suffix + '.png')
         gaze = cfg.get('view_gaze', {}).get(v) if (a.calibrated and a.eyes_follow) else None
-        restore = scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK.get(v, 1.0) if a.eyes_follow else 0.0,
+        look = dict(scene.EYE_LOOK, **(json.loads(a.eye_look) if a.eye_look else {}))
+        restore = scene.eyes_look(cam.matrix_world.translation, look.get(v, 1.0) if a.eyes_follow else 0.0,
                                   gaze=gaze)
         # light rig turns with the camera, as in the reference shots
         cv = cfg.get('camera_views', {})

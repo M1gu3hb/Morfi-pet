@@ -46,8 +46,26 @@ DOF = [('head', 'xyz'), ('upper_arm.L', 'xy'), ('upper_arm.R', 'xy'), ('forearm.
 LAMBDA = 2e-5  # regularisation per squared degree
 LAMBDA_BONE = {'pixels': 1e-7, 'upper_arm.L': 6e-6, 'upper_arm.R': 6e-6}  # cube turn is free (camera-facing cheat); arms swing
 ARM_SWINGS = (-35.0, -18.0, 0.0)  # starting forward swings tried for each arm (deg about world X, - = forward)
+# starting adductions (deg about world Y, toward the body; mirrored for the right arm). In the
+# profiles the arms hang along the body: from the side an arm still held out as at rest points at
+# the camera, and the outline alone cannot tell (the arm moves along the line of sight)
+ARM_ADDUCT = (0.0, 20.0, 38.0)
 PIXEL_TURNS = (0.0, 90.0, -90.0, 180.0)
 W_OUTLINE = 0.5  # share of the outline IoU in the semantic loss
+# camera heights that the outline cannot pin down. In a profile the silhouette
+# hardly changes with the camera height, and the fit drifted to 1.1 m for 05
+# (looking down on the shoes, the far shoe appearing above the near one); in
+# the reference the far shoe only peeks ~25 px above the near one, which with
+# the feet 0.18 m apart at 2.5 m means a camera ~0.4 m high, the same as the
+# fit gives for the other profile (03).
+HEIGHT_FIX = {'profile_right': 0.40}
+# bones whose pose is set by eye, not fitted: in the profiles the near arm hangs
+# along the body with the hand forward (03, 05); held out as at rest it points
+# at the camera and shows the open end of the cuff. Sleeve and body are both
+# black, so neither the outline nor the colour zones can see the difference.
+# Only the adduction is fixed; the forward swing and the elbow are still fitted.
+POSE_FIX = {'profile_left': {('upper_arm.L', 'y'): 18.0},
+            'profile_right': {('upper_arm.R', 'y'): -18.0}}
 NCLS = 3         # 0 blue skin, 1 black (hoodie, frame, brows), 2 white / grey (shirt, shoes, eye whites)
 
 
@@ -168,6 +186,17 @@ class Skin:
         return out
 
 
+def fix_index(key):
+    """Index in the parameter vector of a (bone, axis) DOF."""
+    j = 0
+    for bone, axes in DOF:
+        for a in axes:
+            if (bone, a) == key:
+                return j
+            j += 1
+    raise KeyError(key)
+
+
 def rots_from(x):
     rots, j = {}, 0
     for bone, axes in DOF:
@@ -218,8 +247,11 @@ def main():
         base = cfg['camera_views'][view]
 
         def unpack(x):
+            x = np.array(x, float)
+            for k, ang in POSE_FIX.get(view, {}).items():
+                x[fix_index(k)] = ang
             rots, j = rots_from(x)
-            c = dict(az=base['az'] + x[j], height=base['height'] + x[j + 1], distance=base['distance'] + x[j + 2],
+            c = dict(az=base['az'] + x[j], height=HEIGHT_FIX.get(view, base['height'] + x[j + 1]), distance=base['distance'] + x[j + 2],
                      lens=base['lens'], target=[base['target'][0] + x[j + 3], base['target'][1], base['target'][2] + x[j + 4]],
                      roll=base.get('roll', 0.0) + x[j + 5])
             return rots, c
@@ -271,12 +303,15 @@ def main():
         jl = sum(len(a) for b, a in DOF[:[b for b, _ in DOF].index('upper_arm.L')])
         jr = sum(len(a) for b, a in DOF[:[b for b, _ in DOF].index('upper_arm.R')])
         swings = []
-        for sl in ARM_SWINGS:
-            for sr in ARM_SWINGS:
-                xt = x0.copy()
-                xt[jl], xt[jr] = sl, sr
-                swings.append((coarse(xt), sl, sr))
-        _, x0[jl], x0[jr] = min(swings)
+        for ad in ARM_ADDUCT:
+            for sl in ARM_SWINGS:
+                for sr in ARM_SWINGS:
+                    xt = x0.copy()
+                    xt[jl], xt[jr] = sl, sr
+                    xt[jl + 1], xt[jr + 1] = ad, -ad
+                    swings.append((coarse(xt), sl, sr, ad))
+        _, x0[jl], x0[jr], ad = min(swings)
+        x0[jl + 1], x0[jr + 1] = ad, -ad
         step = np.diag([4.0] * npose + [1.0, 0.03, 0.05, 0.005, 0.005, 0.3])
         res = minimize(coarse, x0, method='Powell',
                        options=dict(xtol=1e-2, ftol=1e-5, maxfev=2000, direc=step))
@@ -305,6 +340,8 @@ def main():
                 ang['xyz'.index(a)] = round(float(res.x[j]), 3)
                 j += 1
             vp[bone] = ang
+        for (b, ax), ang in POSE_FIX.get(view, {}).items():
+            vp[b]['xyz'.index(ax)] = ang
         poses[view] = vp
         cams[view] = {k: (round(v, 5) if isinstance(v, float) else [round(t, 5) for t in v]) for k, v in cam.items()}
         report[view] = dict(iou_before=round(before, 4), iou_after=round(after, 4),
