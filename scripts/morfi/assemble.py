@@ -23,7 +23,7 @@ def sdf_object(name, fn, bmin, bmax, h, col, parent=None, mat=None, smooth_iter=
 def build_body(cfg, col, parent, skin, h=0.0025):
     body = BodySDF(cfg)
     bmin, bmax = body.bounds()
-    ob = sdf_object('Body_Base', body, bmin, bmax, h, col, parent=parent, mat=skin, uv_scale=4.0)
+    ob = sdf_object('Body_Base', body, bmin, bmax, h, col, parent=parent, mat=skin, uv_scale=2.5)
     return ob
 
 

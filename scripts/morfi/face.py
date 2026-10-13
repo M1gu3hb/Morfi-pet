@@ -32,7 +32,14 @@ def build_head(cfg, col, tex_dir, parent=None, tex_size=4096):
     mu.save_image(rough_p, np.repeat(rough[..., None], 3, axis=2))
     bimg = mu.load_image(base_p, 'sRGB', 'T_Head_BaseColor')
     rimg = mu.load_image(rough_p, 'Non-Color', 'T_Head_Roughness')
-    m = mats.skin('M_Head', cfg['colors']['skin'], base_img=bimg, rough_img=rimg)
+    # second UV set for the tiling velvet normal map (box projection)
+    uv_atlas = ob.data.uv_layers['UVMap']
+    tile = ob.data.uv_layers.new(name='UVTile')
+    ob.data.uv_layers.active = tile
+    mu.cube_project_uv(ob, 2.5)
+    ob.data.uv_layers.active = uv_atlas
+    uv_atlas.active_render = True
+    m = mats.skin('M_Head', cfg['colors']['skin'], base_img=bimg, rough_img=rimg, tile_uv='UVTile')
     mu.assign_material(ob, m)
     return ob, shape
 

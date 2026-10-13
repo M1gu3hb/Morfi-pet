@@ -260,19 +260,60 @@ class Garments:
 def fabric_materials(cfg):
     col = cfg['colors']
     hood = mats.flat('M_Hoodie', col['hoodie'], rough=0.95, sheen=0.35, spec=0.18,
-                     bump=dict(scale=150.0, strength=0.45, distance=0.0018, fine=700.0))
-    rib = mats.flat('M_HoodieRib', col['hoodie'], rough=0.93, sheen=0.3, spec=0.18)
-    _rib_bump(rib, radial=False)
-    hem = mats.flat('M_HoodieHem', col['hoodie'], rough=0.93, sheen=0.3, spec=0.18)
-    _rib_bump(hem, radial=True)
+                     bump=dict(scale=150.0, strength=0.45, distance=0.0018, fine=700.0),
+                     tile_normal=('fleece_n', 0.9))
+    rib = mats.flat('M_HoodieRib', col['hoodie'], rough=0.93, sheen=0.3, spec=0.18, tile_normal=('rib_n', 1.0))
+    hem = mats.flat('M_HoodieHem', col['hoodie'], rough=0.93, sheen=0.3, spec=0.18, tile_normal=('rib_n', 1.0))
+    if not mats.TILES:
+        _rib_bump(rib, radial=False)
+        _rib_bump(hem, radial=True)
     shirt = mats.flat('M_Tshirt', col['tshirt'], rough=0.92, sheen=0.35, spec=0.3,
-                      bump=dict(scale=320.0, strength=0.12, distance=0.0008, fine=1100.0))
-    _heather(shirt, col['tshirt'])
+                      bump=dict(scale=320.0, strength=0.12, distance=0.0008, fine=1100.0),
+                      tile_normal=('jersey_n', 0.5), tile_color='jersey_c')
+    if not mats.TILES:
+        _heather(shirt, col['tshirt'])
     logo = mats.flat('M_TshirtLogo', col['tshirt_logo'], rough=0.42, spec=0.5, coat=0.2, coat_rough=0.3)
-    metal = mats.flat('M_Metal', col['metal'], rough=0.28, metal=1.0, spec=0.5)
+    metal = mats.flat('M_Metal', col['metal'], rough=0.22, metal=1.0, spec=0.5)
     cord = mats.flat('M_Cord', col['cord'], rough=0.75, sheen=0.4, spec=0.3,
-                     bump=dict(scale=900.0, strength=0.2, distance=0.0005, fine=2000.0))
+                     bump=dict(scale=900.0, strength=0.2, distance=0.0005, fine=2000.0),
+                     tile_normal=('fleece_n', 0.6))
     return dict(hoodie=hood, rib=rib, hem=hem, shirt=shirt, logo=logo, metal=metal, cord=cord)
+
+
+def cylindrical_uv(ob, center, axis, u_repeat, v_scale):
+    """UVs around an axis: u = angle (repeats u_repeat times), v = height * v_scale."""
+    me = ob.data
+    if not me.uv_layers:
+        me.uv_layers.new(name='UVMap')
+    uvl = me.uv_layers.active
+    nl = len(me.loops)
+    vidx = np.empty(nl, np.int32)
+    me.loops.foreach_get('vertex_index', vidx)
+    co = mu.get_verts(ob)
+    M = np.array(ob.matrix_world)
+    co = co @ M[:3, :3].T + M[:3, 3]
+    a = np.asarray(axis, float)
+    a /= np.linalg.norm(a)
+    ref = np.array([1.0, 0, 0]) if abs(a[0]) < 0.9 else np.array([0, 1.0, 0])
+    e1 = ref - a * (ref @ a)
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(a, e1)
+    d = co - np.asarray(center)
+    ang = np.arctan2(d @ e2, d @ e1)
+    h = d @ a
+    uv = np.stack([(ang / (2 * math.pi) + 0.5) * u_repeat, h * v_scale], 1)[vidx]
+    # fix the seam: per-face unwrap of the angle discontinuity
+    npoly = len(me.polygons)
+    ls = np.empty(npoly, np.int32)
+    me.polygons.foreach_get('loop_start', ls)
+    lt = np.empty(npoly, np.int32)
+    me.polygons.foreach_get('loop_total', lt)
+    for start, tot in zip(ls, lt):
+        us = uv[start:start + tot, 0]
+        if us.max() - us.min() > u_repeat * 0.5:
+            us[us < u_repeat * 0.5] += u_repeat
+            uv[start:start + tot, 0] = us
+    uvl.data.foreach_set('uv', uv.astype(np.float32).ravel())
 
 
 def _rib_bump(m, radial):
@@ -378,7 +419,7 @@ def build(cfg, col, parent, tex_dir, h, quality):
     ts = mu.fast_mesh_object('Tshirt', *S.polygonize(g.shirt, (-0.30, -0.20, 0.20), (0.30, 0.18, 0.53), hh),
                              collection=col, parent=parent)
     mu.assign_material(ts, M['shirt'])
-    mu.cube_project_uv(ts, 4.0)
+    mu.cube_project_uv(ts, 5.0)
     collar = mu.fast_mesh_object('Tshirt_Collar', *S.polygonize(g.shirt_collar, (-0.13, -0.13, 0.44), (0.13, 0.15, 0.55), hh * 0.6),
                                  collection=col, parent=ts)
     mu.assign_material(collar, M['shirt'])
@@ -391,14 +432,14 @@ def build(cfg, col, parent, tex_dir, h, quality):
     hv, hf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.19), (0.40, 0.26, 0.53), hh)
     hd = mu.fast_mesh_object('Hoodie', hv, hf, collection=col, parent=parent)
     mu.assign_material(hd, M['hoodie'])
-    mu.cube_project_uv(hd, 4.0)
+    mu.cube_project_uv(hd, 3.5)
     out['Hoodie'] = hd
 
     # --- hem band
     hb = mu.fast_mesh_object('Hoodie_Hem', *S.polygonize(g.hem_band, (-0.26, -0.22, 0.18), (0.26, 0.21, 0.25), hh * 0.8),
                              collection=col, parent=hd)
     mu.assign_material(hb, M['hem'])
-    mu.cube_project_uv(hb, 4.0)
+    cylindrical_uv(hb, (0, p['hem'].get('cy', -0.016), 0), (0, 0, 1), 7.0, 18.0)
     out['Hoodie_Hem'] = hb
 
     # --- cuffs (local frame)
@@ -411,7 +452,8 @@ def build(cfg, col, parent, tex_dir, h, quality):
         cu.parent = hd
         cu.matrix_parent_inverse = hd.matrix_world.inverted()
         mu.assign_material(cu, M['rib'])
-        mu.cube_project_uv(cu, 4.0)
+        bpy.context.view_layer.update()
+        cylindrical_uv(cu, cs, n, 2.0, 18.0)
         out[name] = cu
 
     # --- zipper
@@ -435,7 +477,7 @@ def build(cfg, col, parent, tex_dir, h, quality):
     # slider + pull on Morfi's left panel (+X)
     zb = p['slider_z']
     xo = g.open_x(zb)
-    hit, _ = S.raycast(g.hoodie, np.array([[xo + 0.003, -0.4, zb]]), np.array([[0, 1.0, 0]]), tmax=0.5)
+    hit, _ = S.raycast(both, np.array([[xo + 0.004, -0.4, zb]]), np.array([[0, 1.0, 0]]), tmax=0.5)
     yb = hit[0, 1]
     for half, c in (((0.0068, 0.0055, 0.0115), (xo - 0.002, yb - 0.001, zb)),
                     ((0.0048, 0.0018, 0.0125), (xo - 0.002, yb - 0.006, zb - 0.017))):

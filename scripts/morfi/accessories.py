@@ -226,6 +226,6 @@ def build_cubes(cfg, head_center, col, parent, skin_mat):
         bm.free()
         ob.data.shade_smooth()
         mu.assign_material(ob, skin_mat)
-        mu.cube_project_uv(ob, scale=4.0)
+        mu.cube_project_uv(ob, scale=2.5)
         out.append(ob)
     return grp, out

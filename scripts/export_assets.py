@@ -1,0 +1,215 @@
+"""Export glTF binaries from the rigged master scene.
+
+    blender -b source/morfi_master.blend --python scripts/export_assets.py -- [--only master,web,parts]
+
+exports/morfi_master.glb   full-resolution meshes, skin + all actions, 2K-4K textures
+exports/morfi_web.glb      decimated meshes (~150k tris), 1K-2K textures, skin + actions
+exports/parts/*.glb        each piece on its own (static, rest pose)
+
+Objects keep their Blender names so the viewer can toggle them
+(Hoodie*, Tshirt*, Shoe_*, Glasses_*, Pixel_*, Laptop, Body_Base, Head ...).
+"""
+import argparse
+import json
+import os
+import sys
+
+import bpy
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(ROOT, 'exports')
+
+# web triangle budgets per object (approximate)
+WEB_TRIS = {
+    'Head': 40000, 'Body_Base': 20000, 'Hoodie': 36000, 'Hoodie_Hem': 6000,
+    'Hoodie_Cuff_L': 3000, 'Hoodie_Cuff_R': 3000, 'Hoodie_Zipper': 8000, 'Hoodie_Drawstrings': 3000,
+    'Tshirt': 6000, 'Tshirt_Collar': 2000, 'Tshirt_Logo': 1500,
+    'Shoe_L': 14000, 'Shoe_R': 14000, 'Glasses_Frame': 12000, 'Laptop': 6000,
+    'Brow_L': 1200, 'Brow_R': 1200,
+}
+MASTER_TRIS = {k: v * 4 for k, v in WEB_TRIS.items()}
+MASTER_TRIS['Head'] = 400000
+
+PARTS = {
+    'hoodie': ['Hoodie', 'Hoodie_Hem', 'Hoodie_Cuff_L', 'Hoodie_Cuff_R', 'Hoodie_Zipper', 'Hoodie_Drawstrings'],
+    'tshirt': ['Tshirt', 'Tshirt_Collar', 'Tshirt_Logo'],
+    'shoes': ['Shoe_L', 'Shoe_R'],
+    'glasses': ['Glasses_Frame', 'Glasses_Lens_L', 'Glasses_Lens_R'],
+    'pixels': ['Pixel_01', 'Pixel_02', 'Pixel_03'],
+    'laptop': ['Laptop'],
+    'body_base': ['Body_Base'],
+    'head': ['Head', 'Eye_L', 'Eye_R', 'Cornea_L', 'Cornea_R', 'Brow_L', 'Brow_R'],
+}
+
+
+def tri_count(ob):
+    me = ob.data
+    me.calc_loop_triangles()
+    return len(me.loop_triangles)
+
+
+def decimate_to(ob, target):
+    n = tri_count(ob)
+    if n <= target:
+        return n
+    ratio = target / n
+    mod = ob.modifiers.new('DecimateExport', 'DECIMATE')
+    mod.ratio = ratio
+    mod.use_collapse_triangulate = True
+    # decimate must run before the armature modifier
+    ob.modifiers.move(ob.modifiers.find(mod.name), 0)
+    with bpy.context.temp_override(object=ob, active_object=ob, selected_objects=[ob],
+                                   selected_editable_objects=[ob]):
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    return tri_count(ob)
+
+
+def attach_laptop_hero():
+    """Bone-parent the laptop to hand.R with the hero-pose placement."""
+    sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+    import render_hero
+    rig = bpy.data.objects.get('Morfi_Rig')
+    if rig is None or bpy.data.objects.get('Laptop') is None:
+        return
+    rig.animation_data.action = bpy.data.actions['Pose_Hero']
+    bpy.context.scene.frame_set(1)
+    bpy.context.view_layer.update()
+    render_hero.place_laptop(rig)
+    rig.animation_data.action = bpy.data.actions['Pose_Neutral']
+    bpy.context.scene.frame_set(1)
+    bpy.context.view_layer.update()
+
+
+def morfi_objects():
+    col = bpy.data.collections['Morfi']
+    return [o for o in col.all_objects]
+
+
+def downscale_images(max_size):
+    for img in bpy.data.images:
+        if img.source != 'FILE' or not img.size[0]:
+            continue
+        w, h = img.size
+        if max(w, h) > max_size:
+            s = max_size / max(w, h)
+            img.scale(int(w * s), int(h * s))
+
+
+def ensure_uvs(objects):
+    """Every exported mesh gets a UV set (box projection) so textured materials are valid glTF."""
+    sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+    from morfi import meshutil as mu
+    import bmesh
+    for o in objects:
+        if o.type != 'MESH':
+            continue
+        if not o.data.uv_layers:
+            mu.cube_project_uv(o, 4.0)
+        # remove degenerate faces left by decimation (they produce zero tangents)
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=1e-6)
+        bad = [f for f in bm.faces if f.calc_area() < 1e-12]
+        if bad:
+            bmesh.ops.delete(bm, geom=bad, context='FACES')
+        bm.to_mesh(o.data)
+        bm.free()
+        o.data.update()
+
+
+def skinned_to_root(objects):
+    """glTF best practice: skinned meshes are root nodes (parent transforms are ignored)."""
+    for o in objects:
+        if o.type == 'MESH' and any(m.type == 'ARMATURE' for m in o.modifiers) and o.parent is not None:
+            mw = o.matrix_world.copy()
+            o.parent = None
+            o.matrix_world = mw
+
+
+def export(path, objects, animations=True, skins=True, image_format='AUTO', jpeg_quality=88):
+    ensure_uvs(objects)
+    if skins:
+        skinned_to_root(objects)
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in objects:
+        o.hide_set(False)
+        o.hide_render = False
+        o.select_set(True)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    kw = dict(filepath=path, export_format='GLB', use_selection=True, export_apply=False,
+              export_yup=True, export_texcoords=True, export_normals=True, export_tangents=True,
+              export_materials='EXPORT', export_image_format=image_format,
+              export_jpeg_quality=jpeg_quality, export_animations=animations,
+              export_skins=skins, export_morph=False, export_extras=True,
+              export_cameras=False, export_lights=False)
+    if animations:
+        kw.update(export_animation_mode='ACTIONS', export_force_sampling=True, export_frame_range=False,
+                  export_anim_single_armature=True, export_reset_pose_bones=True)
+    bpy.ops.export_scene.gltf(**kw)
+    sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+    from fix_glb_tangents import fix
+    fix(path)
+    print('[export]', path, f'{os.path.getsize(path) / 1e6:.1f} MB')
+
+
+def stats(objs):
+    tot = 0
+    rows = []
+    for o in objs:
+        if o.type == 'MESH':
+            n = tri_count(o)
+            tot += n
+            rows.append((o.name, n, len(o.data.materials)))
+    return tot, rows
+
+
+def main():
+    argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--only', default='master,web,parts')
+    a = ap.parse_args(argv)
+    todo = a.only.split(',')
+    src = bpy.data.filepath
+    report = {}
+    rig = bpy.data.objects.get('Morfi_Rig')
+    if rig and rig.animation_data:
+        rig.animation_data.action = bpy.data.actions.get('Pose_Neutral')
+    if 'master' in todo:
+        attach_laptop_hero()
+        for o in morfi_objects():
+            if o.type == 'MESH' and o.name in MASTER_TRIS:
+                decimate_to(o, MASTER_TRIS[o.name])
+        objs = morfi_objects()
+        export(os.path.join(OUT, 'morfi_master.glb'), objs)
+        report['master'] = stats(objs)
+        bpy.ops.wm.open_mainfile(filepath=src)
+    if 'web' in todo:
+        attach_laptop_hero()
+        for o in morfi_objects():
+            if o.type == 'MESH' and o.name in WEB_TRIS:
+                decimate_to(o, WEB_TRIS[o.name])
+        downscale_images(2048)
+        for img in bpy.data.images:
+            if img.name.startswith('T_Head') and img.size[0] > 2048:
+                img.scale(2048, 2048)
+        objs = morfi_objects()
+        export(os.path.join(OUT, 'morfi_web.glb'), objs, image_format='JPEG', jpeg_quality=90)
+        report['web'] = stats(objs)
+        bpy.ops.wm.open_mainfile(filepath=src)
+    if 'parts' in todo:
+        rig = bpy.data.objects.get('Morfi_Rig')
+        for o in morfi_objects():
+            if o.type == 'MESH' and o.name in WEB_TRIS:
+                decimate_to(o, MASTER_TRIS[o.name] // 2)
+        for part, names in PARTS.items():
+            objs = [bpy.data.objects[n] for n in names if n in bpy.data.objects]
+            # include children (e.g. eyes under head handled explicitly)
+            export(os.path.join(OUT, 'parts', f'morfi_{part}.glb'), objs, animations=False, skins=False)
+        bpy.ops.wm.open_mainfile(filepath=src)
+    with open(os.path.join(OUT, 'export_report.json'), 'w') as f:
+        json.dump({k: {'triangles': v[0], 'objects': [{'name': n, 'triangles': t, 'materials': m} for n, t, m in v[1]]}
+                   for k, v in report.items()}, f, indent=1)
+
+
+if __name__ == '__main__':
+    main()

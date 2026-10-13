@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Morfi · Visor 3D</title>
+  <meta name="description" content="Visor del modelo 3D de Morfi, mascota de Astral Morphiq Systems." />
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <div id="app" class="bg-light">
+    <canvas id="view" aria-label="Modelo 3D de Morfi"></canvas>
+    <div id="status" role="status">Cargando modelo… <span id="progress">0%</span></div>
+
+    <button id="panel-toggle" class="panel-toggle" aria-expanded="true" aria-controls="panel">Controles</button>
+    <aside id="panel" class="panel">
+      <header>
+        <h1>Morfi</h1>
+        <p class="sub">Visor del modelo exportado (<span id="model-name">morfi_web.glb</span>)</p>
+      </header>
+
+      <section>
+        <h2>Vista</h2>
+        <div class="grid3" id="views">
+          <button data-view="front">Frente</button>
+          <button data-view="three_quarter_front">3/4 frente</button>
+          <button data-view="profile_left">Perfil izq.</button>
+          <button data-view="profile_right">Perfil der.</button>
+          <button data-view="back">Espalda</button>
+          <button data-view="three_quarter_back">3/4 espalda</button>
+        </div>
+        <div class="row">
+          <button id="reset">Restablecer</button>
+          <label class="check"><input type="checkbox" id="autorotate" /> Giro automático</label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Pose / animación</h2>
+        <select id="anim" aria-label="Animación"></select>
+        <div class="row">
+          <button id="play">Pausa</button>
+          <label class="check"><input type="range" id="speed" min="0.25" max="2" step="0.25" value="1" aria-label="Velocidad" /> <span id="speed-val">1×</span></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Ropa y accesorios</h2>
+        <div class="toggles" id="toggles"></div>
+        <div class="row">
+          <button id="preset-full">Completo</button>
+          <button id="preset-base">Cuerpo base</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Fondo</h2>
+        <div class="grid3" id="bgs">
+          <button data-bg="light" class="on">Claro</button>
+          <button data-bg="dark">Oscuro</button>
+          <button data-bg="transparent">Transparente</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Inspección</h2>
+        <div class="grid3" id="modes">
+          <button data-mode="material" class="on">Material</button>
+          <button data-mode="clay">Gris</button>
+          <button data-mode="wire">Alambre</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Exportar</h2>
+        <div class="row">
+          <button id="shot">Captura PNG</button>
+          <a id="download" class="btn" href="./models/morfi_web.glb" download>Descargar GLB</a>
+        </div>
+        <p class="stats" id="stats"></p>
+      </section>
+    </aside>
+  </div>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

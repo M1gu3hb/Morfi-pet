@@ -160,13 +160,16 @@ def build(cfg, col, parent, tex_dir, h, quality):
     sh = ShoeSDF(cfg)
     c = cfg['colors']
     m_up = mats.flat('M_ShoeLeather', c['shoe_white'], rough=0.52, spec=0.45, sheen=0.1,
-                     bump=dict(scale=420.0, strength=0.08, distance=0.0006, fine=1500.0))
+                     bump=dict(scale=420.0, strength=0.08, distance=0.0006, fine=1500.0),
+                     tile_normal=('leather_n', 0.25))
     m_sole = mats.flat('M_ShoeSole', c['shoe_sole'], rough=0.62, spec=0.4,
                        bump=dict(scale=700.0, strength=0.04, distance=0.0004, fine=2000.0))
     m_blue = mats.flat('M_ShoeBlue', c['shoe_blue'], rough=0.48, spec=0.45,
-                       bump=dict(scale=420.0, strength=0.08, distance=0.0006, fine=1500.0))
+                       bump=dict(scale=420.0, strength=0.08, distance=0.0006, fine=1500.0),
+                       tile_normal=('leather_n', 0.25))
     m_strap = mats.flat('M_ShoeStrap', c['shoe_white'], rough=0.6, spec=0.35, sheen=0.3,
-                        bump=dict(scale=900.0, strength=0.12, distance=0.0005, fine=2500.0))
+                        bump=dict(scale=900.0, strength=0.12, distance=0.0005, fine=2500.0),
+                        tile_normal=('jersey_n', 0.6))
     hh = h * 0.75
     bmin, bmax = (-0.12, -0.18, -0.01), (0.12, 0.18, 0.19)
     parts = [
@@ -199,7 +202,7 @@ def build(cfg, col, parent, tex_dir, h, quality):
         for m in mat_list:
             ob.data.materials.append(m)
         mu.set_face_materials(ob, MI)
-        mu.cube_project_uv(ob, 6.0)
+        mu.cube_project_uv(ob, 5.0)
         ob.location = (side * pl['x'], pl['y'], 0.0)
         ob.rotation_euler = (0, 0, math.radians(side * pl['toe_out_deg']))
         out[name] = ob

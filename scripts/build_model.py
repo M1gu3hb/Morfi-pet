@@ -52,6 +52,8 @@ def main():
     grp_cloth = mu.empty('Clothing', collection=c_cloth, parent=root)
     grp_acc = mu.empty('Accessories', collection=c_acc, parent=root)
 
+    from morfi import textures
+    mats.load_tiles(textures.generate_all(tex, 1024 if q == 'final' else 512))
     skin = mats.skin('M_Skin', cfg['colors']['skin'])
     # ---------------------------------------------------------------- head
     head, shape = face.build_head(cfg, c_head, tex, parent=root, tex_size=4096 if q == 'final' else 2048)
@@ -83,6 +85,26 @@ def main():
     if 'laptop' not in skip:
         parts.update(assemble.build_laptop(cfg, c_acc, grp_acc, quality=q))
         print(f'[build] laptop {time.time() - t0:.1f}s')
+    # ---------------------------------------------------------------- budgets
+    # marching-cubes meshes are heavily oversampled; collapse-decimate them to
+    # per-object triangle budgets (shape is preserved, files stay manageable)
+    budgets = cfg.get('master_tris', {
+        'Body_Base': 90000, 'Hoodie': 140000, 'Hoodie_Hem': 24000, 'Hoodie_Cuff_L': 12000, 'Hoodie_Cuff_R': 12000,
+        'Tshirt': 50000, 'Tshirt_Collar': 8000, 'Tshirt_Logo': 6000, 'Shoe_L': 70000, 'Shoe_R': 70000,
+        'Glasses_Frame': 50000, 'Laptop': 30000})
+    for name, target in budgets.items():
+        ob = bpy.data.objects.get(name)
+        if ob is None:
+            continue
+        ob.data.calc_loop_triangles()
+        n = len(ob.data.loop_triangles)
+        if n > target:
+            mu.decimate(ob, target / n)
+            ob.data.shade_smooth()
+            print(f'[build] decimated {name}: {n} -> {len(ob.data.polygons)}')
+    for ob in bpy.data.objects:
+        if ob.type == 'MESH' and not ob.data.uv_layers:
+            mu.cube_project_uv(ob, 4.0)
     # ---------------------------------------------------------------- studio
     studio = mu.get_collection('Studio')
     scene.build_studio(cfg, studio)
@@ -92,7 +114,7 @@ def main():
     scene.setup_render(samples=128, res=(1145, 1374))
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
     bpy.ops.file.pack_all() if False else None
-    bpy.ops.wm.save_as_mainfile(filepath=a.out, relative_remap=True)
+    bpy.ops.wm.save_as_mainfile(filepath=a.out, relative_remap=True, compress=True)
     print(f'[build] saved {a.out} in {time.time() - t0:.1f}s')
 
 

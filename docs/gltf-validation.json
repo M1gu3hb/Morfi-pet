@@ -1,0 +1,179 @@
+{
+ "morfi_master.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 31,
+  "hints": 0,
+  "info": {
+   "triangles": 917538,
+   "vertices": 528798,
+   "materials": 19,
+   "animations": 6,
+   "extensionsUsed": [
+    "KHR_materials_clearcoat",
+    "KHR_materials_transmission",
+    "KHR_materials_specular",
+    "KHR_materials_sheen",
+    "KHR_materials_ior"
+   ]
+  },
+  "messages": []
+ },
+ "morfi_web.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 31,
+  "hints": 0,
+  "info": {
+   "triangles": 213391,
+   "vertices": 146289,
+   "materials": 19,
+   "animations": 6,
+   "extensionsUsed": [
+    "KHR_materials_clearcoat",
+    "KHR_materials_transmission",
+    "KHR_materials_specular",
+    "KHR_materials_sheen",
+    "KHR_materials_ior"
+   ]
+  },
+  "messages": []
+ },
+ "parts/morfi_body_base.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 0,
+  "hints": 0,
+  "info": {
+   "triangles": 40000,
+   "vertices": 22783,
+   "materials": 1,
+   "animations": 0,
+   "extensionsUsed": [
+    "KHR_materials_specular",
+    "KHR_materials_sheen"
+   ]
+  },
+  "messages": []
+ },
+ "parts/morfi_glasses.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 6,
+  "hints": 0,
+  "info": {
+   "triangles": 25280,
+   "vertices": 17205,
+   "materials": 2,
+   "animations": 0,
+   "extensionsUsed": [
+    "KHR_materials_clearcoat",
+    "KHR_materials_transmission",
+    "KHR_materials_specular",
+    "KHR_materials_ior"
+   ]
+  },
+  "messages": []
+ },
+ "parts/morfi_head.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 10,
+  "hints": 0,
+  "info": {
+   "triangles": 218544,
+   "vertices": 113248,
+   "materials": 4,
+   "animations": 0,
+   "extensionsUsed": [
+    "KHR_materials_transmission",
+    "KHR_materials_specular",
+    "KHR_materials_ior",
+    "KHR_materials_sheen"
+   ]
+  },
+  "messages": []
+ },
+ "parts/morfi_hoodie.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 4,
+  "hints": 0,
+  "info": {
+   "triangles": 111272,
+   "vertices": 78243,
+   "materials": 5,
+   "animations": 0,
+   "extensionsUsed": [
+    "KHR_materials_specular",
+    "KHR_materials_sheen"
+   ]
+  },
+  "messages": []
+ },
+ "parts/morfi_laptop.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 2,
+  "hints": 0,
+  "info": {
+   "triangles": 12000,
+   "vertices": 7336,
+   "materials": 1,
+   "animations": 0
+  },
+  "messages": []
+ },
+ "parts/morfi_pixels.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 0,
+  "hints": 0,
+  "info": {
+   "triangles": 20736,
+   "vertices": 11234,
+   "materials": 1,
+   "animations": 0,
+   "extensionsUsed": [
+    "KHR_materials_specular",
+    "KHR_materials_sheen"
+   ]
+  },
+  "messages": []
+ },
+ "parts/morfi_shoes.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 4,
+  "hints": 0,
+  "info": {
+   "triangles": 56000,
+   "vertices": 42117,
+   "materials": 4,
+   "animations": 0,
+   "extensionsUsed": [
+    "KHR_materials_specular",
+    "KHR_materials_sheen"
+   ]
+  },
+  "messages": []
+ },
+ "parts/morfi_tshirt.glb": {
+  "errors": 0,
+  "warnings": 0,
+  "infos": 2,
+  "hints": 0,
+  "info": {
+   "triangles": 18996,
+   "vertices": 13701,
+   "materials": 2,
+   "animations": 0,
+   "extensionsUsed": [
+    "KHR_materials_clearcoat",
+    "KHR_materials_specular",
+    "KHR_materials_sheen"
+   ]
+  },
+  "messages": []
+ }
+}

@@ -7,3 +7,4 @@ __pycache__/
 *.blend1
 *.blend@
 .DS_Store
+web/public/models/

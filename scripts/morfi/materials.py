@@ -59,6 +59,56 @@ def _micro_bump(nt, bsdf, scale=110.0, strength=0.12, distance=0.0015, fine=520.
     return bump
 
 
+TILES = {}
+
+
+def load_tiles(paths):
+    """Register tile textures {key: path} as Blender images."""
+    import os
+    for k, pth in paths.items():
+        img = bpy.data.images.get(os.path.basename(pth))
+        if img is None:
+            img = bpy.data.images.load(pth, check_existing=True)
+        img.colorspace_settings.name = 'Non-Color' if k.endswith('_n') else 'sRGB'
+        TILES[k] = img
+
+
+def normal_tex(nt, bsdf, key, strength=0.4, uv='UVMap', loc=(-650, -350)):
+    img = TILES.get(key)
+    if img is None:
+        return None
+    uvn = nt.nodes.new('ShaderNodeUVMap')
+    uvn.uv_map = uv
+    uvn.location = (loc[0] - 450, loc[1])
+    t = nt.nodes.new('ShaderNodeTexImage')
+    t.image = img
+    t.location = (loc[0] - 250, loc[1])
+    t.interpolation = 'Cubic'
+    nm = nt.nodes.new('ShaderNodeNormalMap')
+    nm.location = (loc[0] + 50, loc[1])
+    nm.uv_map = uv
+    nm.inputs['Strength'].default_value = strength
+    nt.links.new(uvn.outputs['UV'], t.inputs['Vector'])
+    nt.links.new(t.outputs['Color'], nm.inputs['Color'])
+    nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+    return nm
+
+
+def color_tex(nt, bsdf, key, uv='UVMap', loc=(-650, 250)):
+    img = TILES.get(key)
+    if img is None:
+        return None
+    uvn = nt.nodes.new('ShaderNodeUVMap')
+    uvn.uv_map = uv
+    uvn.location = (loc[0] - 450, loc[1])
+    t = nt.nodes.new('ShaderNodeTexImage')
+    t.image = img
+    t.location = (loc[0] - 250, loc[1])
+    nt.links.new(uvn.outputs['UV'], t.inputs['Vector'])
+    nt.links.new(t.outputs['Color'], bsdf.inputs['Base Color'])
+    return t
+
+
 def _image(nt, img, loc, non_color=False):
     t = nt.nodes.new('ShaderNodeTexImage')
     t.location = loc
@@ -68,7 +118,7 @@ def _image(nt, img, loc, non_color=False):
     return t
 
 
-def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.45):
+def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.45, tile_uv='UVMap'):
     m, nt, b = _new(name)
     b.inputs['Base Color'].default_value = hex_to_linear(color)
     b.inputs['Roughness'].default_value = 0.78
@@ -83,12 +133,13 @@ def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.
     if rough_img is not None:
         t = _image(nt, rough_img, (-300, 0), non_color=True)
         nt.links.new(t.outputs['Color'], b.inputs['Roughness'])
-    _micro_bump(nt, b, scale=95.0, strength=0.22, distance=0.0016)
+    if not normal_tex(nt, b, 'velvet_n', 0.30, uv=tile_uv):
+        _micro_bump(nt, b, scale=95.0, strength=0.22, distance=0.0016)
     return m
 
 
 def flat(name, color, rough=0.5, metal=0.0, sheen=0.0, coat=0.0, coat_rough=0.1, spec=0.5,
-         bump=None, base_img=None):
+         bump=None, base_img=None, tile_normal=None, tile_color=None):
     m, nt, b = _new(name)
     b.inputs['Base Color'].default_value = hex_to_linear(color)
     b.inputs['Roughness'].default_value = rough
@@ -103,7 +154,11 @@ def flat(name, color, rough=0.5, metal=0.0, sheen=0.0, coat=0.0, coat_rough=0.1,
     if base_img is not None:
         t = _image(nt, base_img, (-300, 250))
         nt.links.new(t.outputs['Color'], b.inputs['Base Color'])
-    if bump:
+    if tile_color:
+        color_tex(nt, b, tile_color)
+    if tile_normal:
+        normal_tex(nt, b, tile_normal[0], tile_normal[1])
+    elif bump:
         _micro_bump(nt, b, **bump)
     return m
 

@@ -32,6 +32,13 @@ def joint_table(cfg):
     J['neck'] = ((0, 0.010, 0.47), (0, 0.016, 0.53))
     hc = cfg['head']['center']
     J['head'] = ((0, 0.016, 0.53), (0, hc[1], hc[2] + 0.2))
+    J['pixels'] = ((-0.03, -0.01, 1.0), (-0.03, -0.01, 1.08))
+    f = cfg['face']
+    from .head import HeadShape
+    hs = HeadShape(cfg)
+    for (sx, sfx), E in zip(((-1, 'R'), (1, 'L')), hs.eye_centers):
+        Ew = np.array(hc) + E
+        J['eye.' + sfx] = (tuple(Ew), tuple(Ew + np.array([0, -0.08, 0])))
     for side, sfx in ((1, 'L'), (-1, 'R')):
         s = np.array([side, 1, 1])
         sh = np.array(b['shoulder']) * s
@@ -57,6 +64,7 @@ def joint_table(cfg):
 
 PARENTS = {
     'hips': 'root', 'spine': 'hips', 'chest': 'spine', 'neck': 'chest', 'head': 'neck',
+    'pixels': 'head', 'eye.L': 'head', 'eye.R': 'head',
 }
 for _s in ('L', 'R'):
     PARENTS.update({
@@ -90,7 +98,7 @@ def build_armature(cfg, col, parent=None):
             if base in CONNECTED and (eb[name].head - eb[par].tail).length < 1e-4:
                 eb[name].use_connect = True
         # deform flags
-        for name in ('root',):
+        for name in ('root', 'pixels', 'eye.L', 'eye.R'):
             eb[name].use_deform = False
         bpy.ops.object.mode_set(mode='OBJECT')
     for pb in ob.pose.bones:
@@ -225,7 +233,13 @@ def skin_object(ob, rig, cfg, J, prune=0.01):
     mod = ob.modifiers.new('Armature', 'ARMATURE')
     mod.object = rig
     mod.use_deform_preserve_volume = True
-    # keep the existing parent hierarchy; armature deforms in world space
+    # glTF skins expect the armature as the mesh parent
+    mw = ob.matrix_world.copy()
+    ob.parent = rig
+    ob.parent_type = 'OBJECT'
+    ob.matrix_parent_inverse = rig.matrix_world.inverted()
+    bpy.context.view_layer.update()
+    ob.matrix_world = mw
     return ob
 
 
