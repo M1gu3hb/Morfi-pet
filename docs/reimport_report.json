@@ -3,9 +3,9 @@
   "file": "exports/morfi_web.glb",
   "meshes": 27,
   "armatures": 1,
-  "triangles": 213471,
-  "materials": 19,
-  "images": 9,
+  "triangles": 215796,
+  "materials": 20,
+  "images": 12,
   "images_missing": [],
   "actions": [
    "Idle",
@@ -16,16 +16,45 @@
    "Wave"
   ],
   "bbox_min": [
-   -0.9511,
-   -1.0,
-   -1.0
+   -0.408,
+   -0.2766,
+   -0.003
   ],
   "bbox_max": [
-   0.9511,
-   1.0,
-   1.1442
+   0.408,
+   0.3186,
+   1.1429
   ],
   "height_without_pixels_expected": 1.0,
   "render": "renders/comparisons/reimport_morfi_web.png"
+ },
+ "exports/morfi_master.glb": {
+  "file": "exports/morfi_master.glb",
+  "meshes": 27,
+  "armatures": 1,
+  "triangles": 924816,
+  "materials": 20,
+  "images": 12,
+  "images_missing": [],
+  "actions": [
+   "Idle",
+   "Pose_Hero",
+   "Pose_Neutral",
+   "Run",
+   "Walk",
+   "Wave"
+  ],
+  "bbox_min": [
+   -0.408,
+   -0.2766,
+   -0.003
+  ],
+  "bbox_max": [
+   0.408,
+   0.3186,
+   1.1429
+  ],
+  "height_without_pixels_expected": 1.0,
+  "render": "renders/comparisons/reimport_morfi_master.png"
  }
 }

@@ -36,7 +36,7 @@ PARTS = {
     'shoes': ['Shoe_L', 'Shoe_R'],
     'glasses': ['Glasses_Frame', 'Glasses_Lens_L', 'Glasses_Lens_R'],
     'pixels': ['Pixel_01', 'Pixel_02', 'Pixel_03'],
-    'laptop': ['Laptop'],
+    'laptop': ['Laptop', 'Laptop_Logo'],
     'body_base': ['Body_Base'],
     'head': ['Head', 'Eye_L', 'Eye_R', 'Cornea_L', 'Cornea_R', 'Brow_L', 'Brow_R'],
 }

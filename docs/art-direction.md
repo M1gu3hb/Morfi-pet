@@ -23,7 +23,7 @@ Las referencias son renders generados individualmente, no fotos calibradas. Se e
 | Distancia horizontal | 2.5 |
 | Altura de cámara | 0.756 (mira hacia z = 0.52, inclinación ≈5.4°) |
 | Azimuts | frente 0°, perfil izq. +90°, espalda 180°, perfil der. −90°, 3/4 frontal +33°, 3/4 posterior −150° |
-| Hero (master) | −33°, lente 55 mm, distancia 2.3, altura 0.86 |
+| Hero (master) | −33°, lente 55 mm, distancia 2.3, altura 0.86, mira a z = 0.465 |
 
 Con esa cámara se ajustó la forma de la cabeza por mínimos cuadrados contra los contornos reales de la vista trasera y el perfil (error medio ≈3 px a 1145×1374).
 
@@ -70,7 +70,9 @@ Con esa cámara se ajustó la forma de la cabeza por mínimos cuadrados contra l
 
 **Tenis.** Izquierdo y derecho independientes (espejados): suela gruesa visible como banda con ranura, empeine bajo que desciende hacia la puntera, costura de puntera, panel lateral, lengüeta acolchada, dos correas redondeadas sobre la lengüeta que entran en ojales, talón cuadrado con **contrafuerte azul** de borde curvo (sube desde la suela y queda vertical atrás) y cuello blanco por encima, hueco interior real; la pierna entra por el lado interior del tenis como en las vistas de frente y espalda.
 
-**Laptop.** Objeto independiente cerrado: base + tapa con ranura de cierre, bisagra, muesca frontal, dos puertos, **dos cuadrados azules en diagonal** (no tres). En la pose neutra no se muestra; en la pose Hero cuelga del hueso `hand.R`.
+**Laptop.** Objeto independiente cerrado (≈0.20 × 0.15, tamaño medido en la imagen maestra): base + tapa con ranura de cierre, bisagra, muesca frontal, dos puertos y **dos cuadrados azules en diagonal** (no tres) como objeto hijo `Laptop_Logo`, para que la simplificación de la malla nunca los borre. En la pose neutra no se muestra; en la pose Hero va bajo el brazo derecho (hueso `hand.R`), inclinada ≈50° en su plano como en el master.
+
+**Pose hero.** Cabeza girada 22° hacia la cámara e inclinada 8°, laptop bajo el brazo derecho, puño izquierdo apoyado al frente de la sudadera, pie izquierdo abierto. Los ojos miran a la cámara.
 
 ## 5. Materiales
 

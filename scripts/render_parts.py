@@ -21,7 +21,7 @@ PARTS = {
     'tenis': (['Shoe_L', 'Shoe_R'], 35, 22),
     'lentes': (['Glasses_Frame', 'Glasses_Lens_L', 'Glasses_Lens_R'], 32, 12),
     'cubos': (['Pixel_01', 'Pixel_02', 'Pixel_03'], 20, 8),
-    'laptop': (['Laptop'], 30, 35),
+    'laptop': (['Laptop', 'Laptop_Logo'], 30, 35),
     'cuerpo_base': (['Body_Base', 'Head', 'Eye_L', 'Eye_R', 'Cornea_L', 'Cornea_R', 'Brow_L', 'Brow_R'], 0, 2),
 }
 

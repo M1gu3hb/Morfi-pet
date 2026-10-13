@@ -1,0 +1,282 @@
+{
+ "master": {
+  "triangles": 924816,
+  "objects": [
+   {
+    "name": "Body_Base",
+    "triangles": 80000,
+    "materials": 1
+   },
+   {
+    "name": "Head",
+    "triangles": 371712,
+    "materials": 1
+   },
+   {
+    "name": "Eye_R",
+    "triangles": 6768,
+    "materials": 1
+   },
+   {
+    "name": "Cornea_R",
+    "triangles": 1224,
+    "materials": 1
+   },
+   {
+    "name": "Eye_L",
+    "triangles": 6768,
+    "materials": 1
+   },
+   {
+    "name": "Cornea_L",
+    "triangles": 1224,
+    "materials": 1
+   },
+   {
+    "name": "Brow_R",
+    "triangles": 1280,
+    "materials": 1
+   },
+   {
+    "name": "Brow_L",
+    "triangles": 1280,
+    "materials": 1
+   },
+   {
+    "name": "Tshirt",
+    "triangles": 24000,
+    "materials": 1
+   },
+   {
+    "name": "Tshirt_Collar",
+    "triangles": 8000,
+    "materials": 1
+   },
+   {
+    "name": "Tshirt_Logo",
+    "triangles": 6000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie",
+    "triangles": 140000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Hem",
+    "triangles": 24000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Cuff_R",
+    "triangles": 12000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Cuff_L",
+    "triangles": 12000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Zipper",
+    "triangles": 18648,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Drawstrings",
+    "triangles": 1496,
+    "materials": 2
+   },
+   {
+    "name": "Shoe_R",
+    "triangles": 56000,
+    "materials": 4
+   },
+   {
+    "name": "Shoe_L",
+    "triangles": 56000,
+    "materials": 4
+   },
+   {
+    "name": "Glasses_Frame",
+    "triangles": 48000,
+    "materials": 1
+   },
+   {
+    "name": "Glasses_Lens_R",
+    "triangles": 640,
+    "materials": 1
+   },
+   {
+    "name": "Glasses_Lens_L",
+    "triangles": 640,
+    "materials": 1
+   },
+   {
+    "name": "Pixel_01",
+    "triangles": 6912,
+    "materials": 1
+   },
+   {
+    "name": "Pixel_02",
+    "triangles": 6912,
+    "materials": 1
+   },
+   {
+    "name": "Pixel_03",
+    "triangles": 6912,
+    "materials": 1
+   },
+   {
+    "name": "Laptop",
+    "triangles": 24000,
+    "materials": 1
+   },
+   {
+    "name": "Laptop_Logo",
+    "triangles": 2400,
+    "materials": 1
+   }
+  ]
+ },
+ "web": {
+  "triangles": 215796,
+  "objects": [
+   {
+    "name": "Body_Base",
+    "triangles": 20000,
+    "materials": 1
+   },
+   {
+    "name": "Head",
+    "triangles": 40000,
+    "materials": 1
+   },
+   {
+    "name": "Eye_R",
+    "triangles": 6768,
+    "materials": 1
+   },
+   {
+    "name": "Cornea_R",
+    "triangles": 1224,
+    "materials": 1
+   },
+   {
+    "name": "Eye_L",
+    "triangles": 6768,
+    "materials": 1
+   },
+   {
+    "name": "Cornea_L",
+    "triangles": 1224,
+    "materials": 1
+   },
+   {
+    "name": "Brow_R",
+    "triangles": 1200,
+    "materials": 1
+   },
+   {
+    "name": "Brow_L",
+    "triangles": 1200,
+    "materials": 1
+   },
+   {
+    "name": "Tshirt",
+    "triangles": 6000,
+    "materials": 1
+   },
+   {
+    "name": "Tshirt_Collar",
+    "triangles": 2000,
+    "materials": 1
+   },
+   {
+    "name": "Tshirt_Logo",
+    "triangles": 1500,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie",
+    "triangles": 36000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Hem",
+    "triangles": 6000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Cuff_R",
+    "triangles": 3000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Cuff_L",
+    "triangles": 3000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Zipper",
+    "triangles": 8000,
+    "materials": 1
+   },
+   {
+    "name": "Hoodie_Drawstrings",
+    "triangles": 1496,
+    "materials": 2
+   },
+   {
+    "name": "Shoe_R",
+    "triangles": 14000,
+    "materials": 4
+   },
+   {
+    "name": "Shoe_L",
+    "triangles": 14000,
+    "materials": 4
+   },
+   {
+    "name": "Glasses_Frame",
+    "triangles": 12000,
+    "materials": 1
+   },
+   {
+    "name": "Glasses_Lens_R",
+    "triangles": 640,
+    "materials": 1
+   },
+   {
+    "name": "Glasses_Lens_L",
+    "triangles": 640,
+    "materials": 1
+   },
+   {
+    "name": "Pixel_01",
+    "triangles": 6912,
+    "materials": 1
+   },
+   {
+    "name": "Pixel_02",
+    "triangles": 6912,
+    "materials": 1
+   },
+   {
+    "name": "Pixel_03",
+    "triangles": 6912,
+    "materials": 1
+   },
+   {
+    "name": "Laptop",
+    "triangles": 6000,
+    "materials": 1
+   },
+   {
+    "name": "Laptop_Logo",
+    "triangles": 2400,
+    "materials": 1
+   }
+  ]
+ }
+}

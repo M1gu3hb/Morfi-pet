@@ -61,7 +61,7 @@ blender -b $B --python scripts/render_views.py  -- --out renders/views --samples
 blender -b $B --python scripts/render_views.py  -- --out renders/transparent --samples 64 --transparent --hide Laptop
 blender -b $B --python scripts/render_hero.py   -- --out renders --samples 160
 blender -b $B --python scripts/render_parts.py  -- --out renders/parts --samples 64
-blender -b $B --python scripts/render_turntable.py -- --frames 192 --fps 24 --res 720x864 --samples 16 --out work/turntable
+blender -b $B --python scripts/render_turntable.py -- --frames 144 --fps 24 --res 600x720 --samples 10 --out work/turntable
 ffmpeg -y -framerate 24 -i work/turntable/f_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart renders/morfi_turntable.mp4
 
 # 4. exportar GLB (master, web, piezas) y comprobarlos

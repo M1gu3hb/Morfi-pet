@@ -73,20 +73,29 @@ def build(cfg, col, parent, quality):
     bmax = (p['w'] / 2 + 0.01, p['d'] / 2 + 0.01, 0.026)
     V, F, MI = [], [], []
     off = 0
-    for k, (fn, hh) in enumerate(((lp.base, h), (lp.lid, h), (lp.logo, 0.0006))):
-        if fn is lp.logo:
-            v, f = S.polygonize(fn, (-0.04, -0.04, 0.012), (0.04, 0.04, 0.025), hh)
-        else:
-            v, f = S.polygonize(fn, bmin, bmax, hh)
+    for k, (fn, hh) in enumerate(((lp.base, h), (lp.lid, h))):
+        v, f = S.polygonize(fn, bmin, bmax, hh)
         V.append(v)
         F.append(f + off)
-        MI += [1 if fn is lp.logo else 0] * len(f)
+        MI += [0] * len(f)
         off += len(v)
     ob = mu.fast_mesh_object('Laptop', np.vstack(V), np.vstack(F), collection=col, parent=parent)
     ob.data.materials.append(m_al)
-    ob.data.materials.append(m_logo)
     mu.set_face_materials(ob, MI)
     mu.cube_project_uv(ob, 8.0)
+    # the two blue squares: their own small exact mesh (never decimated, so they
+    # cannot melt into the lid), slightly raised above the lid surface
+    from .accessories import rounded_cube_mesh
+    z_top = p['t_base'] + p['gap'] + p['t_lid']
+    s, o = p['logo_size'] / 2, p['logo_offset']
+    lv, lf = [], []
+    for cx, cy in ((-o, o), (o, -o)):
+        v, f = rounded_cube_mesh((s, s, 0.0008), e=4.0, N=10)
+        lf.append(f + sum(len(x) for x in lv))
+        lv.append(v + np.array([cx, cy, z_top + 0.0003]))
+    logo = mu.mesh_object('Laptop_Logo', np.vstack(lv), np.vstack(lf), collection=col, parent=ob)
+    mu.assign_material(logo, m_logo)
+    mu.cube_project_uv(logo, 8.0)
     # neutral pose: resting beside Morfi's right foot (hidden in turnaround views)
     cfg_l = cfg.get('laptop_place', {})
     ob.location = cfg_l.get('loc', (-0.42, 0.02, 0.0))

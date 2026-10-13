@@ -1,0 +1,32 @@
+{
+ "front": {
+  "reference": "02_Morfi_frente.png",
+  "silhouette_iou": 0.8475,
+  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+ },
+ "profile_left": {
+  "reference": "03_Morfi_perfil_izquierdo.png",
+  "silhouette_iou": 0.8499,
+  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+ },
+ "back": {
+  "reference": "04_Morfi_espalda.png",
+  "silhouette_iou": 0.8856,
+  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+ },
+ "profile_right": {
+  "reference": "05_Morfi_perfil_derecho.png",
+  "silhouette_iou": 0.8213,
+  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+ },
+ "three_quarter_front": {
+  "reference": "06_Morfi_tres_cuartos_frontal.png",
+  "silhouette_iou": 0.7862,
+  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+ },
+ "three_quarter_back": {
+  "reference": "07_Morfi_tres_cuartos_posterior.png",
+  "silhouette_iou": 0.7963,
+  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+ }
+}

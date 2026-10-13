@@ -2,12 +2,12 @@
  "morfi_master.glb": {
   "errors": 0,
   "warnings": 0,
-  "infos": 31,
+  "infos": 33,
   "hints": 0,
   "info": {
-   "triangles": 917538,
-   "vertices": 528798,
-   "materials": 19,
+   "triangles": 924816,
+   "vertices": 531386,
+   "materials": 20,
    "animations": 6,
    "extensionsUsed": [
     "KHR_materials_clearcoat",
@@ -22,12 +22,12 @@
  "morfi_web.glb": {
   "errors": 0,
   "warnings": 0,
-  "infos": 31,
+  "infos": 33,
   "hints": 0,
   "info": {
-   "triangles": 213391,
-   "vertices": 146289,
-   "materials": 19,
+   "triangles": 215796,
+   "vertices": 145740,
+   "materials": 20,
    "animations": 6,
    "extensionsUsed": [
     "KHR_materials_clearcoat",
@@ -46,7 +46,7 @@
   "hints": 0,
   "info": {
    "triangles": 40000,
-   "vertices": 22783,
+   "vertices": 22930,
    "materials": 1,
    "animations": 0,
    "extensionsUsed": [
@@ -63,7 +63,7 @@
   "hints": 0,
   "info": {
    "triangles": 25280,
-   "vertices": 17205,
+   "vertices": 17384,
    "materials": 2,
    "animations": 0,
    "extensionsUsed": [
@@ -82,7 +82,7 @@
   "hints": 0,
   "info": {
    "triangles": 218544,
-   "vertices": 113248,
+   "vertices": 113228,
    "materials": 4,
    "animations": 0,
    "extensionsUsed": [
@@ -100,8 +100,8 @@
   "infos": 4,
   "hints": 0,
   "info": {
-   "triangles": 111272,
-   "vertices": 78243,
+   "triangles": 113496,
+   "vertices": 78973,
    "materials": 5,
    "animations": 0,
    "extensionsUsed": [
@@ -114,12 +114,12 @@
  "parts/morfi_laptop.glb": {
   "errors": 0,
   "warnings": 0,
-  "infos": 2,
+  "infos": 4,
   "hints": 0,
   "info": {
-   "triangles": 12000,
-   "vertices": 7336,
-   "materials": 1,
+   "triangles": 14400,
+   "vertices": 8630,
+   "materials": 2,
    "animations": 0
   },
   "messages": []
@@ -148,7 +148,7 @@
   "hints": 0,
   "info": {
    "triangles": 56000,
-   "vertices": 42117,
+   "vertices": 41181,
    "materials": 4,
    "animations": 0,
    "extensionsUsed": [
@@ -164,8 +164,8 @@
   "infos": 2,
   "hints": 0,
   "info": {
-   "triangles": 18996,
-   "vertices": 13701,
+   "triangles": 19000,
+   "vertices": 13585,
    "materials": 2,
    "animations": 0,
    "extensionsUsed": [
