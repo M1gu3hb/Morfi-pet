@@ -8,7 +8,7 @@ Modelo 3D completo de **Morfi**, la mascota de Astral Morphiq Systems, reconstru
 | GLB master | `exports/morfi_master.glb` (alta resolución, texturas 2K–4K) |
 | GLB web | `exports/morfi_web.glb` (ligero, texturas JPEG ≤2K) |
 | Piezas sueltas | `exports/parts/morfi_*.glb` (sudadera, playera, tenis, lentes, cubos, laptop, cuerpo base, cabeza) |
-| Renders | `renders/` (6 vistas, hero, hero con wordmark, transparentes, piezas, comparativas, giro 360°) |
+| Renders | `renders/` (6 vistas, hero, hero con wordmark, transparentes, piezas, comparativas, giro 360° `morfi_turntable.mp4`, vista previa de animaciones) |
 | Visor | `web/` (Three.js + TypeScript + Vite) |
 | Documentación | `docs/art-direction.md` (decisiones y medidas), `docs/validation.md` (resultados de validación) |
 

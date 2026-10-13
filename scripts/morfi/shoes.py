@@ -94,11 +94,26 @@ class ShoeSDF:
         q = np.sqrt((x / (o['rx'] + 0.006)) ** 2 + ((y - o['cy']) / (o['ry'] + 0.006)) ** 2) * (o['rx'] + 0.006) - (o['rx'] + 0.006)
         return np.sqrt(q * q + (z - zc) ** 2) - 0.0085
 
+    def collar_roll(self, P):
+        """Padded collar: a soft tube following the top edge of the opening
+        around the heel and sides (the tongue closes the front)."""
+        x, y, z = P
+        o = self.p['opening']
+        cx = o.get('cx', 0.0)
+        rx, ry = o['rx'] + 0.003, o['ry'] + 0.003
+        m = min(rx, ry)
+        q = np.sqrt(((x - cx) / rx) ** 2 + ((y - o['cy']) / ry) ** 2) * m - m
+        zc = self.top_height(x, y) - 0.006
+        roll = np.sqrt(q * q + (z - zc) ** 2) - self.p.get('collar_r', 0.0085)
+        return S.smax(roll, (o['cy'] - 0.45 * ry) - y, 0.012)
+
     def upper(self, P):
         x, y, z = P
         d = self.upper_outer(P)
         cav, hole = self.cavity(P)
         d = S.smax(d, -cav, 0.010)
+        if self.p.get('collar_r', 0.0) > 0:
+            d = S.smin(d, self.collar_roll(P), 0.006)
         # toe-cap seam groove
         ys = -0.092 - 0.035 * (x / 0.08) ** 2
         seam = np.maximum(np.abs(y - ys) - 0.0011, -d - 0.0018)
@@ -115,13 +130,15 @@ class ShoeSDF:
         x, y, z = P
         uo = self.upper_outer(P)
         cx = self.p['opening'].get('cx', 0.0)
-        pad = np.maximum(uo - 0.0035, -(uo + 0.004))
+        tg = self.p.get('tongue', {})
+        pad = np.maximum(uo - tg.get('thick', 0.0035), -(uo + 0.004))
         pad = S.smax(pad, np.abs(x - cx * 0.6) - 0.035, 0.006)
         pad = S.smax(pad, y - 0.006, 0.006)
         pad = S.smax(pad, -0.078 - y, 0.01)
-        # upper end of the tongue standing in front of the shin
-        R = S.rot_matrix(-25, 0, 0)
-        top = S.sd_ellipsoid(P, (cx * 0.8, 0.002, self.p['opening']['z'] + 0.008), (0.035, 0.010, 0.022), R=R)
+        # padded upper end of the tongue standing in front of the shin
+        R = S.rot_matrix(tg.get('tilt', -25.0), 0, 0)
+        top = S.sd_ellipsoid(P, (cx * 0.8, tg.get('y', 0.002), self.p['opening']['z'] + tg.get('dz', 0.008)),
+                             tuple(tg.get('r', (0.035, 0.010, 0.022))), R=R)
         return S.smin(pad, top, 0.012)
 
     def blue_panel(self, P):
@@ -155,7 +172,7 @@ class ShoeSDF:
             # rounded elastic band lying on the vamp (rounded-rect cross-section)
             q = np.maximum(np.abs(y - ys) - (p['strap_w'] - t), 0.0)
             band = np.sqrt(q * q + (uo - t) ** 2) - t
-            band = S.smax(band, np.abs(x) - 0.060, 0.006)
+            band = S.smax(band, np.abs(x) - p.get('strap_end', 0.060), 0.008)
             band = np.maximum(band, 0.06 - z)
             d = band if d is None else np.minimum(d, band)
         return d
@@ -164,9 +181,11 @@ class ShoeSDF:
         d = None
         for ys in self.p['straps_y']:
             for side in (-1, 1):
-                c = (side * 0.066, ys, self.top_height(np.array([0.066]), np.array([ys]))[0] - 0.016)
+                ey = self.p.get('eyelet', {})
+                ex = ey.get('x', 0.066)
+                c = (side * ex, ys, self.top_height(np.array([ex]), np.array([ys]))[0] - ey.get('drop', 0.016))
                 R = S.rot_matrix(0, 90 * side, 0)
-                t = S.sd_torus(P, c, 0.0105, 0.0034, Rm=R)
+                t = S.sd_torus(P, c, ey.get('R', 0.0105), ey.get('r', 0.0034), Rm=R)
                 d = t if d is None else np.minimum(d, t)
         return d
 

@@ -73,7 +73,14 @@ La altura sin cubos es 1.0 (convención del proyecto) y 1.143 con los cubos.
 
 `cd web && npm run build && npm run test:e2e`: Chromium headless (SwiftShader, sin GPU) carga el GLB real, recorre las vistas, la pose hero, la animación de caminar, el preset cuerpo base, los modos gris/alambre, el fondo oscuro, la captura PNG y una ventana de móvil (390×844). Falla ante cualquier error de consola. Resultado: **SMOKE TEST PASSED** — 215 796 triángulos · 34 mallas · 20 materiales · 6 animaciones. Capturas en `renders/viewer/`.
 
-## 5. Invariantes del encargo
+## 5. Animaciones y giro 360°
+
+- `renders/animations/animaciones_preview_workbench.png`: fotogramas de Idle, Caminar, Correr y Saludar (sombreado rápido de Workbench, sin texturas ni cristales) para revisar la deformación.
+- Al revisarlas se detectó que el dobladillo de la sudadera se despegaba al saludar y correr (recibía influencia de los huesos del brazo porque las manos cuelgan a su altura). Se corrigió en `rig.compute_weights`: los brazos solo influyen fuera de la columna del cuerpo o por encima del codo.
+- También se detectó que girar los huesos de los ojos hacia la cámara se perdía al renderizar (la acción activa vuelve a aplicar sus claves) y la córnea quedaba desalineada en 3/4; ahora se giran los objetos del ojo respecto a su hueso.
+- `renders/morfi_turntable.mp4`: giro completo de 6 s (144 fotogramas, 24 fps, 600×720, Cycles) con los ojos siguiendo al espectador mientras la cara es visible.
+
+## 6. Invariantes del encargo
 
 | Invariante | Estado |
 |---|---|
@@ -86,7 +93,7 @@ La altura sin cubos es 1.0 (convención del proyecto) y 1.143 con los cubos.
 | Manos con pulgar + 3 dedos | ✔ |
 | Ropa separada, con grosor y holgura reales | ✔ cada prenda es un objeto propio y se puede ocultar |
 
-## 6. Diferencias pendientes (honestas)
+## 7. Diferencias pendientes (honestas)
 
 Las 15 imágenes de referencia son renders de IA generados por separado; **no son vistas de un mismo objeto 3D** y se contradicen entre sí. Un modelo físico único no puede reproducirlas todas píxel a píxel. Las diferencias que quedan, y por qué:
 
