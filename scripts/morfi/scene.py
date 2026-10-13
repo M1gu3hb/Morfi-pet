@@ -190,8 +190,8 @@ EYE_LOOK = {'front': 1.0, 'three_quarter_front': 1.0, 'profile_left': 0.35, 'pro
 
 def eyes_look(cam_loc, k):
     """Turn both eyes toward a camera (same rotation for both, so the modelled
-    convergence is kept). Works on the rigged file (eye.L/eye.R pose bones) or
-    on an unrigged build (Eye_* objects). Returns a restore() callable.
+    convergence is kept). Works on the rigged file and on an unrigged build.
+    Returns a restore() callable.
     """
     from mathutils import Matrix, Vector
     eyes = [bpy.data.objects.get('Eye_L'), bpy.data.objects.get('Eye_R')]
@@ -205,24 +205,18 @@ def eyes_look(cam_loc, k):
     to_cam = (Vector(cam_loc) - mid).normalized()
     look = fwd.slerp(to_cam, k)
     rq = fwd.rotation_difference(look)
-    rig = bpy.data.objects.get('Morfi_Rig')
+    # Rotate the eye objects themselves (their transform relative to the eye
+    # bone). Rotating the pose bones would be undone at render time, when the
+    # active action (whose keys include every bone) is evaluated again.
     undo = []
     for e, c in zip(eyes, cs):
         M = Matrix.Translation(c) @ rq.to_matrix().to_4x4() @ Matrix.Translation(-c)
-        if rig is not None and e.parent == rig and e.parent_type == 'BONE':
-            pb = rig.pose.bones[e.parent_bone]
-            undo.append(('bone', pb, pb.matrix_basis.copy()))
-            pb.matrix = rig.matrix_world.inverted() @ M @ rig.matrix_world @ pb.matrix
-        else:
-            undo.append(('obj', e, e.matrix_world.copy()))
-            e.matrix_world = M @ e.matrix_world
+        undo.append((e, e.matrix_basis.copy()))
+        e.matrix_world = M @ e.matrix_world
     bpy.context.view_layer.update()
 
     def restore():
-        for kind, ob, old in undo:
-            if kind == 'bone':
-                ob.matrix_basis = old
-            else:
-                ob.matrix_world = old
+        for ob, old in undo:
+            ob.matrix_basis = old
         bpy.context.view_layer.update()
     return restore

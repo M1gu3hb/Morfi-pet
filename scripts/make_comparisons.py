@@ -102,6 +102,23 @@ def main():
         sheet.paste(label(r, 'Referencia maestra 00'), (0, 0))
         sheet.paste(label(h, 'Render hero + wordmark'), (W, 0))
         sheet.resize((W, H // 2), Image.LANCZOS).save(os.path.join(OUT, 'cmp_hero_master.png'))
+    # each garment / accessory next to its reference sheet
+    parts = [('sudadera', '08_Morfi_sudadera'), ('playera', '09_Morfi_playera'), ('tenis', '10_Morfi_tenis'),
+             ('lentes', '11_Morfi_lentes'), ('cubos', '12_Morfi_tres_cubos'), ('laptop', '13_Morfi_laptop'),
+             ('cuerpo_base', '14_Morfi_cuerpo_base')]
+    for key, ref in parts:
+        pp = os.path.join(ROOT, 'renders', 'parts', key + '.png')
+        if not os.path.exists(pp):
+            continue
+        r = Image.open(os.path.join(REF, ref + '.png')).convert('RGB')
+        p_ = Image.open(pp).convert('RGB')
+        H = 700
+        r = r.resize((int(r.width * H / r.height), H), Image.LANCZOS)
+        p_ = p_.resize((int(p_.width * H / p_.height), H), Image.LANCZOS)
+        sheet = Image.new('RGB', (r.width + p_.width, H), 'white')
+        sheet.paste(label(r, f'Referencia {ref}.png'), (0, 0))
+        sheet.paste(label(p_, f'Pieza 3D ({key})'), (r.width, 0))
+        sheet.save(os.path.join(OUT, f'cmp_part_{key}.png'))
     with open(os.path.join(ROOT, 'docs', 'metrics.json'), 'w') as f:
         json.dump(metrics, f, indent=1)
 
