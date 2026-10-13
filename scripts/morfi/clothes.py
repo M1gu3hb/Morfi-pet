@@ -143,6 +143,15 @@ class Garments:
         for k, t in enumerate((0.012, 0.034, 0.058)):
             c = cs - n * t
             d = S.smin(d, S.sd_sphere(P, c, r[2] + bu * (1.0 if k % 2 == 0 else 0.6)), 0.012)
+        # soft horizontal fold rings along the forearm part of the sleeve
+        fa = p.get('sleeve_folds', 0.0)
+        if fa:
+            ax = cs - el
+            L = np.linalg.norm(ax)
+            ax = ax / L
+            t = ((P[0] - el[0]) * ax[0] + (P[1] - el[1]) * ax[1] + (P[2] - el[2]) * ax[2]) / L
+            ring = np.where((t > 0.35) & (t < 0.98), np.cos(t * 2 * math.pi * 2.2 + 0.4), 0.0)
+            d = d - fa * ring * S.smoothstep(0.35, 0.55, t)
         # flat end where the cuff starts
         d = np.maximum(d, (P[0] - cs[0]) * n[0] + (P[1] - cs[1]) * n[1] + (P[2] - cs[2]) * n[2] - 0.004)
         return d
@@ -164,6 +173,10 @@ class Garments:
         p = self.p
         d = self.body.torso(P) - 0.030
         d = S.smin(d, self.box(P), 0.03)
+        # fabric bloused over the gathered waistband
+        z1 = p['hem']['z1']
+        roll = np.exp(-((P[2] - (z1 + 0.018)) / 0.016) ** 2)
+        d = d - p.get('blouse', 0.0) * roll
         for side in (-1, 1):
             d = S.smin(d, self.sleeve(P, side), 0.035)
         return d
@@ -212,13 +225,19 @@ class Garments:
 
     # ------------------------------------------------------------ bands
     def hem_band(self, P):
+        """Vertical ribbed waistband, gathered slightly toward the bottom."""
         h = self.p['hem']
-        outer = self.hoodie_outer(P) + h['inset'] * S.smoothstep(h['z1'], h['z0'], P[2])
+        x, y, z = P
+        t = np.clip((h['z1'] - z) / (h['z1'] - h['z0']), 0, 1)
+        a = h['a'] - h['inset'] * t
+        b = h['b'] - h['inset'] * t
+        rho = (np.abs(x / a) ** h['p'] + np.abs((y - h['cy']) / b) ** h['p']) ** (1 / h['p'])
+        outer = (rho - 1.0) * np.minimum(a, b) - 0.003 * np.sin(t * math.pi)
         d = np.maximum(outer, -(outer + h['thick']))
-        d = S.smax(d, h['z0'] - P[2], 0.004)
-        d = np.maximum(d, P[2] - h['z1'])
-        xo = self.open_x(P[2])
-        d = np.maximum(d, -np.maximum(np.abs(P[0]) - xo, P[1] + 0.03))
+        d = S.smax(d, h['z0'] - z, 0.005)
+        d = S.smax(d, z - h['z1'], 0.003)
+        xo = self.open_x(z)
+        d = np.maximum(d, -np.maximum(np.abs(x) - xo, y + 0.03))
         return d
 
     def cuff_local(self, P):
@@ -398,14 +417,15 @@ def build(cfg, col, parent, tex_dir, h, quality):
     # --- zipper
     zv, zf = [], []
     off = 0
-    tooth_v, tooth_f = rounded_cube_mesh((0.0052, 0.0034, 0.0017), e=3.0, N=3)
+    tooth_v, tooth_f = rounded_cube_mesh((0.0060, 0.0040, 0.0019), e=3.0, N=3)
     zs = np.arange(p['zip_z'][0], p['zip_z'][1], p['zip_pitch'])
     for side in (-1, 1):
         xs = side * (g.open_x(zs) + 0.0008)
         origins = np.stack([xs, np.full_like(zs, -0.40), zs], 1)
-        hits, ok = S.raycast(g.hoodie, origins, np.tile([0, 1.0, 0], (len(zs), 1)), tmax=0.5)
+        both = lambda P: np.minimum(g.hoodie(P), g.hem_band(P))
+        hits, ok = S.raycast(both, origins, np.tile([0, 1.0, 0], (len(zs), 1)), tmax=0.5)
         for i, (hp, k) in enumerate(zip(hits, ok)):
-            if not k:
+            if not k or hp[1] > -0.06:
                 continue
             stagger = 0.5 * p['zip_pitch'] if side > 0 else 0.0
             c = np.array([side * (g.open_x(hp[2]) - 0.0030), hp[1] + 0.0042, hp[2] + stagger])

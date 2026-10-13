@@ -98,6 +98,9 @@ def build_glasses(cfg, shape, head, col, h=0.0013):
                     ys.append(hit[0].y - _bend(np.array([x]), gp['wrap'])[0])
     y_back = min(ys) - gp['clearance']
     yg = y_back - gp['depth_half']
+    # the lens plates must stay in front of the bulging eyeballs
+    eye_front = min(shape.eye_centers[:, 1]) - shape.eye_R
+    yg = min(yg, eye_front - 0.0045)
     gp['yg'] = yg
     frame_m = mats.flat('M_GlassesFrame', cfg['colors']['frame'], rough=0.42, coat=0.06, coat_rough=0.3, spec=0.35)
     lens_m = mats.glass('M_GlassesLens')

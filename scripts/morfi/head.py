@@ -198,15 +198,32 @@ class HeadShape:
     def final_points(self, P, N):
         disp = self.relief(P, N)
         Q = P + N * disp[:, None]
-        wL, wR = self.eye_blend(P)
-        for w, E in ((wL, self.eye_centers[0]), (wR, self.eye_centers[1])):
+        # eye region: the skin conforms to a shell concentric with the eyeball
+        # (lid thickness outside the opening, just behind the eyeball inside
+        # it) and blends back into the face away from the opening
+        lid = self.f.get('lid_thickness', 0.0035)
+        r0, r1 = self.f.get('dome_blend', [0.010, 0.034])
+        for side, E in ((-1, self.eye_centers[0]), (1, self.eye_centers[1])):
+            es = self.eye_sdf(P[:, 0], P[:, 2], side)
+            v = Q - E
+            r = np.linalg.norm(v, axis=1)
+            fwd = -v[:, 1] / np.maximum(r, 1e-9)
+            w = smoothstep(r1, r0, es) * smoothstep(0.1, 0.35, fwd) * (P[:, 1] < -0.05)
             m = w > 0
             if not np.any(m):
                 continue
-            v = Q[m] - E
-            r = np.linalg.norm(v, axis=1, keepdims=True)
-            onball = E + v / r * (self.eye_R - 0.004)
-            Q[m] = Q[m] * (1 - w[m, None]) + onball * w[m, None]
+            inside = smoothstep(0.003, -0.011, es[m])
+            rt = (self.eye_R + lid) * (1 - inside) + (self.eye_R - 0.004) * inside
+            Qd = E + v[m] / r[m, None] * rt[:, None]
+            Q[m] = Q[m] * (1 - w[m, None]) + Qd * w[m, None]
+            # never let the eyeball poke through the skin outside the opening
+            v = Q - E
+            r = np.linalg.norm(v, axis=1)
+            fwd = -v[:, 1] / np.maximum(r, 1e-9)
+            k = (es > -0.002) & (fwd > 0.05) & (r < self.eye_R + lid) & (P[:, 1] < -0.05)
+            if np.any(k):
+                rr = self.eye_R + lid * smoothstep(-0.002, 0.004, es[k])
+                Q[k] = E + v[k] / r[k, None] * np.maximum(r[k], rr)[:, None]
         return Q
 
     # ------------------------------------------------------------ mesh
@@ -292,11 +309,11 @@ class HeadShape:
             c = c * (1 - inside[:, None]) + mc * inside[:, None]
             # mouth corner dimples (short dark ticks curling upward)
             for side in (-1, 1):
-                cx = side * (f['mouth_half_width'] + 0.002)
-                cz = f['mouth_center_z'] + 0.004
+                cx = side * (f['mouth_half_width'] + 0.0005)
+                cz = f['mouth_center_z'] + 0.002
                 dx, dz = x - cx, z - cz
-                tick = np.exp(-((dx * side - 0.003) / 0.004) ** 2 - ((dz - 0.002) / 0.0045) ** 2)
-                tick = np.clip(tick * 0.55, 0, 0.55) * frontish
+                tick = np.exp(-((dx * side - 0.0015) / 0.0025) ** 2 - ((dz - 0.0015) / 0.0035) ** 2)
+                tick = np.clip(tick * 0.35, 0, 0.35) * frontish
                 c = c * (1 - tick[:, None]) + mouth_c[None, :] * tick[:, None]
             r = 0.78 * (1 - inside) + 0.42 * inside
             img[py0:py0 + npx, px0:px0 + npx] = c.reshape(npx, npx, 3)

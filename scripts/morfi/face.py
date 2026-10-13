@@ -90,7 +90,7 @@ def build_eyes(cfg, shape, head, col, tex_dir):
         eyes.append(ob)
         # cornea: thin clear cap over the front of the eyeball
         cv, cfc, _ = _eyeball_mesh(R + 0.0016, seg=72, rings=48)
-        keep = cv[:, 1] < -(R + 0.0016) * 0.35
+        keep = cv[:, 1] < -(R + 0.0016) * 0.80
         idx = np.nonzero(keep)[0]
         remap = -np.ones(len(cv), int)
         remap[idx] = np.arange(len(idx))

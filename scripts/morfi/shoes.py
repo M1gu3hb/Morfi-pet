@@ -116,7 +116,7 @@ class ShoeSDF:
         pad = S.smax(pad, -0.078 - y, 0.01)
         # upper end of the tongue standing in front of the shin
         R = S.rot_matrix(-25, 0, 0)
-        top = S.sd_ellipsoid(P, (0.0, 0.002, 0.120), (0.033, 0.010, 0.024), R=R)
+        top = S.sd_ellipsoid(P, (0.0, 0.002, 0.108), (0.033, 0.010, 0.022), R=R)
         return S.smin(pad, top, 0.012)
 
     def blue_panel(self, P):

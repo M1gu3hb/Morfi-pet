@@ -25,8 +25,8 @@
  "face": {
   "eye_center_x": 0.15,
   "eye_center_z": -0.045,
-  "eye_radius": 0.12,
-  "eye_protrusion": 0.022,
+  "eye_radius": 0.125,
+  "eye_protrusion": 0.018,
   "eye_open_half": [
    0.079,
    0.0735
@@ -34,11 +34,11 @@
   "eye_open_exponent": 2.4,
   "eye_look_target": [
    0.0,
-   -0.65,
-   0.045
+   -0.85,
+   0.012
   ],
-  "iris_angle_deg": 30.0,
-  "pupil_angle_deg": 18.5,
+  "iris_angle_deg": 29.5,
+  "pupil_angle_deg": 18.0,
   "brow_center": [
    0.147,
    0.106
@@ -58,7 +58,8 @@
   "brow_arch": 0.027,
   "brow_height": 0.008,
   "nose_amp": 0.0045,
-  "nose_tint": 0.45
+  "nose_tint": 0.45,
+  "nose_tip_z": -0.084
  },
  "colors": {
   "skin": "#0757F5",
@@ -73,7 +74,7 @@
   "iris_mid": "#1452D4",
   "iris_inner": "#3C82F0",
   "pupil": "#050608",
-  "hoodie": "#1D1E23",
+  "hoodie": "#212227",
   "tshirt": "#D6D7DA",
   "tshirt_logo": "#1F6BFF",
   "frame": "#070E20",
@@ -124,8 +125,8 @@
  "shoes": {
   "upper_top": {
    "toe": 0.088,
-   "instep": 0.116,
-   "collar": 0.136
+   "instep": 0.108,
+   "collar": 0.127
   },
   "opening": {
    "cy": 0.05,
@@ -181,23 +182,27 @@
   "cuff_inner": 0.04,
   "sleeve_bunch": 0.01,
   "hem": {
-   "z0": 0.192,
-   "z1": 0.24,
-   "inset": 0.016,
-   "thick": 0.014
+   "z0": 0.212,
+   "z1": 0.255,
+   "inset": 0.012,
+   "thick": 0.014,
+   "a": 0.2,
+   "b": 0.158,
+   "cy": -0.016,
+   "p": 2.7
   },
   "hood": {
    "c": [
     0.0,
-    0.142,
-    0.452
+    0.148,
+    0.447
    ],
    "r": [
-    0.206,
-    0.066,
-    0.118
+    0.208,
+    0.074,
+    0.112
    ],
-   "tip_z": 0.352,
+   "tip_z": 0.362,
    "slope": 0.62,
    "rx": 10.0,
    "v_soft": 0.06
@@ -216,7 +221,18 @@
    "hh": 0.049,
    "raise": 0.0015,
    "r_in": 0.035
-  }
+  },
+  "cord": {
+   "x": 0.1,
+   "z_top": 0.468,
+   "z_knot": 0.428,
+   "z_tip": 0.388,
+   "r": 0.0045,
+   "aglet_r": 0.007
+  },
+  "shirt_hem_z": 0.232,
+  "blouse": 0.01,
+  "sleeve_folds": 0.0035
  },
  "laptop_place": {
   "loc": [
@@ -242,9 +258,9 @@
    0.264
   ],
   "leg_r": [
-   0.058,
-   0.053,
-   0.048
+   0.054,
+   0.049,
+   0.046
   ],
   "knee": [
    0.108,
@@ -273,6 +289,18 @@
     0.036
    ],
    "rz": -6.0
+  },
+  "pelvis": {
+   "c": [
+    0.0,
+    0.004,
+    0.212
+   ],
+   "r": [
+    0.138,
+    0.106,
+    0.07
+   ]
   }
  },
  "lights": {

@@ -114,6 +114,9 @@ def eye(name, img):
     nt.links.new(t.outputs['Color'], b.inputs['Base Color'])
     b.inputs['Roughness'].default_value = 0.45
     b.inputs['Specular IOR Level'].default_value = 0.0
+    # cartoon sclera stays bright on the shaded side: a little self light
+    nt.links.new(t.outputs['Color'], b.inputs['Emission Color'])
+    b.inputs['Emission Strength'].default_value = 0.22
     return m
 
 
@@ -152,7 +155,7 @@ def glass(name='M_Lens'):
     gl = nt.nodes.new('ShaderNodeBsdfGlossy')
     gl.inputs['Roughness'].default_value = 0.015
     fr = nt.nodes.new('ShaderNodeFresnel')
-    fr.inputs['IOR'].default_value = 1.45
+    fr.inputs['IOR'].default_value = 1.18
     thin = nt.nodes.new('ShaderNodeMixShader')
     nt.links.new(fr.outputs['Fac'], thin.inputs['Fac'])
     nt.links.new(tr.outputs['BSDF'], thin.inputs[1])
