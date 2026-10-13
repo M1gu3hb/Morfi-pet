@@ -27,7 +27,9 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=a.glb)
     sc = bpy.context.scene
-    meshes = [o for o in sc.objects if o.type == 'MESH']
+    # the importer adds helper objects (bone shapes) to a 'glTF_not_exported' collection
+    meshes = [o for o in sc.objects if o.type == 'MESH'
+              and not any(c.name.startswith('glTF_not_exported') for c in o.users_collection)]
     arms = [o for o in sc.objects if o.type == 'ARMATURE']
     tris = 0
     missing_tex = []
@@ -57,7 +59,10 @@ def main():
         'bbox_min': [round(v, 4) for v in lo], 'bbox_max': [round(v, 4) for v in hi],
         'height_without_pixels_expected': 1.0,
     }
-    # quick studio render of the re-imported asset
+    # quick studio render of the re-imported asset (rest pose; the laptop belongs to the hero pose)
+    for o in sc.objects:
+        if o.name.startswith('Laptop'):
+            o.hide_render = True
     cd = bpy.data.cameras.new('C')
     cd.lens = 65.2
     cd.sensor_fit = 'VERTICAL'

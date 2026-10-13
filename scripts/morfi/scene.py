@@ -75,7 +75,7 @@ def build_studio(cfg, col):
         ob.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
         return ob
     L = cfg.get('lights', {})
-    area('Light_Key', L.get('key_loc', (-2.2, -3.0, 2.9)), (0, 0, 0.6), L.get('key_size', 2.6), L.get('key_power', 95.0))
+    area('Light_Key', L.get('key_loc', (-2.2, -3.0, 2.9)), L.get('key_target', (0, 0, 0.5)), L.get('key_size', 2.6), L.get('key_power', 95.0))
     area('Light_Fill', L.get('fill_loc', (3.0, -2.4, 1.3)), (0, 0, 0.5), L.get('fill_size', 3.0), L.get('fill_power', 30.0))
     area('Light_Rim', L.get('rim_loc', (1.2, 2.6, 2.6)), (0, 0, 0.7), L.get('rim_size', 2.0), L.get('rim_power', 45.0))
     area('Light_Top', L.get('top_loc', (0.0, -0.6, 3.6)), (0, 0, 0.5), L.get('top_size', 3.0), L.get('top_power', 30.0))
@@ -180,3 +180,49 @@ def make_camera(name, az_deg, cfg, col, target=None, dist=None, height=None, len
     d = Vector(target) - Vector(ob.location)
     ob.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
     return ob
+
+
+# how much the eyes turn toward each camera (0 = modelled forward gaze, 1 = at the lens).
+# The references always show Morfi looking at the viewer in front / 3-4 shots.
+EYE_LOOK = {'front': 1.0, 'three_quarter_front': 1.0, 'profile_left': 0.35, 'profile_right': 0.35,
+            'back': 0.0, 'three_quarter_back': 0.0, 'hero': 1.0}
+
+
+def eyes_look(cam_loc, k):
+    """Turn both eyes toward a camera (same rotation for both, so the modelled
+    convergence is kept). Works on the rigged file (eye.L/eye.R pose bones) or
+    on an unrigged build (Eye_* objects). Returns a restore() callable.
+    """
+    from mathutils import Matrix, Vector
+    eyes = [bpy.data.objects.get('Eye_L'), bpy.data.objects.get('Eye_R')]
+    if k <= 0 or any(e is None for e in eyes):
+        return lambda: None
+    bpy.context.view_layer.update()
+    cs = [e.matrix_world.translation.copy() for e in eyes]
+    ds = [-(e.matrix_world.to_3x3() @ Vector((0, 1, 0))).normalized() for e in eyes]
+    mid = (cs[0] + cs[1]) / 2
+    fwd = (ds[0] + ds[1]).normalized()
+    to_cam = (Vector(cam_loc) - mid).normalized()
+    look = fwd.slerp(to_cam, k)
+    rq = fwd.rotation_difference(look)
+    rig = bpy.data.objects.get('Morfi_Rig')
+    undo = []
+    for e, c in zip(eyes, cs):
+        M = Matrix.Translation(c) @ rq.to_matrix().to_4x4() @ Matrix.Translation(-c)
+        if rig is not None and e.parent == rig and e.parent_type == 'BONE':
+            pb = rig.pose.bones[e.parent_bone]
+            undo.append(('bone', pb, pb.matrix_basis.copy()))
+            pb.matrix = rig.matrix_world.inverted() @ M @ rig.matrix_world @ pb.matrix
+        else:
+            undo.append(('obj', e, e.matrix_world.copy()))
+            e.matrix_world = M @ e.matrix_world
+    bpy.context.view_layer.update()
+
+    def restore():
+        for kind, ob, old in undo:
+            if kind == 'bone':
+                ob.matrix_basis = old
+            else:
+                ob.matrix_world = old
+        bpy.context.view_layer.update()
+    return restore

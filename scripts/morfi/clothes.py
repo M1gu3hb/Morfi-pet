@@ -34,8 +34,8 @@ DEFAULT = {
     "hood": {"c": [0.0, 0.168, 0.432], "r": [0.200, 0.068, 0.100], "tip_z": 0.348, "slope": 0.60, "rx": 12.0},
     "collar": {"c": [0.0, 0.040, 0.472], "R": [0.130, 0.120], "r": 0.036, "tilt": 12.0},
     "pocket": {"cx": 0.143, "cz": 0.290, "hw": 0.048, "hh": 0.049, "raise": 0.0022, "r_in": 0.035},
-    "zip_z": [0.200, 0.466], "zip_pitch": 0.0042,
-    "slider_z": 0.214,
+    "zip_z": [0.186, 0.466], "zip_pitch": 0.0058, "zip_tooth": [0.0052, 0.0042, 0.0025],
+    "slider_z": 0.200,
     "cord": {"x": 0.100, "z_top": 0.468, "z_knot": 0.436, "z_tip": 0.398, "r": 0.0042, "aglet_r": 0.0068},
     "logo": {"cz": 0.407, "w": 0.060, "h": 0.039, "stroke": 0.0062, "v_depth": 0.6},
 }
@@ -63,6 +63,12 @@ class Garments:
         end = wr + n * 0.004
         start = end - n * self.p['cuff_len']
         return start, end, n
+
+    def hem_z(self, key, y):
+        """Waistband edge height: slightly higher at the back than at the front."""
+        h = self.p['hem']
+        t = np.clip((y - h.get('cy', 0.0)) / h.get('b', 0.16), -1, 1)
+        return h[key] + h.get('tilt', 0.0) * t
 
     def open_x(self, z):
         p = self.p
@@ -101,7 +107,7 @@ class Garments:
 
     def shirt_collar(self, P):
         col = self.p['shirt_collar']
-        R = S.rot_matrix(-col['tilt'], 0, 0)
+        R = S.rot_matrix(col['tilt'], 0, 0)  # +X rotation: front edge lower, like the neckline
         return S.sd_torus(P, col['c'], col['R'], col['r'], Rm=R)
 
     def logo2d(self, u, v):
@@ -162,7 +168,7 @@ class Garments:
         dv = (h['tip_z'] + h['slope'] * np.abs(P[0]) - P[2]) / math.sqrt(1 + h['slope'] ** 2)
         d = S.smax(d, dv, h.get('v_soft', 0.03))
         c = self.p['collar']
-        Rm = S.rot_matrix(-c['tilt'], 0, 0)
+        Rm = S.rot_matrix(c['tilt'] * c.get('tilt_sign', -1.0), 0, 0)
         x, y, z = S.to_local(P, c['c'], Rm)
         q = np.sqrt((x / c['R'][0]) ** 2 + (y / c['R'][1]) ** 2) * min(c['R']) - min(c['R'])
         ring = np.sqrt(q * q + z * z) - c['r']
@@ -174,11 +180,11 @@ class Garments:
         d = self.body.torso(P) - 0.030
         d = S.smin(d, self.box(P), 0.03)
         # fabric bloused over the gathered waistband
-        z1 = p['hem']['z1']
+        z1 = self.hem_z('z1', P[1])
         roll = np.exp(-((P[2] - (z1 + 0.018)) / 0.016) ** 2)
         d = d - p.get('blouse', 0.0) * roll
         for side in (-1, 1):
-            d = S.smin(d, self.sleeve(P, side), 0.035)
+            d = S.smin(d, self.sleeve(P, side), p.get('sleeve_blend', 0.035))
         return d
 
     def hoodie(self, P):
@@ -199,7 +205,7 @@ class Garments:
         cut_open = np.maximum(np.abs(P[0]) - xo, P[1] + 0.03)
         d = np.maximum(d, -cut_open)
         # hem: the ribbed waistband object covers below hem z1
-        d = np.maximum(d, p['hem']['z1'] - 0.006 - P[2])
+        d = np.maximum(d, self.hem_z('z1', P[1]) - 0.006 - P[2])
         # pockets: slightly raised patches on the lower front panels
         pk = p['pocket']
         for side in (-1, 1):
@@ -228,14 +234,16 @@ class Garments:
         """Vertical ribbed waistband, gathered slightly toward the bottom."""
         h = self.p['hem']
         x, y, z = P
-        t = np.clip((h['z1'] - z) / (h['z1'] - h['z0']), 0, 1)
+        z0 = self.hem_z('z0', y)
+        z1 = self.hem_z('z1', y)
+        t = np.clip((z1 - z) / (z1 - z0), 0, 1)
         a = h['a'] - h['inset'] * t
         b = h['b'] - h['inset'] * t
         rho = (np.abs(x / a) ** h['p'] + np.abs((y - h['cy']) / b) ** h['p']) ** (1 / h['p'])
         outer = (rho - 1.0) * np.minimum(a, b) - 0.003 * np.sin(t * math.pi)
         d = np.maximum(outer, -(outer + h['thick']))
-        d = S.smax(d, h['z0'] - z, 0.005)
-        d = S.smax(d, z - h['z1'], 0.003)
+        d = S.smax(d, z0 - z, 0.005)
+        d = S.smax(d, z - z1, 0.003)
         xo = self.open_x(z)
         d = np.maximum(d, -np.maximum(np.abs(x) - xo, y + 0.03))
         return d
@@ -259,9 +267,10 @@ class Garments:
 # ---------------------------------------------------------------- materials
 def fabric_materials(cfg):
     col = cfg['colors']
-    hood = mats.flat('M_Hoodie', col['hoodie'], rough=0.95, sheen=0.35, spec=0.18,
+    hood = mats.flat('M_Hoodie', col['hoodie'], rough=0.95, sheen=0.18, spec=0.15,
                      bump=dict(scale=150.0, strength=0.45, distance=0.0018, fine=700.0),
-                     tile_normal=('fleece_n', 0.9))
+                     tile_normal=('hoodie_n', 0.9) if 'hoodie_n' in mats.TILES else ('fleece_n', 0.9),
+                     tile_color='hoodie_c' if 'hoodie_c' in mats.TILES else None)
     rib = mats.flat('M_HoodieRib', col['hoodie'], rough=0.93, sheen=0.3, spec=0.18, tile_normal=('rib_n', 1.0))
     hem = mats.flat('M_HoodieHem', col['hoodie'], rough=0.93, sheen=0.3, spec=0.18, tile_normal=('rib_n', 1.0))
     if not mats.TILES:
@@ -269,7 +278,7 @@ def fabric_materials(cfg):
         _rib_bump(hem, radial=True)
     shirt = mats.flat('M_Tshirt', col['tshirt'], rough=0.92, sheen=0.35, spec=0.3,
                       bump=dict(scale=320.0, strength=0.12, distance=0.0008, fine=1100.0),
-                      tile_normal=('jersey_n', 0.5), tile_color='jersey_c')
+                      tile_normal=('jersey_n', 0.6), tile_color='jersey_c')
     if not mats.TILES:
         _heather(shirt, col['tshirt'])
     logo = mats.flat('M_TshirtLogo', col['tshirt_logo'], rough=0.42, spec=0.5, coat=0.2, coat_rough=0.3)
@@ -429,14 +438,14 @@ def build(cfg, col, parent, tex_dir, h, quality):
     out.update(Tshirt=ts, Tshirt_Collar=collar, Tshirt_Logo=logo)
 
     # --- Hoodie shell (+hood, pockets)
-    hv, hf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.19), (0.40, 0.26, 0.53), hh)
+    hv, hf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.17), (0.40, 0.26, 0.53), hh)
     hd = mu.fast_mesh_object('Hoodie', hv, hf, collection=col, parent=parent)
     mu.assign_material(hd, M['hoodie'])
     mu.cube_project_uv(hd, 3.5)
     out['Hoodie'] = hd
 
     # --- hem band
-    hb = mu.fast_mesh_object('Hoodie_Hem', *S.polygonize(g.hem_band, (-0.26, -0.22, 0.18), (0.26, 0.21, 0.25), hh * 0.8),
+    hb = mu.fast_mesh_object('Hoodie_Hem', *S.polygonize(g.hem_band, (-0.26, -0.22, 0.165), (0.26, 0.21, 0.26), hh * 0.8),
                              collection=col, parent=hd)
     mu.assign_material(hb, M['hem'])
     cylindrical_uv(hb, (0, p['hem'].get('cy', -0.016), 0), (0, 0, 1), 7.0, 18.0)
@@ -459,7 +468,7 @@ def build(cfg, col, parent, tex_dir, h, quality):
     # --- zipper
     zv, zf = [], []
     off = 0
-    tooth_v, tooth_f = rounded_cube_mesh((0.0060, 0.0040, 0.0019), e=3.0, N=3)
+    tooth_v, tooth_f = rounded_cube_mesh(tuple(p.get('zip_tooth', (0.0052, 0.0042, 0.0025))), e=2.6, N=4)
     zs = np.arange(p['zip_z'][0], p['zip_z'][1], p['zip_pitch'])
     for side in (-1, 1):
         xs = side * (g.open_x(zs) + 0.0008)

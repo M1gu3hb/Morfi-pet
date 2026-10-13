@@ -28,8 +28,8 @@
   "eye_radius": 0.125,
   "eye_protrusion": 0.018,
   "eye_open_half": [
-   0.079,
-   0.0735
+   0.083,
+   0.077
   ],
   "eye_open_exponent": 2.4,
   "eye_look_target": [
@@ -37,29 +37,33 @@
    -0.85,
    0.012
   ],
-  "iris_angle_deg": 29.5,
-  "pupil_angle_deg": 18.0,
+  "iris_angle_deg": 32.0,
+  "pupil_angle_deg": 19.5,
   "brow_center": [
    0.147,
    0.106
   ],
   "brow_length": 0.092,
   "brow_thickness": 0.025,
-  "mouth_center_z": -0.1,
+  "mouth_center_z": -0.1065,
   "mouth_half_width": 0.051,
   "mouth_top_sag": 0.008,
-  "mouth_bottom_sag": 0.04,
+  "mouth_bottom_sag": 0.035,
   "mouth_depth": 0.022,
   "socket_depth": 0.008,
   "lid_band": [
    -0.017,
-   0.004
+   0.0075
   ],
   "brow_arch": 0.027,
   "brow_height": 0.008,
   "nose_amp": 0.0045,
   "nose_tint": 0.45,
-  "nose_tip_z": -0.084
+  "nose_tip_z": -0.084,
+  "celeste_wrap": [
+   0.66,
+   0.36
+  ]
  },
  "colors": {
   "skin": "#0757F5",
@@ -74,8 +78,8 @@
   "iris_mid": "#1452D4",
   "iris_inner": "#3C82F0",
   "pupil": "#050608",
-  "hoodie": "#212227",
-  "tshirt": "#D6D7DA",
+  "hoodie": "#1C1D21",
+  "tshirt": "#E6E3E3",
   "tshirt_logo": "#1F6BFF",
   "frame": "#070E20",
   "shoe_white": "#F0F0ED",
@@ -114,45 +118,85 @@
   ],
   "outer_half": [
    0.125,
-   0.113
+   0.107
   ],
-  "lens_cz": -0.029,
+  "lens_cz": -0.026,
   "clearance": -0.002,
   "depth_half": 0.0095,
   "outer_r": 0.092,
-  "edge_r": 0.0075
+  "edge_r": 0.0075,
+  "rim": 0.024
  },
  "shoes": {
   "upper_top": {
-   "toe": 0.088,
-   "instep": 0.108,
-   "collar": 0.127
+   "toe": 0.086,
+   "instep": 0.112,
+   "collar": 0.122
   },
   "opening": {
-   "cy": 0.05,
+   "cx": -0.022,
+   "cy": 0.048,
    "rx": 0.058,
-   "ry": 0.07,
-   "z": 0.095
+   "ry": 0.066,
+   "z": 0.092
   },
-  "w_fore": 0.093,
-  "w_heel": 0.082,
+  "w_fore": 0.1,
+  "w_heel": 0.088,
   "straps_y": [
-   -0.06,
-   -0.02
+   -0.062,
+   -0.024
   ],
-  "strap_w": 0.0095,
-  "strap_t": 0.0022,
+  "strap_w": 0.009,
+  "strap_t": 0.0042,
   "place": {
-   "x": 0.163,
-   "y": -0.036,
+   "x": 0.152,
+   "y": -0.045,
    "toe_out_deg": 5.0
-  }
+  },
+  "half_len": 0.146,
+  "sole_h": 0.04,
+  "groove_z": 0.029,
+  "blue_plane": {
+   "y_bot": 0.068,
+   "y_top": 0.128,
+   "z_top": 0.094
+  },
+  "p_heel": 3.6,
+  "top_round": 0.026,
+  "top_profile": [
+   [
+    0.0,
+    0.046
+   ],
+   [
+    0.08,
+    0.068
+   ],
+   [
+    0.2,
+    0.084
+   ],
+   [
+    0.45,
+    0.11
+   ],
+   [
+    0.66,
+    0.122
+   ],
+   [
+    1.0,
+    0.122
+   ]
+  ],
+  "top_side_drop": 0.01,
+  "upper_inset": 0.006
  },
  "clothes": {
   "sleeve_start": [
-   0.198,
+   0.18,
    0.004,
-   0.446
+   0.433
   ],
   "sleeve_r": [
    0.064,
@@ -163,12 +207,12 @@
    "c": [
     0.0,
     -0.016,
-    0.345
+    0.338
    ],
    "half": [
-    0.216,
+    0.226,
     0.17,
-    0.158
+    0.163
    ],
    "p_h": 2.7,
    "q_top": 2.7,
@@ -182,14 +226,15 @@
   "cuff_inner": 0.04,
   "sleeve_bunch": 0.01,
   "hem": {
-   "z0": 0.212,
-   "z1": 0.255,
-   "inset": 0.012,
+   "z0": 0.203,
+   "z1": 0.246,
+   "inset": 0.008,
    "thick": 0.014,
-   "a": 0.2,
-   "b": 0.158,
+   "a": 0.222,
+   "b": 0.16,
    "cy": -0.016,
-   "p": 2.7
+   "p": 2.7,
+   "tilt": 0.01
   },
   "hood": {
    "c": [
@@ -230,9 +275,20 @@
    "r": 0.0045,
    "aglet_r": 0.007
   },
-  "shirt_hem_z": 0.232,
+  "shirt_hem_z": 0.222,
   "blouse": 0.01,
-  "sleeve_folds": 0.0035
+  "sleeve_folds": 0.0035,
+  "sleeve_blend": 0.018,
+  "shirt_collar": {
+   "c": [
+    0.0,
+    0.016,
+    0.48
+   ],
+   "R": 0.1,
+   "r": 0.0085,
+   "tilt": 12.0
+  }
  },
  "laptop_place": {
   "loc": [
@@ -258,19 +314,19 @@
    0.264
   ],
   "leg_r": [
-   0.054,
-   0.049,
-   0.046
+   0.066,
+   0.06,
+   0.05
   ],
   "knee": [
-   0.108,
+   0.11,
    0.004,
-   0.115
+   0.122
   ],
   "ankle": [
-   0.15,
+   0.122,
    0.01,
-   0.064
+   0.066
   ],
   "shoulder": [
    0.14,
@@ -279,14 +335,14 @@
   ],
   "foot": {
    "c": [
-    0.152,
-    -0.04,
+    0.15,
+    -0.045,
     0.036
    ],
    "r": [
-    0.062,
-    0.11,
-    0.036
+    0.06,
+    0.105,
+    0.034
    ],
    "rz": -6.0
   },
@@ -294,20 +350,46 @@
    "c": [
     0.0,
     0.004,
-    0.212
+    0.236
    ],
    "r": [
-    0.138,
-    0.106,
-    0.07
+    0.132,
+    0.102,
+    0.06
    ]
-  }
+  },
+  "hip": [
+   0.106,
+   0.004,
+   0.2
+  ],
+  "hand_pronate_deg": 55.0,
+  "finger_blend_mul": 1.4
  },
  "lights": {
   "world_glossy": 0.3,
   "key_power": 85.0,
   "world": 0.45,
-  "catch_size": 0.5,
-  "catch_power": 60.0
+  "catch_size": 0.75,
+  "catch_power": 70.0,
+  "key_loc": [
+   -1.6,
+   -3.2,
+   1.6
+  ],
+  "key_size": 3.0,
+  "top_power": 12.0,
+  "fill_power": 35.0,
+  "catch_loc": [
+   0.9,
+   -2.6,
+   1.55
+  ]
+ },
+ "laptop": {
+  "w": 0.196,
+  "d": 0.146,
+  "logo_size": 0.019,
+  "logo_offset": 0.0105
  }
 }

@@ -164,7 +164,8 @@ class HeadShape:
     def frontness_threshold(self, z):
         # how far the celeste muzzle wraps around the face corners
         t = smoothstep(-0.07, -0.235, z)
-        return 0.80 - 0.38 * t
+        a, b = self.f.get('celeste_wrap', [0.80, 0.38])
+        return a - b * t
 
     def relief(self, P, N):
         """Displacement (scalar along normal) for base points/normals."""
@@ -252,8 +253,13 @@ class HeadShape:
         return np.concatenate(verts), np.concatenate(quads), np.concatenate(uvs)
 
     # ------------------------------------------------------------ textures
-    def bake_textures(self, size=4096):
-        """Base colour (RGB) + roughness (gray) atlases; row 0 = top."""
+    def bake_textures(self, size=4096, lines=None, line_scale=2.5, line_dark=0.10):
+        """Base colour (RGB) + roughness (gray) atlases; row 0 = top.
+
+        lines: optional periodic labyrinth mask (see textures.squiggle); it is
+        sampled with the same box projection as the 'UVTile' normal map so the
+        engraved lines in the colour line up with the relief.
+        """
         cfg = self.cfg
         col = cfg['colors']
         skin = _hexrgb(col['skin'])
@@ -289,6 +295,14 @@ class HeadShape:
             nose_in = (1 - nose) * smoothstep(0.07, 0.035, z) * frontish
             nose_c = skin * (1 - f.get('nose_tint', 0.32)) + cele * f.get('nose_tint', 0.32)
             c = c * (1 - nose_in[:, None]) + nose_c[None, :] * nose_in[:, None]
+            if lines is not None:
+                from .textures import sample_wrap
+                ax = np.argmax(np.abs(n), axis=1)
+                uu = np.where(ax == 0, y, x) * line_scale
+                vv = np.where(ax == 2, y, z) * line_scale
+                L = sample_wrap(lines, uu, vv)
+                k = line_dark * (1.0 - 0.7 * cel)
+                c = c * (1 - (k * L)[:, None])
             # upper lid lines
             for side in (-1, 1):
                 es = self.eye_sdf(x, z, side)
@@ -353,7 +367,7 @@ def eye_texture(cfg, size=1024):
                     i_in[None, None, :] * (1 - t[..., None] / 0.55) + i_mid[None, None, :] * (t[..., None] / 0.55),
                     i_mid[None, None, :] * (1 - (t[..., None] - 0.55) / 0.45) + i_out[None, None, :] * ((t[..., None] - 0.55) / 0.45))
     # darker collarette right around the pupil
-    coll = np.exp(-((t - 0.08) / 0.07) ** 2)[..., None] * 0.35
+    coll = np.exp(-((t - 0.08) / 0.07) ** 2)[..., None] * 0.15
     base = base * (1 - coll) + i_out[None, None, :] * coll
     base = base * (1.0 + 0.18 * fib[..., None] * (0.3 + t[..., None]))
     # limbal ring

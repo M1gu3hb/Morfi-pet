@@ -91,18 +91,18 @@ def pose_hero(rig):
     set_rot(rig, 'hips', ((0, 0, 1), -4.0), ((0, 1, 0), 1.5))
     set_rot(rig, 'spine', ((0, 1, 0), -1.5))
     bpy.context.view_layer.update()
-    aim(rig, 'head', (-0.13, -0.04, 1.0))
-    set_rot(rig, 'head', ((0, 0, 1), -10.0))
+    # head turned toward the hero camera (-33 deg) and tilted, as in the master image
+    set_rot(rig, 'head', ((0, 0, 1), -22.0), ((0, 1, 0), -8.0))
     # right arm hugs the laptop against the body
     aim(rig, 'upper_arm.R', (-0.42, 0.10, -1.0))
     aim(rig, 'forearm.R', (-0.10, -0.85, -0.55), twist=-20)
     aim(rig, 'hand.R', (0.05, -0.55, 0.85))
     aim(rig, 'fingers.R', (0.25, -0.2, 1.0))
-    # left fist on the hip
-    aim(rig, 'upper_arm.L', (0.62, 0.30, -0.75))
-    aim(rig, 'forearm.L', (-0.70, -0.25, -0.55))
-    aim(rig, 'hand.L', (-0.55, -0.15, -0.8))
-    aim(rig, 'fingers.L', (-0.2, 0.3, -0.6))
+    # left fist resting on the front of the hoodie (visible from the hero camera)
+    aim(rig, 'upper_arm.L', (0.62, -0.48, -0.62))
+    aim(rig, 'forearm.L', (-0.72, -0.62, -0.30))
+    aim(rig, 'hand.L', (-0.35, -0.55, -0.75))
+    aim(rig, 'fingers.L', (-0.1, 0.35, -0.8))
     # stance: left foot turned out a little
     set_rot(rig, 'thigh.L', ((0, 0, 1), 10.0), ((0, 1, 0), 2.0))
     set_rot(rig, 'thigh.R', ((0, 0, 1), -4.0))

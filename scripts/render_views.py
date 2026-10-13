@@ -27,6 +27,8 @@ def main():
     ap.add_argument('--suffix', default='')
     ap.add_argument('--engine', default='CYCLES', choices=['CYCLES', 'WORKBENCH', 'EEVEE'])
     ap.add_argument('--res', default='', help='WxH override')
+    ap.add_argument('--no-eyes-follow', dest='eyes_follow', action='store_false',
+                    help='keep the modelled forward gaze instead of looking at each camera')
     a = ap.parse_args(argv)
     sc = bpy.context.scene
     sc.cycles.samples = a.samples
@@ -68,7 +70,9 @@ def main():
             continue
         sc.camera = cam
         sc.render.filepath = os.path.join(a.out, v + a.suffix + '.png')
+        restore = scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK.get(v, 1.0) if a.eyes_follow else 0.0)
         bpy.ops.render.render(write_still=True)
+        restore()
         print(f'[render] {v} {time.time() - t0:.1f}s -> {sc.render.filepath}')
 
 

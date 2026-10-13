@@ -34,18 +34,22 @@ class ShoeSDF:
         L = p['half_len'] + grow
         t = np.clip((y + L) / (2 * L), 0, 1)  # 0 toe, 1 heel
         w = p['w_fore'] + (p['w_heel'] - p['w_fore']) * S.smoothstep(0.35, 1.0, t) + grow
-        # slightly more pointed toe, rounder heel
-        rho = (np.abs(x / w) ** p['p'] + np.abs(y / L) ** p['p']) ** (1 / p['p'])
+        # rounded toe, squarer heel (flat heel counter seen from the back)
+        e = p['p'] + (p.get('p_heel', p['p']) - p['p']) * S.smoothstep(0.5, 0.9, t)
+        rho = (np.abs(x / w) ** e + np.abs(y / L) ** e) ** (1 / e)
         return (rho - 1.0) * min(w.min() if hasattr(w, 'min') else w, L) * 0.95
 
     def top_height(self, x, y):
         p = self.p['upper_top']
         L = self.p['half_len']
-        t = np.clip((y + L) / (2 * L), 0, 1)
-        hy = np.interp(t, [0.0, 0.12, 0.40, 0.62, 1.0], [p['toe'] * 0.85, p['toe'], p['instep'], p['collar'], p['collar']])
+        t = np.clip((y + L) / (2 * L), 0, 1)  # 0 toe tip, 1 heel
+        # (t, height) keys; default: blunt toe, instep, collar
+        keys = self.p.get('top_profile') or [
+            [0.0, p['toe'] * 0.85], [0.12, p['toe']], [0.40, p['instep']], [0.62, p['collar']], [1.0, p['collar']]]
+        hy = np.interp(t, [k[0] for k in keys], [k[1] for k in keys])
         w = self.p['w_fore']
         side = np.clip(np.abs(x) / w, 0, 1)
-        return hy - 0.016 * side ** 2.2
+        return hy - self.p.get('top_side_drop', 0.016) * side ** 2.2
 
     def sole(self, P):
         p = self.p
@@ -69,18 +73,18 @@ class ShoeSDF:
 
     def upper_outer(self, P):
         x, y, z = P
-        d2 = self.foot2d(x, y, grow=-0.004)
+        d2 = self.foot2d(x, y, grow=-self.p.get('upper_inset', 0.004))
         side = S.extrude(d2, z - 0.10, 0.10, 0.0)
         top = z - self.top_height(x, y)
-        d = S.smax(side, top, 0.045)
-        d = S.smax(d, 0.03 - z, 0.005)
+        d = S.smax(side, top, self.p.get('top_round', 0.045))
+        d = S.smax(d, self.p['sole_h'] - 0.006 - z, 0.005)
         return d
 
     def cavity(self, P):
         x, y, z = P
         o = self.p['opening']
         cav = np.maximum(self.upper_outer(P) + 0.011, 0.040 - z)
-        hole = S.sd_ellipsoid(P, (0, o['cy'], o['z'] + 0.06), (o['rx'], o['ry'], 0.075))
+        hole = S.sd_ellipsoid(P, (o.get('cx', 0.0), o['cy'], o['z'] + 0.06), (o['rx'], o['ry'], 0.075))
         return S.smin(cav, hole, 0.012), hole
 
     def collar(self, P):
@@ -110,13 +114,14 @@ class ShoeSDF:
     def tongue(self, P):
         x, y, z = P
         uo = self.upper_outer(P)
+        cx = self.p['opening'].get('cx', 0.0)
         pad = np.maximum(uo - 0.0035, -(uo + 0.004))
-        pad = S.smax(pad, np.abs(x) - 0.033, 0.006)
+        pad = S.smax(pad, np.abs(x - cx * 0.6) - 0.035, 0.006)
         pad = S.smax(pad, y - 0.006, 0.006)
         pad = S.smax(pad, -0.078 - y, 0.01)
         # upper end of the tongue standing in front of the shin
         R = S.rot_matrix(-25, 0, 0)
-        top = S.sd_ellipsoid(P, (0.0, 0.002, 0.108), (0.033, 0.010, 0.022), R=R)
+        top = S.sd_ellipsoid(P, (cx * 0.8, 0.002, self.p['opening']['z'] + 0.008), (0.035, 0.010, 0.022), R=R)
         return S.smin(pad, top, 0.012)
 
     def blue_panel(self, P):
@@ -124,8 +129,16 @@ class ShoeSDF:
         x, y, z = P
         uo = self.upper_outer(P)
         d = np.maximum(uo - 0.0024, -(uo + 0.0003))
-        plane = (bp['y0'] - y) + bp['slope'] * (z - self.p['sole_h'])
-        d = S.smax(d, plane / math.sqrt(1 + bp['slope'] ** 2), 0.003)
+        if 'y_bot' in bp:
+            # curved front edge: runs forward along the sole, turns vertical at the top
+            z0 = self.p['sole_h']
+            t = np.clip((z - z0) / (bp['z_top'] - z0), 0, 1)
+            y_edge = bp['y_bot'] + (bp['y_top'] - bp['y_bot']) * (1 - (1 - t) ** 2)
+            d = S.smax(d, (y_edge - y) * 0.7, 0.003)
+            d = S.smax(d, z - bp['z_top'], 0.003)
+        else:
+            plane = (bp['y0'] - y) + bp['slope'] * (z - self.p['sole_h'])
+            d = S.smax(d, plane / math.sqrt(1 + bp['slope'] ** 2), 0.003)
         cav, hole = self.cavity(P)
         d = np.maximum(d, -hole)
         d = np.maximum(d, self.p['sole_h'] - 0.004 - z)
@@ -136,11 +149,13 @@ class ShoeSDF:
         x, y, z = P
         p = self.p
         uo = np.minimum(self.upper_outer(P), self.tongue(P))
-        shell = np.maximum(uo - 0.0040, -(uo + 0.0004))
+        t = p['strap_t']
         d = None
         for ys in p['straps_y']:
-            band = np.maximum(shell, np.abs(y - ys) - p['strap_w'])
-            band = np.maximum(band, np.abs(x) - 0.058)
+            # rounded elastic band lying on the vamp (rounded-rect cross-section)
+            q = np.maximum(np.abs(y - ys) - (p['strap_w'] - t), 0.0)
+            band = np.sqrt(q * q + (uo - t) ** 2) - t
+            band = S.smax(band, np.abs(x) - 0.060, 0.006)
             band = np.maximum(band, 0.06 - z)
             d = band if d is None else np.minimum(d, band)
         return d
@@ -177,7 +192,7 @@ def build(cfg, col, parent, tex_dir, h, quality):
         (sh.upper, m_up, hh),
         (sh.tongue, m_up, hh),
         (sh.blue_panel, m_blue, hh * 0.8),
-        (sh.straps, m_strap, hh * 0.8),
+        (sh.straps, m_strap, hh * 0.55),
         (sh.eyelets, m_up, hh * 0.6),
     ]
     meshes = [S.polygonize(fn, bmin, bmax, r) for fn, _m, r in parts]

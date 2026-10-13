@@ -36,10 +36,13 @@ def place_laptop(rig):
     up = Vector((0.10, 0.30, 1.0))
     xa = up.cross(n).normalized()                        # local +X (width) roughly horizontal
     ya = n.cross(xa).normalized()                        # local +Y (depth) roughly vertical
+    # tilt it in its own plane: long side running diagonally up-back as in the master image
+    phi = math.radians(52.0)
+    xa, ya = xa * math.cos(phi) + ya * math.sin(phi), ya * math.cos(phi) - xa * math.sin(phi)
     R = Matrix((xa, ya, n)).transposed().to_4x4()
     # bottom edge resting in the hand, laptop body just outside the arm
     p = lap.data
-    c = wrist + Vector((-0.030, -0.060, 0.112))
+    c = wrist + Vector((-0.045, -0.050, 0.080))
     M = Matrix.Translation(c) @ R @ Matrix.Translation(Vector((0, 0, -0.009)))
     lap.parent = None
     lap.matrix_world = M
@@ -103,6 +106,8 @@ def main():
     cam = bpy.data.objects.get('Cam_hero') or scene.make_camera(
         'Cam_hero', -33.0, cfg, studio, target=(0.0, 0.0, 0.43), dist=2.30, height=0.86, lens=55.0)
     sc.camera = cam
+    bpy.context.view_layer.update()
+    scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK['hero'])
     sc.cycles.samples = a.samples
     sc.render.resolution_percentage = int(round(100 * a.scale))
     os.makedirs(os.path.join(a.out, 'transparent'), exist_ok=True)

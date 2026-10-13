@@ -66,6 +66,10 @@ class BodySDF:
         I /= np.linalg.norm(I)
         if I[0] * side > 0:  # inward must point toward the body
             I = -I
+        # pronation: turn the palm toward the back so the knuckles face the
+        # front-outside and the thumb sits at the front-inside (as in the references)
+        th = np.radians(b.get('hand_pronate_deg', 0.0))
+        F, I = F * np.cos(th) + I * np.sin(th), I * np.cos(th) - F * np.sin(th)
         return W, D, F, I
 
     def _hand(self, P, side):
@@ -89,7 +93,7 @@ class BodySDF:
             f1 = S.sd_round_cone(P, a - D * 0.012, m, fr * 1.04, fr)
             f1 = S.smin(f1, S.sd_round_cone(P, m, t, fr, fr * 0.94), 0.008)
             fd = f1 if fd is None else np.minimum(fd, f1)
-        d = S.smin(d, fd, b['blend']['finger'] * 2.2)
+        d = S.smin(d, fd, b['blend']['finger'] * b.get('finger_blend_mul', 2.2))
         tb = W + D * h['thumb_base'][0] + F * h['thumb_base'][1] + I * h['thumb_base'][2]
         td = D * h['thumb_dir'][0] + F * h['thumb_dir'][1] + I * h['thumb_dir'][2]
         td /= np.linalg.norm(td)

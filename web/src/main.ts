@@ -84,6 +84,40 @@ const GROUPS: Record<string, string[]> = {
 const groupObjects: Record<string, THREE.Object3D[]> = {};
 const groupState: Record<string, boolean> = {};
 
+// ------------------------------------------------------------------ eyes follow the camera
+// In the references Morfi always looks at the viewer in front / 3-4 shots. The
+// eye bones get the same turn (so the modelled convergence is kept), fading out
+// toward the profile and switched off from behind.
+let eyesFollow = true;
+let eyeBones: THREE.Object3D[] = [];
+let eyeBase: THREE.Quaternion[] = [];
+let headBone: THREE.Object3D | null = null;
+const headRestInv = new THREE.Quaternion();
+const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _qk = new THREE.Quaternion();
+const _v = new THREE.Vector3(), _mid = new THREE.Vector3(), _fwd = new THREE.Vector3();
+function captureEyeBase() { eyeBase = eyeBones.map((b) => b.quaternion.clone()); }
+function aimEyes() {
+  if (eyeBones.length < 2 || !headBone) return;
+  eyeBones.forEach((b, i) => b.quaternion.copy(eyeBase[i]));
+  if (!eyesFollow) return;
+  model!.updateMatrixWorld(true);
+  headBone.getWorldQuaternion(_q).multiply(headRestInv);
+  _fwd.set(0, 0, 1).applyQuaternion(_q);
+  _mid.set(0, 0, 0);
+  for (const b of eyeBones) _mid.add(b.getWorldPosition(_v));
+  _mid.multiplyScalar(1 / eyeBones.length);
+  const toCam = _v.copy(camera.position).sub(_mid).normalize();
+  const ang = _fwd.angleTo(toCam);
+  const k = ang < 0.7 ? 1 : ang < 1.571 ? 1 - (0.65 * (ang - 0.7)) / 0.871 : Math.max(0, 0.35 * (1 - (ang - 1.571) / 0.5));
+  if (k <= 0) return;
+  _qk.identity().slerp(_q2.setFromUnitVectors(_fwd, toCam), k);
+  for (const b of eyeBones) {
+    b.parent!.getWorldQuaternion(_q);
+    // local = parent^-1 * delta * parent * local
+    b.quaternion.premultiply(_q2.copy(_q).premultiply(_qk).premultiply(_q.clone().invert()));
+  }
+}
+
 let model: THREE.Object3D | null = null;
 let mixer: THREE.AnimationMixer | null = null;
 let clips: THREE.AnimationClip[] = [];
@@ -183,6 +217,11 @@ loader.load(
     }
     buildToggles();
     for (const g of Object.keys(GROUPS)) setGroup(g, groupState[g]);
+    eyeBones = ['eyeL', 'eyeR', 'eye.L', 'eye.R'].map((n) => model!.getObjectByName(n)).filter((x): x is THREE.Object3D => !!x);
+    headBone = model.getObjectByName('head') ?? null;
+    model.updateMatrixWorld(true);
+    if (headBone) headRestInv.copy(headBone.getWorldQuaternion(_q)).invert();
+    captureEyeBase();
     clips = gltf.animations;
     mixer = new THREE.AnimationMixer(model);
     const sel = document.getElementById('anim') as HTMLSelectElement;
@@ -202,6 +241,7 @@ loader.load(
     statusEl.classList.add('hidden');
     invalidate(6);
     (window as unknown as { __morfiReady: boolean }).__morfiReady = true;
+    (window as unknown as { __morfiModel: THREE.Object3D }).__morfiModel = model;
   },
   (ev) => {
     if (ev.lengthComputable) progressEl.textContent = Math.round((ev.loaded / ev.total) * 100) + '%';
@@ -218,6 +258,10 @@ document.querySelectorAll<HTMLButtonElement>('#views button').forEach((b) => b.a
 document.getElementById('reset')!.addEventListener('click', () => setView('front'));
 (document.getElementById('autorotate') as HTMLInputElement).addEventListener('change', (e) => {
   controls.autoRotate = (e.target as HTMLInputElement).checked;
+});
+(document.getElementById('eyes') as HTMLInputElement).addEventListener('change', (e) => {
+  eyesFollow = (e.target as HTMLInputElement).checked;
+  invalidate(3);
 });
 (document.getElementById('anim') as HTMLSelectElement).addEventListener('change', (e) => playClip((e.target as HTMLSelectElement).value));
 document.getElementById('play')!.addEventListener('click', (e) => {
@@ -244,6 +288,7 @@ document.getElementById('shot')!.addEventListener('click', () => {
   const prev = renderer.getClearAlpha();
   if (bg === 'light') renderer.setClearColor(0xfdfdf9, 1);
   if (bg === 'dark') renderer.setClearColor(0x14161c, 1);
+  aimEyes();
   renderer.render(scene, camera);
   const url = renderer.domElement.toDataURL('image/png');
   renderer.setClearColor(0x000000, prev);
@@ -288,9 +333,10 @@ window.addEventListener('resize', () => invalidate(3));
 renderer.setAnimationLoop(() => {
   const dt = clock.getDelta();
   const animating = !!(mixer && action && !action.paused && action.isRunning() && !action.getClip().name.startsWith('Pose_'));
-  if (mixer && (animating || dirtyFrames > 0)) mixer.update(animating ? dt : 0);
+  if (mixer && (animating || dirtyFrames > 0)) { mixer.update(animating ? dt : 0); captureEyeBase(); }
   const moving = controls.update() || controls.autoRotate;
   if (animating || moving || dirtyFrames > 0) {
+    aimEyes();
     renderer.render(scene, camera);
     if (dirtyFrames > 0) dirtyFrames--;
   }

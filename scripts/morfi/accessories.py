@@ -102,7 +102,7 @@ def build_glasses(cfg, shape, head, col, h=0.0013):
     eye_front = min(shape.eye_centers[:, 1]) - shape.eye_R
     yg = min(yg, eye_front - 0.0045)
     gp['yg'] = yg
-    frame_m = mats.flat('M_GlassesFrame', cfg['colors']['frame'], rough=0.42, coat=0.06, coat_rough=0.3, spec=0.35)
+    frame_m = mats.flat('M_GlassesFrame', cfg['colors']['frame'], rough=0.5, coat=0.05, coat_rough=0.35, spec=0.2)
     lens_m = mats.glass('M_GlassesLens')
     # front frame
     bmin = (-0.36, yg - 0.03, -0.17)

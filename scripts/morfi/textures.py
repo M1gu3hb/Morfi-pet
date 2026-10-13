@@ -50,6 +50,47 @@ def voronoi_edges(n, cells, seed=0, jitter=1.0):
     return e / max(e.max(), 1e-9)
 
 
+def band_noise(n, f0, bw=0.25, seed=0):
+    """Periodic narrow-band noise (ring spectrum around f0 cycles/tile), unit std."""
+    rng = np.random.default_rng(seed)
+    k = np.fft.fftfreq(n) * n
+    KX, KY = np.meshgrid(k, k)
+    K = np.sqrt(KX ** 2 + KY ** 2)
+    amp = np.exp(-((K - f0) / (bw * f0)) ** 2)
+    f = np.real(np.fft.ifft2(amp * np.exp(1j * rng.uniform(0, 2 * np.pi, (n, n)))))
+    return f / f.std()
+
+
+def squiggle(n, f0, width=0.07, seed=0):
+    """Labyrinth of thin meandering lines (zero set of band noise), 1 on the lines.
+
+    This is the fine "worm" relief visible on Morfi's skin, hoodie and t-shirt
+    in the references. width is the line half-width as a fraction of the period.
+    """
+    a = band_noise(n, f0, 0.25, seed)
+    gx = (np.roll(a, -1, 1) - np.roll(a, 1, 1)) * 0.5
+    gy = (np.roll(a, -1, 0) - np.roll(a, 1, 0)) * 0.5
+    dist = np.abs(a) / (np.sqrt(gx * gx + gy * gy) + 1e-6)
+    return np.exp(-(dist / (width * n / f0)) ** 2)
+
+
+def sample_wrap(img, u, v):
+    """Bilinear sample of a periodic (H, W[, C]) array at UV (v up, row 0 = top)."""
+    H, W = img.shape[:2]
+    x = (np.asarray(u) % 1.0) * W - 0.5
+    y = ((1.0 - np.asarray(v)) % 1.0) * H - 0.5
+    x0 = np.floor(x).astype(int)
+    y0 = np.floor(y).astype(int)
+    fx = x - x0
+    fy = y - y0
+    if img.ndim == 3:
+        fx = fx[..., None]
+        fy = fy[..., None]
+    g = lambda yy, xx: img[yy % H, xx % W]
+    return (g(y0, x0) * (1 - fx) * (1 - fy) + g(y0, x0 + 1) * fx * (1 - fy)
+            + g(y0 + 1, x0) * (1 - fx) * fy + g(y0 + 1, x0 + 1) * fx * fy)
+
+
 def height_to_normal(h, strength):
     """Periodic central differences -> RGB normal map (OpenGL +Y)."""
     dx = (np.roll(h, -1, axis=1) - np.roll(h, 1, axis=1)) * 0.5
@@ -109,8 +150,56 @@ def leather(n=1024, seed=13):
     return height_to_normal(h, 1.6)
 
 
-def generate_all(out_dir, size=1024):
+def _srgb(hexstr):
+    h = hexstr.lstrip('#')
+    return np.array([int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)])
+
+
+# line density per material, in tile periods: the tile is mapped with box UVs at
+# 2.5 (skin), 3.5 (hoodie) and 5.0 (t-shirt) tiles per unit, which gives a line
+# spacing of ~7 mm on the skin and ~10 mm on the fabrics, as in the references.
+SQUIGGLE_F0 = {'skin': 40.0, 'hoodie': 19.0, 'tshirt': 15.0}
+CACHE = {}
+
+
+def skin_lines(n=1024, seed=21):
+    if ('skin', n) not in CACHE:
+        CACHE[('skin', n)] = squiggle(n, SQUIGGLE_F0['skin'], 0.065, seed)
+    return CACHE[('skin', n)]
+
+
+def skin_tile(n=1024, color='#0757F5', seed=21):
+    """Skin: velvet micro-noise + engraved labyrinth lines (colour + normal)."""
+    lines = skin_lines(n, seed)
+    fine = fourier_noise(n, 1.2, seed + 1, fmin=60)
+    h = 0.20 * fine - 0.80 * lines
+    col = _srgb(color)[None, None, :] * (1.0 - 0.10 * lines[..., None]) * (0.985 + 0.03 * fine[..., None])
+    return np.clip(col, 0, 1), height_to_normal(h, 3.0)
+
+
+def hoodie_tile(n=1024, color='#212227', seed=31):
+    """Fleece with the raised labyrinth pattern (slightly lighter lines)."""
+    lines = squiggle(n, SQUIGGLE_F0['hoodie'], 0.075, seed)
+    _, fl = fleece(n, seed + 1)
+    h = 0.55 * fl + 0.45 * lines
+    base = _srgb(color)
+    col = base[None, None, :] * (1.0 + 0.14 * lines[..., None]) * (0.96 + 0.08 * fl[..., None])
+    return np.clip(col, 0, 1), height_to_normal(h, 4.0)
+
+
+def tshirt_tile(n=1024, color='#D6D7DA', seed=41):
+    """Heather jersey with darker printed/embossed labyrinth lines."""
+    lines = squiggle(n, SQUIGGLE_F0['tshirt'], 0.06, seed)
+    col, _ = jersey(n, base=tuple(_srgb(color)), seed=seed + 1)
+    col = col * (1.0 - 0.16 * lines[..., None])
+    b = fourier_noise(n, 0.6, seed + 2, fmin=150)
+    h = 0.55 * (1 - lines) + 0.45 * b
+    return np.clip(col, 0, 1), height_to_normal(h, 3.0)
+
+
+def generate_all(out_dir, size=1024, colors=None):
     from .meshutil import save_image
+    colors = colors or {}
     os.makedirs(out_dir, exist_ok=True)
     paths = {}
     nrm, _ = velvet(size)
@@ -119,8 +208,14 @@ def generate_all(out_dir, size=1024):
     paths['fleece_n'] = save_image(os.path.join(out_dir, 'tile_fleece_normal.png'), nrm)
     nrm, _ = rib(512)
     paths['rib_n'] = save_image(os.path.join(out_dir, 'tile_rib_normal.png'), nrm)
-    col, nrm = jersey(size)
+    col, nrm = tshirt_tile(size, colors.get('tshirt', '#D6D7DA'))
     paths['jersey_c'] = save_image(os.path.join(out_dir, 'tile_jersey_basecolor.png'), col)
     paths['jersey_n'] = save_image(os.path.join(out_dir, 'tile_jersey_normal.png'), nrm)
     paths['leather_n'] = save_image(os.path.join(out_dir, 'tile_leather_normal.png'), leather(size))
+    col, nrm = skin_tile(size, colors.get('skin', '#0757F5'))
+    paths['skin_c'] = save_image(os.path.join(out_dir, 'tile_skin_basecolor.png'), col)
+    paths['skin_n'] = save_image(os.path.join(out_dir, 'tile_skin_normal.png'), nrm)
+    col, nrm = hoodie_tile(size, colors.get('hoodie', '#212227'))
+    paths['hoodie_c'] = save_image(os.path.join(out_dir, 'tile_hoodie_basecolor.png'), col)
+    paths['hoodie_n'] = save_image(os.path.join(out_dir, 'tile_hoodie_normal.png'), nrm)
     return paths

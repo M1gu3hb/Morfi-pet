@@ -53,10 +53,12 @@ def main():
     grp_acc = mu.empty('Accessories', collection=c_acc, parent=root)
 
     from morfi import textures
-    mats.load_tiles(textures.generate_all(tex, 1024 if q == 'final' else 512))
+    tsize = 1024 if q == 'final' else 512
+    mats.load_tiles(textures.generate_all(tex, tsize, cfg['colors']))
     skin = mats.skin('M_Skin', cfg['colors']['skin'])
     # ---------------------------------------------------------------- head
-    head, shape = face.build_head(cfg, c_head, tex, parent=root, tex_size=4096 if q == 'final' else 2048)
+    head, shape = face.build_head(cfg, c_head, tex, parent=root, tex_size=4096 if q == 'final' else 2048,
+                                  lines=textures.skin_lines(tsize))
     bpy.context.view_layer.update()
     grp_face.parent = head
     grp_face.location = (0, 0, 0)

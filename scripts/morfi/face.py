@@ -12,7 +12,7 @@ from . import materials as mats
 from .head import HeadShape, eye_texture
 
 
-def build_head(cfg, col, tex_dir, parent=None, tex_size=4096):
+def build_head(cfg, col, tex_dir, parent=None, tex_size=4096, lines=None):
     shape = HeadShape(cfg)
     verts, quads, uvs = shape.build_mesh()
     ob = mu.mesh_object('Head', verts, quads, collection=col, uvs=uvs, parent=parent)
@@ -27,7 +27,7 @@ def build_head(cfg, col, tex_dir, parent=None, tex_size=4096):
     os.makedirs(tex_dir, exist_ok=True)
     base_p = os.path.join(tex_dir, 'head_basecolor.png')
     rough_p = os.path.join(tex_dir, 'head_roughness.png')
-    img, rough = shape.bake_textures(tex_size)
+    img, rough = shape.bake_textures(tex_size, lines=lines)
     mu.save_image(base_p, img)
     mu.save_image(rough_p, np.repeat(rough[..., None], 3, axis=2))
     bimg = mu.load_image(base_p, 'sRGB', 'T_Head_BaseColor')

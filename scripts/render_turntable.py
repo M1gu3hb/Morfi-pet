@@ -26,6 +26,7 @@ def main():
     ap.add_argument('--out', default=os.path.join(ROOT, 'renders', 'turntable'))
     ap.add_argument('--start', type=int, default=0)
     ap.add_argument('--step', type=int, default=1)
+    ap.add_argument('--no-eyes-follow', dest='eyes_follow', action='store_false')
     a = ap.parse_args(argv)
     sc = bpy.context.scene
     w, h = (int(v) for v in a.res.split('x'))
@@ -48,10 +49,16 @@ def main():
         path = os.path.join(a.out, f'f_{i:04d}.png')
         if os.path.exists(path):
             continue
-        root.rotation_euler = (0, 0, 2 * math.pi * i / a.frames)
+        ang = 2 * math.pi * i / a.frames
+        root.rotation_euler = (0, 0, ang)
         bpy.context.view_layer.update()
+        # eyes follow the viewer while the face is visible (same curve as the web viewer)
+        off = abs((ang + math.pi) % (2 * math.pi) - math.pi)
+        k = 1.0 if off < 0.7 else 1 - 0.65 * (off - 0.7) / 0.871 if off < 1.571 else max(0.0, 0.35 * (1 - (off - 1.571) / 0.5))
+        restore = scene.eyes_look(sc.camera.matrix_world.translation, k if a.eyes_follow else 0.0)
         sc.render.filepath = path
         bpy.ops.render.render(write_still=True)
+        restore()
         print('[turntable]', i)
 
 

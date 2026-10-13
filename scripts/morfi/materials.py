@@ -118,7 +118,7 @@ def _image(nt, img, loc, non_color=False):
     return t
 
 
-def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.45, tile_uv='UVMap'):
+def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.32, tile_uv='UVMap'):
     m, nt, b = _new(name)
     b.inputs['Base Color'].default_value = hex_to_linear(color)
     b.inputs['Roughness'].default_value = 0.78
@@ -130,11 +130,15 @@ def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.
     if base_img is not None:
         t = _image(nt, base_img, (-300, 250))
         nt.links.new(t.outputs['Color'], b.inputs['Base Color'])
+    elif 'skin_c' in TILES:
+        # labyrinth lines in the colour (the head has them baked in its atlas)
+        color_tex(nt, b, 'skin_c', uv=tile_uv)
     if rough_img is not None:
         t = _image(nt, rough_img, (-300, 0), non_color=True)
         nt.links.new(t.outputs['Color'], b.inputs['Roughness'])
-    if not normal_tex(nt, b, 'velvet_n', 0.30, uv=tile_uv):
-        _micro_bump(nt, b, scale=95.0, strength=0.22, distance=0.0016)
+    if not normal_tex(nt, b, 'skin_n', 0.55, uv=tile_uv):
+        if not normal_tex(nt, b, 'velvet_n', 0.30, uv=tile_uv):
+            _micro_bump(nt, b, scale=95.0, strength=0.22, distance=0.0016)
     return m
 
 
