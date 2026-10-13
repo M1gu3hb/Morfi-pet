@@ -6,7 +6,7 @@
   "hints": 0,
   "info": {
    "triangles": 924816,
-   "vertices": 531386,
+   "vertices": 531712,
    "materials": 20,
    "animations": 6,
    "extensionsUsed": [
@@ -26,7 +26,7 @@
   "hints": 0,
   "info": {
    "triangles": 215796,
-   "vertices": 145740,
+   "vertices": 146104,
    "materials": 20,
    "animations": 6,
    "extensionsUsed": [
@@ -148,7 +148,7 @@
   "hints": 0,
   "info": {
    "triangles": 56000,
-   "vertices": 41181,
+   "vertices": 41686,
    "materials": 4,
    "animations": 0,
    "extensionsUsed": [

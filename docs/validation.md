@@ -10,7 +10,7 @@ Cada vista se renderiza con la **misma cámara estimada** de las referencias (le
 |---|---|---|
 | Frente | `02_Morfi_frente.png` | 0.848 |
 | Perfil izquierdo | `03_Morfi_perfil_izquierdo.png` | 0.850 |
-| Espalda | `04_Morfi_espalda.png` | 0.886 |
+| Espalda | `04_Morfi_espalda.png` | 0.885 |
 | Perfil derecho | `05_Morfi_perfil_derecho.png` | 0.821 |
 | 3/4 frontal | `06_Morfi_tres_cuartos_frontal.png` | 0.786 |
 | 3/4 posterior | `07_Morfi_tres_cuartos_posterior.png` | 0.796 |
@@ -102,4 +102,6 @@ Las 15 imágenes de referencia son renders de IA generados por separado; **no so
 3. **Perspectiva de manos y pies en perfil.** En los perfiles de referencia la mano cercana aparece más alta y el pie lejano no asoma; eso implica una cámara distinta a la de las vistas frontal y trasera. Se usa una sola cámara para todas las vistas (la que ajusta la cabeza con error medio ≈3 px), así que en perfil la mano cercana se ve algo más baja y grande.
 4. **Pose hero.** Reproduce la composición del master (cabeza hacia cámara e inclinada, laptop bajo el brazo derecho, puño izquierdo al frente, wordmark), pero no es un calco: la mano derecha queda detrás de la laptop y los pies se apoyan de forma ligeramente distinta.
 5. **Detalle fino de tela.** Arrugas y pliegues están modelados de forma procedural (pliegues de manga, fruncido sobre el dobladillo, acanalados); no hay simulación de tela, por lo que la caída es más limpia que en las referencias.
-6. **Visor web vs. Cycles.** El visor usa iluminación en tiempo real (Three.js); los colores y sombras son cercanos pero no idénticos a los renders de Cycles (por ejemplo, el iris se ve más oscuro). Los renders finales son los de `renders/`.
+6. **Tenis.** Tienen las piezas de la lámina 10 (suela con muescas, puntera, lengüeta, cuello acolchado, dos correas con ojales, talón azul), pero la puntera es algo más ancha y redonda y las correas más bajas que en la lámina; en primer plano (`cmp_part_tenis.png`) se nota más que en las vistas completas.
+7. **Textura laberinto en primer plano.** Su escala está ajustada a las vistas completas; en los renders de piezas cercanos (cubos, playera) se ve más marcada que en las láminas de producto, que muestran un tejido más liso.
+8. **Visor web vs. Cycles.** El visor usa iluminación en tiempo real (Three.js); los colores y sombras son cercanos pero no idénticos a los renders de Cycles (por ejemplo, el iris se ve más oscuro). Los renders finales son los de `renders/`.

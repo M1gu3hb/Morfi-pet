@@ -6,27 +6,27 @@
  },
  "profile_left": {
   "reference": "03_Morfi_perfil_izquierdo.png",
-  "silhouette_iou": 0.8499,
+  "silhouette_iou": 0.8497,
   "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
  },
  "back": {
   "reference": "04_Morfi_espalda.png",
-  "silhouette_iou": 0.8856,
+  "silhouette_iou": 0.885,
   "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
  },
  "profile_right": {
   "reference": "05_Morfi_perfil_derecho.png",
-  "silhouette_iou": 0.8213,
+  "silhouette_iou": 0.8211,
   "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
  },
  "three_quarter_front": {
   "reference": "06_Morfi_tres_cuartos_frontal.png",
-  "silhouette_iou": 0.7862,
+  "silhouette_iou": 0.7858,
   "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
  },
  "three_quarter_back": {
   "reference": "07_Morfi_tres_cuartos_posterior.png",
-  "silhouette_iou": 0.7963,
+  "silhouette_iou": 0.7958,
   "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
  }
 }
