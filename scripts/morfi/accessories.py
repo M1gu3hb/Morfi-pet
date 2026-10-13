@@ -43,7 +43,7 @@ def glasses_front_sdf(P, gp, yg):
         # slightly wider at the top (classic acetate square frames)
         hw_eff = hw + 0.004 * np.clip(v / hh, -1, 1)
         outer = S.rrect2d(u, v, hw_eff, hh, gp['outer_r'])
-        inner = S.rrect2d(u, v, hw_eff - gp['rim'], hh - gp['rim'] * 0.95, gp['outer_r'] - gp['rim'] * 0.8)
+        inner = S.rrect2d(u, v, hw_eff - gp['rim'], hh - gp['rim'] * 0.95, gp['outer_r'] - gp['rim'] * 0.55)
         ring2 = np.maximum(outer, -inner)
         r3 = S.extrude(ring2, yb, gp['depth_half'], gp['edge_r'])
         d = r3 if d is None else np.minimum(d, r3)
@@ -99,7 +99,7 @@ def build_glasses(cfg, shape, head, col, h=0.0013):
     y_back = min(ys) - gp['clearance']
     yg = y_back - gp['depth_half']
     gp['yg'] = yg
-    frame_m = mats.flat('M_GlassesFrame', cfg['colors']['frame'], rough=0.38, coat=0.15, coat_rough=0.25, spec=0.4)
+    frame_m = mats.flat('M_GlassesFrame', cfg['colors']['frame'], rough=0.42, coat=0.06, coat_rough=0.3, spec=0.35)
     lens_m = mats.glass('M_GlassesLens')
     # front frame
     bmin = (-0.36, yg - 0.03, -0.17)
@@ -132,7 +132,7 @@ def build_glasses(cfg, shape, head, col, h=0.0013):
 def lens_outline(gp, side, n=160, grow=0.004):
     """2D outline points (x, z) of a lens (rounded rect, slightly wider on top)."""
     hw, hh = gp['outer_half']
-    r = gp['outer_r'] - gp['rim'] * 0.8
+    r = gp['outer_r'] - gp['rim'] * 0.55
     ihw = hw - gp['rim'] + grow
     ihh = hh - gp['rim'] * 0.95 + grow
     pts = []

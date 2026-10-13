@@ -101,12 +101,21 @@ def build_studio(cfg, col):
     # small catch-light that only the eyes see (light linking) -> crisp
     # specular dot on the pupils like the reference renders
     eyes = bpy.data.collections.get('EyeCatch') or bpy.data.collections.new('EyeCatch')
-    for n in ('Eye_L', 'Eye_R'):
+    no_cornea = bpy.data.collections.get('NoCornea') or bpy.data.collections.new('NoCornea')
+    for n in ('Cornea_L', 'Cornea_R'):
         ob = bpy.data.objects.get(n)
         if ob and ob.name not in eyes.objects:
             eyes.objects.link(ob)
+        if ob and ob.name not in no_cornea.objects:
+            no_cornea.objects.link(ob)
+    for i in range(len(no_cornea.collection_objects)):
+        no_cornea.collection_objects[i].light_linking.link_state = 'EXCLUDE'
+    for ln in ('Light_Key', 'Light_Fill', 'Light_Rim', 'Light_Top'):
+        lo = bpy.data.objects.get(ln)
+        if lo:
+            lo.light_linking.receiver_collection = no_cornea
     catch = area('Light_EyeCatch', L.get('catch_loc', (-0.9, -2.6, 1.55)), (0, 0, 0.72),
-                 L.get('catch_size', 0.32), L.get('catch_power', 60.0))
+                 L.get('catch_size', 0.22), L.get('catch_power', 40.0))
     catch.visible_diffuse = False
     catch.visible_transmission = False
     catch.visible_volume_scatter = False

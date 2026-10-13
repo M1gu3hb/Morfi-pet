@@ -75,6 +75,7 @@ def build_eyes(cfg, shape, head, col, tex_dir):
     mu.save_image(p, img)
     eimg = mu.load_image(p, 'sRGB', 'T_Eye_BaseColor')
     m = mats.eye('M_Eye', eimg)
+    cmat = mats.cornea('M_Cornea')
     eyes = []
     target = shape.center + np.array(f['eye_look_target'])
     for name, c in (('Eye_R', shape.eye_centers[0]), ('Eye_L', shape.eye_centers[1])):
@@ -87,6 +88,16 @@ def build_eyes(cfg, shape, head, col, tex_dir):
         ob.rotation_quaternion = d.to_track_quat('-Y', 'Z')
         mu.assign_material(ob, m)
         eyes.append(ob)
+        # cornea: thin clear cap over the front of the eyeball
+        cv, cfc, _ = _eyeball_mesh(R + 0.0016, seg=72, rings=48)
+        keep = cv[:, 1] < -(R + 0.0016) * 0.35
+        idx = np.nonzero(keep)[0]
+        remap = -np.ones(len(cv), int)
+        remap[idx] = np.arange(len(idx))
+        faces_c = [tuple(remap[i] for i in fc) for fc in cfc if all(keep[i] for i in fc)]
+        co = mu.mesh_object(name.replace('Eye', 'Cornea'), cv[idx], faces_c, collection=col, parent=ob)
+        mu.assign_material(co, cmat)
+        co.visible_shadow = False
     return eyes
 
 

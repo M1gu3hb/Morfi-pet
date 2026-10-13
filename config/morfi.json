@@ -28,36 +28,37 @@
   "eye_radius": 0.12,
   "eye_protrusion": 0.022,
   "eye_open_half": [
-   0.088,
-   0.079
+   0.079,
+   0.0735
   ],
-  "eye_open_exponent": 2.6,
+  "eye_open_exponent": 2.4,
   "eye_look_target": [
    0.0,
    -0.65,
    0.045
   ],
-  "iris_angle_deg": 31.0,
-  "pupil_angle_deg": 19.0,
+  "iris_angle_deg": 30.0,
+  "pupil_angle_deg": 18.5,
   "brow_center": [
    0.147,
    0.106
   ],
   "brow_length": 0.092,
   "brow_thickness": 0.025,
-  "mouth_center_z": -0.11,
-  "mouth_half_width": 0.055,
-  "mouth_top_sag": 0.0095,
-  "mouth_bottom_sag": 0.035,
+  "mouth_center_z": -0.1,
+  "mouth_half_width": 0.051,
+  "mouth_top_sag": 0.008,
+  "mouth_bottom_sag": 0.04,
   "mouth_depth": 0.022,
   "socket_depth": 0.008,
   "lid_band": [
    -0.017,
    0.004
   ],
-  "brow_arch": 0.02,
+  "brow_arch": 0.027,
   "brow_height": 0.008,
-  "nose_amp": 0.0045
+  "nose_amp": 0.0045,
+  "nose_tint": 0.45
  },
  "colors": {
   "skin": "#0757F5",
@@ -68,11 +69,11 @@
   "mouth_interior": "#3A1512",
   "tongue": "#9A4038",
   "sclera": "#F6F7FA",
-  "iris_outer": "#0B2D7A",
-  "iris_mid": "#1E63D6",
-  "iris_inner": "#5FA2F2",
+  "iris_outer": "#0A1E5E",
+  "iris_mid": "#1452D4",
+  "iris_inner": "#3C82F0",
   "pupil": "#050608",
-  "hoodie": "#232429",
+  "hoodie": "#1D1E23",
   "tshirt": "#D6D7DA",
   "tshirt_logo": "#1F6BFF",
   "frame": "#070E20",
@@ -116,13 +117,15 @@
   ],
   "lens_cz": -0.029,
   "clearance": -0.002,
-  "depth_half": 0.0095
+  "depth_half": 0.0095,
+  "outer_r": 0.092,
+  "edge_r": 0.0075
  },
  "shoes": {
   "upper_top": {
-   "toe": 0.068,
-   "instep": 0.104,
-   "collar": 0.128
+   "toe": 0.088,
+   "instep": 0.116,
+   "collar": 0.136
   },
   "opening": {
    "cy": 0.05,
@@ -168,19 +171,19 @@
    ],
    "p_h": 2.7,
    "q_top": 2.7,
-   "q_bot": 4.2
+   "q_bot": 3.0
   },
   "cuff_len": 0.068,
   "cuff_r": [
-   0.06,
-   0.057
+   0.053,
+   0.051
   ],
-  "cuff_inner": 0.044,
-  "sleeve_bunch": 0.008,
+  "cuff_inner": 0.04,
+  "sleeve_bunch": 0.01,
   "hem": {
    "z0": 0.192,
    "z1": 0.24,
-   "inset": 0.008,
+   "inset": 0.016,
    "thick": 0.014
   },
   "hood": {
@@ -198,6 +201,21 @@
    "slope": 0.62,
    "rx": 10.0,
    "v_soft": 0.06
+  },
+  "logo": {
+   "cz": 0.405,
+   "w": 0.066,
+   "h": 0.044,
+   "stroke": 0.0076,
+   "v_depth": 0.58
+  },
+  "pocket": {
+   "cx": 0.143,
+   "cz": 0.29,
+   "hw": 0.048,
+   "hh": 0.049,
+   "raise": 0.0015,
+   "r_in": 0.035
   }
  },
  "laptop_place": {
@@ -242,9 +260,26 @@
    0.14,
    0.004,
    0.44
-  ]
+  ],
+  "foot": {
+   "c": [
+    0.152,
+    -0.04,
+    0.036
+   ],
+   "r": [
+    0.062,
+    0.11,
+    0.036
+   ],
+   "rz": -6.0
+  }
  },
  "lights": {
-  "world_glossy": 0.3
+  "world_glossy": 0.3,
+  "key_power": 85.0,
+  "world": 0.45,
+  "catch_size": 0.5,
+  "catch_power": 60.0
  }
 }

@@ -340,8 +340,8 @@ def eye_texture(cfg, size=1024):
     base = base * (1 - coll) + i_out[None, None, :] * coll
     base = base * (1.0 + 0.18 * fib[..., None] * (0.3 + t[..., None]))
     # limbal ring
-    limb = smoothstep(ri * 0.86, ri * 0.99, rho)[..., None]
-    base = base * (1 - limb * 0.75) + i_out[None, None, :] * 0.6 * limb * 0.75
+    limb = smoothstep(ri * 0.80, ri * 0.97, rho)[..., None]
+    base = base * (1 - limb * 0.9) + i_out[None, None, :] * 0.5 * limb * 0.9
     iris_m = smoothstep(ri + 0.006, ri - 0.006, rho)[..., None]
     pupil_m = smoothstep(rp + 0.006, rp - 0.004, rho)[..., None]
     sclera = scl[None, None, :] * (1 - 0.06 * smoothstep(0.55, 1.0, rho))[..., None]

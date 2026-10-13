@@ -45,7 +45,7 @@ class ShoeSDF:
         hy = np.interp(t, [0.0, 0.12, 0.40, 0.62, 1.0], [p['toe'] * 0.85, p['toe'], p['instep'], p['collar'], p['collar']])
         w = self.p['w_fore']
         side = np.clip(np.abs(x) / w, 0, 1)
-        return hy - 0.030 * side ** 2.2
+        return hy - 0.016 * side ** 2.2
 
     def sole(self, P):
         p = self.p
@@ -63,7 +63,8 @@ class ShoeSDF:
         nd = np.min(np.abs(y[..., None] - notch_y), axis=-1) if y.ndim else np.min(np.abs(y - notch_y))
         notch = np.maximum(np.maximum(nd - 0.0007, z - gz + 0.003), -d - 0.0010)
         notch = np.maximum(notch, 0.004 - z)
-        d = np.maximum(d, -notch)
+        if self.p.get('notches', False):
+            d = np.maximum(d, -notch)
         return d
 
     def upper_outer(self, P):
@@ -78,11 +79,9 @@ class ShoeSDF:
     def cavity(self, P):
         x, y, z = P
         o = self.p['opening']
-        d2 = self.foot2d(x, y, grow=-0.016)
-        cav = S.extrude(d2, z - 0.13, 0.08, 0.02)
-        cav = S.smax(cav, z - (self.top_height(x, y) - 0.013), 0.01)
+        cav = np.maximum(self.upper_outer(P) + 0.011, 0.040 - z)
         hole = S.sd_ellipsoid(P, (0, o['cy'], o['z'] + 0.06), (o['rx'], o['ry'], 0.075))
-        return S.smin(cav, hole, 0.02), hole
+        return S.smin(cav, hole, 0.012), hole
 
     def collar(self, P):
         o = self.p['opening']
@@ -95,8 +94,7 @@ class ShoeSDF:
         x, y, z = P
         d = self.upper_outer(P)
         cav, hole = self.cavity(P)
-        d = S.smin(d, np.maximum(self.collar(P), y - 0.2), 0.01)
-        d = S.smax(d, -cav, 0.006)
+        d = S.smax(d, -cav, 0.010)
         # toe-cap seam groove
         ys = -0.092 - 0.035 * (x / 0.08) ** 2
         seam = np.maximum(np.abs(y - ys) - 0.0011, -d - 0.0018)
@@ -111,22 +109,21 @@ class ShoeSDF:
 
     def tongue(self, P):
         x, y, z = P
-        a = np.array([0.0, -0.082, 0.082])
-        b = np.array([0.0, 0.010, 0.138])
-        ax = b - a
-        L = np.linalg.norm(ax)
-        ax /= L
-        up = np.cross(ax, [1.0, 0, 0])
-        R = np.stack([[1.0, 0, 0], ax, -up], 1)
-        d = S.sd_round_box(P, (a + b) / 2, (0.036, L / 2, 0.008), 0.007, R=R)
-        cav, hole = self.cavity(P)
-        return d
+        uo = self.upper_outer(P)
+        pad = np.maximum(uo - 0.0035, -(uo + 0.004))
+        pad = S.smax(pad, np.abs(x) - 0.033, 0.006)
+        pad = S.smax(pad, y - 0.006, 0.006)
+        pad = S.smax(pad, -0.078 - y, 0.01)
+        # upper end of the tongue standing in front of the shin
+        R = S.rot_matrix(-25, 0, 0)
+        top = S.sd_ellipsoid(P, (0.0, 0.002, 0.120), (0.033, 0.010, 0.024), R=R)
+        return S.smin(pad, top, 0.012)
 
     def blue_panel(self, P):
         bp = self.p['blue_plane']
         x, y, z = P
-        d = self.upper_outer(P) - 0.0018
-        d = np.maximum(d, -(self.upper_outer(P) + 0.003))
+        uo = self.upper_outer(P)
+        d = np.maximum(uo - 0.0024, -(uo + 0.0003))
         plane = (bp['y0'] - y) + bp['slope'] * (z - self.p['sole_h'])
         d = S.smax(d, plane / math.sqrt(1 + bp['slope'] ** 2), 0.003)
         cav, hole = self.cavity(P)
@@ -135,17 +132,16 @@ class ShoeSDF:
         return d
 
     def straps(self, P):
+        """Wide elastic straps conforming to the vamp surface."""
         x, y, z = P
         p = self.p
+        uo = np.minimum(self.upper_outer(P), self.tongue(P))
+        shell = np.maximum(uo - 0.0040, -(uo + 0.0004))
         d = None
         for ys in p['straps_y']:
-            # arched band over the instep, following the top surface
-            xs = np.clip(x, -0.062, 0.062)
-            zt = self.top_height(xs, np.full_like(xs, ys)) + 0.0025 + 0.010 * (1 - (xs / 0.062) ** 2)
-            q = np.abs(y - ys) - p['strap_w']
-            dz = z - zt
-            band = np.maximum(np.maximum(q, np.abs(dz) - p['strap_t']), np.abs(x) - 0.063)
-            band = band - 0.002
+            band = np.maximum(shell, np.abs(y - ys) - p['strap_w'])
+            band = np.maximum(band, np.abs(x) - 0.058)
+            band = np.maximum(band, 0.06 - z)
             d = band if d is None else np.minimum(d, band)
         return d
 
@@ -153,9 +149,9 @@ class ShoeSDF:
         d = None
         for ys in self.p['straps_y']:
             for side in (-1, 1):
-                c = (side * 0.060, ys, self.top_height(np.array([0.06]), np.array([ys]))[0] - 0.012)
+                c = (side * 0.066, ys, self.top_height(np.array([0.066]), np.array([ys]))[0] - 0.016)
                 R = S.rot_matrix(0, 90 * side, 0)
-                t = S.sd_torus(P, c, 0.010, 0.0032, Rm=R)
+                t = S.sd_torus(P, c, 0.0105, 0.0034, Rm=R)
                 d = t if d is None else np.minimum(d, t)
         return d
 

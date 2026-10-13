@@ -72,10 +72,10 @@ def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.
     m, nt, b = _new(name)
     b.inputs['Base Color'].default_value = hex_to_linear(color)
     b.inputs['Roughness'].default_value = 0.78
-    b.inputs['Specular IOR Level'].default_value = 0.22
+    b.inputs['Specular IOR Level'].default_value = 0.12
     b.inputs['Sheen Weight'].default_value = sheen
     b.inputs['Sheen Roughness'].default_value = 0.45
-    b.inputs['Sheen Tint'].default_value = (0.18, 0.45, 1.0, 1.0)
+    b.inputs['Sheen Tint'].default_value = (0.04, 0.32, 1.0, 1.0)
     b.inputs['Diffuse Roughness'].default_value = 0.4
     if base_img is not None:
         t = _image(nt, base_img, (-300, 250))
@@ -112,11 +112,21 @@ def eye(name, img):
     m, nt, b = _new(name)
     t = _image(nt, img, (-300, 200))
     nt.links.new(t.outputs['Color'], b.inputs['Base Color'])
-    b.inputs['Roughness'].default_value = 0.35
-    b.inputs['Coat Weight'].default_value = 1.0
-    b.inputs['Coat Roughness'].default_value = 0.015
-    b.inputs['Coat IOR'].default_value = 1.376
+    b.inputs['Roughness'].default_value = 0.45
     b.inputs['Specular IOR Level'].default_value = 0.0
+    return m
+
+
+def cornea(name='M_Cornea'):
+    """Clear wet cornea shell: thin-glass in Cycles, transmission in glTF."""
+    m = glass(name)
+    nt = m.node_tree
+    for n in nt.nodes:
+        if n.type == 'BSDF_GLOSSY':
+            n.inputs['Roughness'].default_value = 0.0
+        if n.type == 'FRESNEL':
+            n.inputs['IOR'].default_value = 1.376
+    nt.nodes['Principled BSDF'].inputs['IOR'].default_value = 1.376
     return m
 
 
