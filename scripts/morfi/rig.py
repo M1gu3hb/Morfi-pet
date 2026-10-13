@@ -162,6 +162,13 @@ def compute_weights(P, cfg, J):
     D = np.stack([parts[k] for k in names], 1)
     tau = 0.008
     A = np.exp(-(D - D.min(1, keepdims=True)) / tau)
+    # The hands hang next to the hips: garment points on the torso side
+    # (waistband, lower front panels) are close to them but must never follow
+    # the arms. Arm/hand influence is only allowed outside the body column or
+    # above elbow height.
+    gate = np.maximum(S.smoothstep(0.235, 0.27, np.abs(x)), S.smoothstep(0.31, 0.36, z))
+    for k in ('arm.L', 'arm.R', 'hand.L', 'hand.R'):
+        A[:, names.index(k)] *= gate
     A /= A.sum(1, keepdims=True)
     out = {}
 
