@@ -30,6 +30,14 @@ PAIRS = [
 
 
 def ref_mask(path, size):
+    """Silhouette of a reference: the segmentation from scripts/ref_masks.py if
+    available (accurate on white sneakers / floor shadows), else a colour threshold."""
+    mp = os.path.join(ROOT, 'references_masks', os.path.basename(path))
+    if os.path.exists(mp):
+        m = Image.open(mp).convert('L')
+        if m.size != size:
+            m = m.resize(size, Image.BILINEAR)
+        return np.asarray(m) > 128
     im = Image.open(path).convert('RGB')
     if im.size != size:
         im = im.resize(size)

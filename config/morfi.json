@@ -78,8 +78,8 @@
   "iris_mid": "#1452D4",
   "iris_inner": "#3C82F0",
   "pupil": "#050608",
-  "hoodie": "#1C1D21",
-  "tshirt": "#E6E3E3",
+  "hoodie": "#121316",
+  "tshirt": "#DEDBDB",
   "tshirt_logo": "#1F6BFF",
   "frame": "#070E20",
   "shoe_white": "#F0F0ED",
@@ -129,9 +129,9 @@
  },
  "shoes": {
   "upper_top": {
-   "toe": 0.086,
-   "instep": 0.112,
-   "collar": 0.122
+   "toe": 0.0791,
+   "instep": 0.103,
+   "collar": 0.1122
   },
   "opening": {
    "cx": -0.022,
@@ -140,8 +140,8 @@
    "ry": 0.066,
    "z": 0.092
   },
-  "w_fore": 0.1,
-  "w_heel": 0.088,
+  "w_fore": 0.104,
+  "w_heel": 0.092,
   "straps_y": [
    -0.062,
    -0.024
@@ -166,27 +166,27 @@
   "top_profile": [
    [
     0.0,
-    0.046
+    0.0423
    ],
    [
     0.08,
-    0.068
+    0.0626
    ],
    [
     0.2,
-    0.084
+    0.0773
    ],
    [
     0.45,
-    0.11
+    0.1012
    ],
    [
     0.66,
-    0.122
+    0.1122
    ],
    [
     1.0,
-    0.122
+    0.1122
    ]
   ],
   "top_side_drop": 0.01,
@@ -197,7 +197,7 @@
    "thick": 0.0055,
    "tilt": -20.0,
    "y": 0.004,
-   "dz": 0.022,
+   "dz": 0.016,
    "r": [
     0.037,
     0.013,
@@ -219,19 +219,19 @@
    0.433
   ],
   "sleeve_r": [
-   0.064,
-   0.066,
+   0.058,
+   0.062,
    0.066
   ],
   "box": {
    "c": [
     0.0,
-    -0.016,
+    -0.01,
     0.338
    ],
    "half": [
     0.226,
-    0.17,
+    0.166,
     0.163
    ],
    "p_h": 2.7,
@@ -264,10 +264,10 @@
    ],
    "r": [
     0.208,
-    0.074,
-    0.112
+    0.078,
+    0.122
    ],
-   "tip_z": 0.362,
+   "tip_z": 0.345,
    "slope": 0.62,
    "rx": 10.0,
    "v_soft": 0.06
@@ -308,6 +308,20 @@
    "R": 0.1,
    "r": 0.0085,
    "tilt": 12.0
+  },
+  "sleeve_mid_out": -0.008,
+  "collar": {
+   "c": [
+    0.0,
+    0.04,
+    0.474
+   ],
+   "R": [
+    0.14,
+    0.122
+   ],
+   "r": 0.04,
+   "tilt": 12.0
   }
  },
  "laptop_place": {
@@ -324,19 +338,19 @@
  },
  "body": {
   "elbow": [
-   0.262,
-   0.004,
-   0.35
+   0.255,
+   0.008,
+   0.352
   ],
   "wrist": [
-   0.35,
-   0.0,
-   0.264
+   0.34,
+   0.02,
+   0.272
   ],
   "leg_r": [
    0.066,
-   0.06,
-   0.05
+   0.058,
+   0.046
   ],
   "knee": [
    0.11,
@@ -370,7 +384,7 @@
    "c": [
     0.0,
     0.004,
-    0.236
+    0.245
    ],
    "r": [
     0.132,
@@ -383,8 +397,13 @@
    0.004,
    0.2
   ],
-  "hand_pronate_deg": 55.0,
-  "finger_blend_mul": 1.4
+  "hand_pronate_deg": 45.0,
+  "finger_blend_mul": 1.4,
+  "hand_down": [
+   0.1,
+   0.05,
+   -1.0
+  ]
  },
  "lights": {
   "world_glossy": 0.3,
@@ -411,5 +430,280 @@
   "d": 0.146,
   "logo_size": 0.019,
   "logo_offset": 0.0105
+ },
+ "camera_views": {
+  "front": {
+   "az": -0.84133,
+   "height": 0.74947,
+   "distance": 2.4498,
+   "lens": 65.23437,
+   "target": [
+    0.00285,
+    0.0,
+    0.52377
+   ],
+   "roll": -0.16322
+  },
+  "profile_left": {
+   "az": 89.85554,
+   "height": 0.56287,
+   "distance": 2.49762,
+   "lens": 65.23368,
+   "target": [
+    0.01484,
+    0.0,
+    0.52521
+   ],
+   "roll": 0.46693
+  },
+  "back": {
+   "az": 180.84023,
+   "height": 0.73638,
+   "distance": 2.50384,
+   "lens": 65.19958,
+   "target": [
+    -0.00113,
+    0.0,
+    0.51989
+   ],
+   "roll": 0.51718
+  },
+  "profile_right": {
+   "az": -87.10914,
+   "height": 1.13938,
+   "distance": 2.4653,
+   "lens": 65.03673,
+   "target": [
+    0.01341,
+    0.0,
+    0.51388
+   ],
+   "roll": 0.17381
+  },
+  "three_quarter_front": {
+   "az": 17.11828,
+   "height": 0.66259,
+   "distance": 2.50394,
+   "lens": 65.05038,
+   "target": [
+    -0.00705,
+    0.0,
+    0.50358
+   ],
+   "roll": -0.46249
+  },
+  "three_quarter_back": {
+   "az": -150.04913,
+   "height": 0.41048,
+   "distance": 2.50508,
+   "lens": 65.06512,
+   "target": [
+    -0.00938,
+    0.0,
+    0.51017
+   ],
+   "roll": 2.25863
+  },
+  "hero": {
+   "az": -28.44768,
+   "height": 0.34057,
+   "distance": 2.19088,
+   "lens": 54.91165,
+   "target": [
+    -0.01868,
+    0.0,
+    0.47874
+   ],
+   "roll": 1.98407
+  },
+  "_doc": "Camara calibrada por vista contra la silueta de cada referencia (scripts/fit_cameras.py). Las referencias son renders independientes con encuadres distintos."
+ },
+ "textures": {
+  "_doc": "Laberinto fino medido en parches planos de 02_frente (espaciado y contraste del relieve). f0 = ciclos por tile; width = medio ancho de linea / periodo; gain = cambio de color en la linea (+ mas claro); relief = peso en el mapa de alturas (+ cresta).",
+  "skin": {
+   "f0": 56.0,
+   "width": 0.12,
+   "gain": 0.35,
+   "relief": 0.8,
+   "fine": 0.25,
+   "normal": 0.95
+  },
+  "hoodie": {
+   "f0": 30.0,
+   "width": 0.1,
+   "gain": 0.9,
+   "relief": 0.55
+  },
+  "tshirt": {
+   "f0": 44.0,
+   "width": 0.15,
+   "gain": -0.1,
+   "relief": 0.6
+  }
+ },
+ "view_poses": {
+  "front": {
+   "head": [
+    0.257,
+    0.026,
+    1.538
+   ],
+   "upper_arm.L": [
+    -0.173,
+    -3.084,
+    0.0
+   ],
+   "upper_arm.R": [
+    1.572,
+    2.606,
+    0.0
+   ],
+   "forearm.L": [
+    -0.154,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    2.134,
+    0.0,
+    0.0
+   ]
+  },
+  "profile_left": {
+   "head": [
+    0.713,
+    1.428,
+    1.43
+   ],
+   "upper_arm.L": [
+    -0.69,
+    -0.157,
+    0.0
+   ],
+   "upper_arm.R": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "forearm.L": [
+    -0.407,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "back": {
+   "head": [
+    -1.254,
+    0.387,
+    -0.919
+   ],
+   "upper_arm.L": [
+    -8.985,
+    -1.065,
+    0.0
+   ],
+   "upper_arm.R": [
+    -6.493,
+    2.794,
+    0.0
+   ],
+   "forearm.L": [
+    -6.835,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    -4.289,
+    0.0,
+    0.0
+   ]
+  },
+  "profile_right": {
+   "head": [
+    0.138,
+    1.807,
+    -1.061
+   ],
+   "upper_arm.L": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "upper_arm.R": [
+    -2.169,
+    0.667,
+    0.0
+   ],
+   "forearm.L": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    -0.665,
+    0.0,
+    0.0
+   ]
+  },
+  "three_quarter_front": {
+   "head": [
+    1.068,
+    -4.6,
+    15.387
+   ],
+   "upper_arm.L": [
+    8.191,
+    15.961,
+    0.0
+   ],
+   "upper_arm.R": [
+    -0.458,
+    1.596,
+    0.0
+   ],
+   "forearm.L": [
+    5.647,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    -2.45,
+    0.0,
+    0.0
+   ]
+  },
+  "three_quarter_back": {
+   "head": [
+    5.631,
+    2.935,
+    2.552
+   ],
+   "upper_arm.L": [
+    -4.539,
+    -8.215,
+    0.0
+   ],
+   "upper_arm.R": [
+    7.632,
+    -1.999,
+    0.0
+   ],
+   "forearm.L": [
+    -2.704,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    4.392,
+    0.0,
+    0.0
+   ]
+  },
+  "_doc": "Pose por toma (grados, ejes del mundo en la cabeza de cada hueso en reposo), ajustada a la silueta de cada referencia con scripts/fit_view_poses.py"
  }
 }

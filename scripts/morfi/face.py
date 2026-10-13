@@ -27,7 +27,8 @@ def build_head(cfg, col, tex_dir, parent=None, tex_size=4096, lines=None):
     os.makedirs(tex_dir, exist_ok=True)
     base_p = os.path.join(tex_dir, 'head_basecolor.png')
     rough_p = os.path.join(tex_dir, 'head_roughness.png')
-    img, rough = shape.bake_textures(tex_size, lines=lines)
+    img, rough = shape.bake_textures(tex_size, lines=lines,
+                                     line_dark=-cfg.get('textures', {}).get('skin', {}).get('gain', -0.10))
     mu.save_image(base_p, img)
     mu.save_image(rough_p, np.repeat(rough[..., None], 3, axis=2))
     bimg = mu.load_image(base_p, 'sRGB', 'T_Head_BaseColor')

@@ -56,7 +56,7 @@ class BodySDF:
         b = self.b
         h = b['hand']
         W = np.array(b['wrist']) * np.array([side, 1, 1])
-        D = np.array(h['down']) * np.array([side, 1, 1])
+        D = np.array(b.get('hand_down', h['down'])) * np.array([side, 1, 1])
         D = D / np.linalg.norm(D)
         F = np.array([0.0, -1.0, 0.0])
         F = F - D * (F @ D)

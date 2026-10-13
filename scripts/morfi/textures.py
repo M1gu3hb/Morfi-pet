@@ -155,45 +155,65 @@ def _srgb(hexstr):
     return np.array([int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)])
 
 
-# line density per material, in tile periods: the tile is mapped with box UVs at
-# 2.5 (skin), 3.5 (hoodie) and 5.0 (t-shirt) tiles per unit, which gives a line
-# spacing of ~7 mm on the skin and ~10 mm on the fabrics, as in the references.
-SQUIGGLE_F0 = {'skin': 40.0, 'hoodie': 19.0, 'tshirt': 15.0}
+# Labyrinth parameters, matched to the references by measuring the micro-relief
+# of flat patches (high-pass luminance: line spacing and contrast) on 02_frente.
+# The UV tiles span 0.4 (skin), 0.286 (hoodie) and 0.2 (t-shirt) units.
+#   f0     ring frequency of the band noise, in cycles per tile
+#   width  line half-width as a fraction of the period
+#   gain   colour change on the lines (+ lighter, - darker)
+#   relief sign/weight of the lines in the height map (+ raised ridge)
+TEX = {
+    'skin': dict(f0=56.0, width=0.055, gain=0.07, relief=0.75, fine=0.25),
+    'hoodie': dict(f0=24.0, width=0.065, gain=0.45, relief=0.55),
+    'tshirt': dict(f0=44.0, width=0.05, gain=-0.06, relief=0.5),
+}
 CACHE = {}
 
 
+def configure(cfg_tex):
+    """Override TEX from config['textures'] (if present)."""
+    for k, v in (cfg_tex or {}).items():
+        if k in TEX:
+            TEX[k].update(v)
+
+
 def skin_lines(n=1024, seed=21):
-    if ('skin', n) not in CACHE:
-        CACHE[('skin', n)] = squiggle(n, SQUIGGLE_F0['skin'], 0.065, seed)
-    return CACHE[('skin', n)]
+    t = TEX['skin']
+    key = ('skin', n, t['f0'], t['width'])
+    if key not in CACHE:
+        CACHE[key] = squiggle(n, t['f0'], t['width'], seed)
+    return CACHE[key]
 
 
 def skin_tile(n=1024, color='#0757F5', seed=21):
-    """Skin: velvet micro-noise + engraved labyrinth lines (colour + normal)."""
+    """Skin: velvet micro-noise + fine raised labyrinth ridges (colour + normal)."""
+    t = TEX['skin']
     lines = skin_lines(n, seed)
     fine = fourier_noise(n, 1.2, seed + 1, fmin=60)
-    h = 0.20 * fine - 0.80 * lines
-    col = _srgb(color)[None, None, :] * (1.0 - 0.10 * lines[..., None]) * (0.985 + 0.03 * fine[..., None])
+    h = t['fine'] * fine + t['relief'] * lines
+    col = _srgb(color)[None, None, :] * (1.0 + t['gain'] * lines[..., None]) * (0.985 + 0.03 * fine[..., None])
     return np.clip(col, 0, 1), height_to_normal(h, 3.0)
 
 
 def hoodie_tile(n=1024, color='#212227', seed=31):
-    """Fleece with the raised labyrinth pattern (slightly lighter lines)."""
-    lines = squiggle(n, SQUIGGLE_F0['hoodie'], 0.075, seed)
+    """Fleece with the raised labyrinth pattern (lighter lines)."""
+    t = TEX['hoodie']
+    lines = squiggle(n, t['f0'], t['width'], seed)
     _, fl = fleece(n, seed + 1)
-    h = 0.55 * fl + 0.45 * lines
+    h = (1 - t['relief']) * fl + t['relief'] * lines
     base = _srgb(color)
-    col = base[None, None, :] * (1.0 + 0.14 * lines[..., None]) * (0.96 + 0.08 * fl[..., None])
+    col = base[None, None, :] * (1.0 + t['gain'] * lines[..., None]) * (0.96 + 0.08 * fl[..., None])
     return np.clip(col, 0, 1), height_to_normal(h, 4.0)
 
 
 def tshirt_tile(n=1024, color='#D6D7DA', seed=41):
-    """Heather jersey with darker printed/embossed labyrinth lines."""
-    lines = squiggle(n, SQUIGGLE_F0['tshirt'], 0.06, seed)
+    """Heather jersey with a fine, soft embossed labyrinth."""
+    t = TEX['tshirt']
+    lines = squiggle(n, t['f0'], t['width'], seed)
     col, _ = jersey(n, base=tuple(_srgb(color)), seed=seed + 1)
-    col = col * (1.0 - 0.16 * lines[..., None])
+    col = col * (1.0 + t['gain'] * lines[..., None])
     b = fourier_noise(n, 0.6, seed + 2, fmin=150)
-    h = 0.55 * (1 - lines) + 0.45 * b
+    h = t['relief'] * lines + (1 - t['relief']) * b
     return np.clip(col, 0, 1), height_to_normal(h, 3.0)
 
 

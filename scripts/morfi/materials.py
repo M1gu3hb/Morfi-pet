@@ -60,6 +60,7 @@ def _micro_bump(nt, bsdf, scale=110.0, strength=0.12, distance=0.0015, fine=520.
 
 
 TILES = {}
+SKIN_NORMAL = 0.55  # strength of the skin relief normal map (config textures.skin.normal)
 
 
 def load_tiles(paths):
@@ -118,14 +119,16 @@ def _image(nt, img, loc, non_color=False):
     return t
 
 
-def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.32, tile_uv='UVMap'):
+def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.35, tile_uv='UVMap'):
+    # flocked velvet: no white specular (it washed out the saturated blue of
+    # the references, measured R 21 vs 3 in sRGB), a blue sheen gives the soft rim
     m, nt, b = _new(name)
     b.inputs['Base Color'].default_value = hex_to_linear(color)
     b.inputs['Roughness'].default_value = 0.78
-    b.inputs['Specular IOR Level'].default_value = 0.12
+    b.inputs['Specular IOR Level'].default_value = 0.0
     b.inputs['Sheen Weight'].default_value = sheen
     b.inputs['Sheen Roughness'].default_value = 0.45
-    b.inputs['Sheen Tint'].default_value = (0.04, 0.32, 1.0, 1.0)
+    b.inputs['Sheen Tint'].default_value = (0.0, 0.35, 1.0, 1.0)
     b.inputs['Diffuse Roughness'].default_value = 0.4
     if base_img is not None:
         t = _image(nt, base_img, (-300, 250))
@@ -136,7 +139,7 @@ def skin(name='M_Skin', color='#0757F5', base_img=None, rough_img=None, sheen=0.
     if rough_img is not None:
         t = _image(nt, rough_img, (-300, 0), non_color=True)
         nt.links.new(t.outputs['Color'], b.inputs['Roughness'])
-    if not normal_tex(nt, b, 'skin_n', 0.55, uv=tile_uv):
+    if not normal_tex(nt, b, 'skin_n', SKIN_NORMAL, uv=tile_uv):
         if not normal_tex(nt, b, 'velvet_n', 0.30, uv=tile_uv):
             _micro_bump(nt, b, scale=95.0, strength=0.22, distance=0.0016)
     return m

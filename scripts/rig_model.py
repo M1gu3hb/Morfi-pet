@@ -212,6 +212,17 @@ def main():
     for act in bpy.data.actions:
         if act.name in ('Idle', 'Walk', 'Run', 'Wave'):
             make_cyclic(act)
+    # per-shot poses matched to each reference image (scripts/fit_view_poses.py)
+    for view, vp in cfg.get('view_poses', {}).items():
+        if view.startswith('_'):
+            continue
+        new_action(rig, 'Ref_' + view)
+        R.reset_pose(rig)
+        bpy.context.view_layer.update()
+        for bone, ang in vp.items():
+            if bone in rig.pose.bones:
+                set_rot(rig, bone, ((1, 0, 0), ang[0]), ((0, 1, 0), ang[1]), ((0, 0, 1), ang[2]))
+        key_all(rig, 1)
     # leave the rig in the neutral pose
     rig.animation_data.action = bpy.data.actions['Pose_Neutral']
     R.reset_pose(rig)

@@ -105,6 +105,8 @@ def main():
     studio = bpy.data.collections['Studio']
     cam = bpy.data.objects.get('Cam_hero') or scene.make_camera(
         'Cam_hero', -33.0, cfg, studio, target=(0.0, 0.0, 0.465), dist=2.30, height=0.86, lens=55.0)
+    if 'hero' in cfg.get('camera_views', {}):
+        scene.place_camera(cam, cfg['camera_views']['hero'])
     sc.camera = cam
     bpy.context.view_layer.update()
     scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK['hero'])

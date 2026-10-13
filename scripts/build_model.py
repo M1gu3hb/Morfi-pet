@@ -54,6 +54,8 @@ def main():
 
     from morfi import textures
     tsize = 1024 if q == 'final' else 512
+    textures.configure(cfg.get('textures'))
+    mats.SKIN_NORMAL = cfg.get('textures', {}).get('skin', {}).get('normal', mats.SKIN_NORMAL)
     mats.load_tiles(textures.generate_all(tex, tsize, cfg['colors']))
     skin = mats.skin('M_Skin', cfg['colors']['skin'])
     # ---------------------------------------------------------------- head

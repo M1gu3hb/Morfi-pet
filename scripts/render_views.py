@@ -27,6 +27,8 @@ def main():
     ap.add_argument('--suffix', default='')
     ap.add_argument('--engine', default='CYCLES', choices=['CYCLES', 'WORKBENCH', 'EEVEE'])
     ap.add_argument('--res', default='', help='WxH override')
+    ap.add_argument('--shared-camera', dest='calibrated', action='store_false',
+                    help='use the single estimated camera instead of the per-view calibrated ones')
     ap.add_argument('--no-eyes-follow', dest='eyes_follow', action='store_false',
                     help='keep the modelled forward gaze instead of looking at each camera')
     a = ap.parse_args(argv)
@@ -63,12 +65,21 @@ def main():
             c.hide_render = True
     os.makedirs(a.out, exist_ok=True)
     t0 = time.time()
+    import json
+    cfg = json.load(open(os.path.join(ROOT, 'config', 'morfi.json')))
     for v in a.views.split(','):
-        cam = bpy.data.objects.get('Cam_' + v)
+        cam = scene.view_camera(v, cfg) if a.calibrated else bpy.data.objects.get('Cam_' + v)
         if cam is None:
             print('no camera', v)
             continue
         sc.camera = cam
+        rig = bpy.data.objects.get('Morfi_Rig')
+        if rig and rig.animation_data:
+            # each reference shot has its own fitted pose (Ref_<view>), else neutral
+            ref_act = bpy.data.actions.get('Ref_' + v) if a.calibrated else None
+            rig.animation_data.action = ref_act or bpy.data.actions.get('Pose_Neutral')
+            sc.frame_set(1)
+            bpy.context.view_layer.update()
         sc.render.filepath = os.path.join(a.out, v + a.suffix + '.png')
         restore = scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK.get(v, 1.0) if a.eyes_follow else 0.0)
         bpy.ops.render.render(write_still=True)

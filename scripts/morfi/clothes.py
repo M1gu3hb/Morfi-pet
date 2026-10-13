@@ -141,7 +141,7 @@ class Garments:
         cs, ce, n = self.cuff_axis(side)
         r = p['sleeve_r']
         st = np.array(p['sleeve_start']) * np.array([side, 1, 1])
-        mid = (st + cs) / 2 + np.array([side * 0.004, 0, -0.004])
+        mid = (st + cs) / 2 + np.array([side * p.get('sleeve_mid_out', 0.004), 0, -0.004])
         d = S.sd_round_cone(P, st, mid, r[0], r[1])
         d = S.smin(d, S.sd_round_cone(P, mid, cs, r[1], r[2]), 0.02)
         # bunched folds above the cuff

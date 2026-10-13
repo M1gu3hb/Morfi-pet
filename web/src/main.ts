@@ -64,12 +64,46 @@ scene.add(ground);
 const VIEWS: Record<string, number> = {
   front: 0, three_quarter_front: 33, profile_left: 90, profile_right: -90, back: 180, three_quarter_back: -150,
 };
+// Calibrated camera of each reference shot (scripts/fit_cameras.py, copied to
+// models/views.json by sync-assets). Blender (x, y, z) -> glTF (x, z, -y).
+type CamView = { az: number; height: number; distance: number; lens: number; target: number[]; roll?: number };
+let CAMS: Record<string, CamView> = {};
+let REF_POSES: string[] = [];
+let lensFov = VFOV;
+let currentView = 'front';
+const b2t = (v: number[]) => new THREE.Vector3(v[0], v[2], -v[1]);
+fetch('./models/views.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+  if (!j) return;
+  CAMS = j.camera_views ?? {};
+  REF_POSES = j.poses ?? [];
+  setView(currentView);
+}).catch(() => undefined);
+
 function setView(name: string) {
-  const az = (VIEWS[name] * Math.PI) / 180;
-  // Blender (x, y, z) -> glTF (x, z, -y)
-  camera.position.set(DIST * Math.sin(az), CAM_H, DIST * Math.cos(az));
-  controls.target.copy(TARGET);
+  currentView = name;
+  const c = CAMS[name];
+  if (c) {
+    const a = (c.az * Math.PI) / 180;
+    const t = c.target;
+    camera.position.copy(b2t([t[0] + c.distance * Math.sin(a), t[1] - c.distance * Math.cos(a), c.height]));
+    controls.target.copy(b2t(t));
+    lensFov = (2 * Math.atan(18 / c.lens) * 180) / Math.PI;
+  } else {
+    const az = (VIEWS[name] * Math.PI) / 180;
+    camera.position.set(DIST * Math.sin(az), CAM_H, DIST * Math.cos(az));
+    controls.target.copy(TARGET);
+    lensFov = VFOV;
+  }
+  resize();
+  // the reference shots were posed individually: use that shot's pose while
+  // the character is in its neutral / reference pose
+  const cur = action?.getClip().name ?? 'Pose_Neutral';
+  if (mixer && (cur === 'Pose_Neutral' || cur.startsWith('Ref_'))) {
+    const want = REF_POSES.includes(name) && clips.some((k) => k.name === 'Ref_' + name) ? 'Ref_' + name : 'Pose_Neutral';
+    if (want !== cur) playClip(want);
+  }
   controls.update();
+  invalidate(4);
 }
 
 // ------------------------------------------------------------------ toggles
@@ -227,7 +261,7 @@ loader.load(
     const sel = document.getElementById('anim') as HTMLSelectElement;
     sel.innerHTML = '';
     const order = ['Pose_Neutral', 'Pose_Hero', 'Idle', 'Walk', 'Run', 'Wave'];
-    const names = clips.map((c) => c.name).sort((a, b) => (order.indexOf(a) + 99 * +(order.indexOf(a) < 0)) - (order.indexOf(b) + 99 * +(order.indexOf(b) < 0)));
+    const names = clips.map((c) => c.name).filter((n) => !n.startsWith('Ref_')).sort((a, b) => (order.indexOf(a) + 99 * +(order.indexOf(a) < 0)) - (order.indexOf(b) + 99 * +(order.indexOf(b) < 0)));
     for (const n of names) {
       const opt = document.createElement('option');
       opt.value = n;
@@ -289,8 +323,20 @@ document.getElementById('shot')!.addEventListener('click', () => {
   if (bg === 'light') renderer.setClearColor(0xfdfdf9, 1);
   if (bg === 'dark') renderer.setClearColor(0x14161c, 1);
   aimEyes();
+  // capture at the reference image size (1145x1374) so a shot taken from a
+  // reference view is framed exactly like that reference
+  const size = renderer.getSize(new THREE.Vector2());
+  const [aspect, fov] = [camera.aspect, camera.fov];
+  renderer.setSize(1145, 1374, false);
+  camera.aspect = 1145 / 1374;
+  camera.fov = lensFov;
+  camera.updateProjectionMatrix();
   renderer.render(scene, camera);
   const url = renderer.domElement.toDataURL('image/png');
+  renderer.setSize(size.x, size.y, false);
+  camera.aspect = aspect;
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
   renderer.setClearColor(0x000000, prev);
   const a = document.createElement('a');
   a.href = url;
@@ -314,7 +360,7 @@ function resize() {
   camera.aspect = w / h;
   // keep the whole character in frame on portrait/landscape screens
   const fit = w / h < 0.85 ? 1.25 : 1.0;
-  camera.fov = VFOV * fit;
+  camera.fov = lensFov * fit;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);

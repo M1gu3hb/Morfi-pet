@@ -220,3 +220,35 @@ def eyes_look(cam_loc, k):
             ob.matrix_basis = old
         bpy.context.view_layer.update()
     return restore
+
+
+def place_camera(ob, cam):
+    """Place a Blender camera object from a calibrated view dict
+    (az, height, distance, lens, target, roll) as written by scripts/fit_cameras.py."""
+    from mathutils import Quaternion
+    a = math.radians(cam['az'])
+    t = Vector(cam['target'])
+    ob.location = (t.x + cam['distance'] * math.sin(a), t.y - cam['distance'] * math.cos(a), cam['height'])
+    q = (t - Vector(ob.location)).to_track_quat('-Z', 'Y')
+    q = q @ Quaternion(Vector((0, 0, 1)), math.radians(cam.get('roll', 0.0)))
+    ob.rotation_mode = 'XYZ'
+    ob.rotation_euler = q.to_euler()
+    ob.data.lens = cam['lens']
+    ob.data.sensor_fit = 'VERTICAL'
+    ob.data.sensor_height = 36.0
+    return ob
+
+
+def view_camera(view, cfg, col=None):
+    """Camera for a reference view: the calibrated one from config['camera_views']
+    when present, else the shared estimated camera."""
+    views = cfg.get('camera_views', {})
+    name = 'Cam_' + view
+    ob = bpy.data.objects.get(name)
+    if view in views:
+        if ob is None:
+            ob = make_camera(name, views[view]['az'], cfg, col or bpy.context.scene.collection)
+        return place_camera(ob, views[view])
+    if ob is None and view in VIEWS:
+        ob = make_camera(name, VIEWS[view]['az'], cfg, col or bpy.context.scene.collection)
+    return ob
