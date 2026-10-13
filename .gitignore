@@ -1,0 +1,9 @@
+work/
+node_modules/
+web/node_modules/
+web/dist/
+__pycache__/
+*.pyc
+*.blend1
+*.blend@
+.DS_Store

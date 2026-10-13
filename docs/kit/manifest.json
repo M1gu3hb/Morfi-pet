@@ -1,0 +1,142 @@
+{
+  "name": "Morfi 3D Codex Kit",
+  "image_count": 15,
+  "authoritative_reference": "references/00_Morfi_master_wordmark.png",
+  "images": [
+    {
+      "path": "references/00_Morfi_master_wordmark.png",
+      "description": "Referencia maestra: diseño aprobado y wordmark",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1744758,
+      "sha256": "d8601e751be4c4999bb1eed08091f2916f550882862a4c5aee71147d54093c27"
+    },
+    {
+      "path": "references/01_Morfi_turnaround_seis_angulos.png",
+      "description": "Lámina de seis ángulos y laptop",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "bytes": 1767499,
+      "sha256": "32c0113ee988a9fd42e3fee2fa4dcfd32c43a6e6fa61c74cd68782078fa19644"
+    },
+    {
+      "path": "references/02_Morfi_frente.png",
+      "description": "Vista frontal",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1805908,
+      "sha256": "8ff16acef1bd0982a8b5741695b0a73c3b43ba0d5bba88e32d9954f7d8a06da3"
+    },
+    {
+      "path": "references/03_Morfi_perfil_izquierdo.png",
+      "description": "Perfil mirando a la izquierda de la imagen",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1697715,
+      "sha256": "7b818b17014fdf3d48751f78a6827c8b6a64efe177811020e61be3209cb08083"
+    },
+    {
+      "path": "references/04_Morfi_espalda.png",
+      "description": "Vista posterior",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1826730,
+      "sha256": "c8818a182128f74ff74eb6df6d7e5ae390ab7d8de603f00a7514f86032a1f391"
+    },
+    {
+      "path": "references/05_Morfi_perfil_derecho.png",
+      "description": "Perfil mirando a la derecha de la imagen",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1686038,
+      "sha256": "e10b19ec33e884a695d6ea8a3a78bd9d3d417f5484b40a2dd797e200a1c0c6dd"
+    },
+    {
+      "path": "references/06_Morfi_tres_cuartos_frontal.png",
+      "description": "Tres cuartos frontal",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1790666,
+      "sha256": "ac942753c1c9f18410c0a902c45b58deeba1962ae86f67e7843eb3503581338c"
+    },
+    {
+      "path": "references/07_Morfi_tres_cuartos_posterior.png",
+      "description": "Tres cuartos posterior",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1811943,
+      "sha256": "0405e105bcd9e2fef4b8d61d7d29b04a102276349d13cd1d192f1a026454b0fd"
+    },
+    {
+      "path": "references/08_Morfi_sudadera.png",
+      "description": "Sudadera negra abierta",
+      "width": 1312,
+      "height": 1199,
+      "mode": "RGB",
+      "bytes": 2120233,
+      "sha256": "6829301525d5c83aafe64c9c089c55ff3eed28f97f3dcca1c35c5843d00ee675"
+    },
+    {
+      "path": "references/09_Morfi_playera.png",
+      "description": "Playera gris con M azul",
+      "width": 1312,
+      "height": 1199,
+      "mode": "RGB",
+      "bytes": 2439817,
+      "sha256": "e73f72a95e76c3e6ee5ed033062b099f9f28780edf469d897dce83329e7d13e0"
+    },
+    {
+      "path": "references/10_Morfi_tenis.png",
+      "description": "Par de tenis blancos con detalles azules",
+      "width": 1374,
+      "height": 1145,
+      "mode": "RGB",
+      "bytes": 1862381,
+      "sha256": "63e29e7cc0d7116440e6b6f39c2e123f58302a8fd4e2a29fc9f7188047370c08"
+    },
+    {
+      "path": "references/11_Morfi_lentes.png",
+      "description": "Lentes de montura azul marino",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "bytes": 1581178,
+      "sha256": "ffcd21085e853c9641d6c95b1ddb4664be55179ba5713c40c7809d9ee30293ce"
+    },
+    {
+      "path": "references/12_Morfi_tres_cubos.png",
+      "description": "Conjunto de tres cubos suaves",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1800171,
+      "sha256": "c97fcf32a9487f2f5956845832cc8e28dc362a7089b193c9d5133761e2124aa9"
+    },
+    {
+      "path": "references/13_Morfi_laptop.png",
+      "description": "Laptop plateada cerrada",
+      "width": 1312,
+      "height": 1199,
+      "mode": "RGB",
+      "bytes": 1854587,
+      "sha256": "25a342a84eda7d5885481a37da460af6b9ad63acb9152864d3cd4656ba25051f"
+    },
+    {
+      "path": "references/14_Morfi_cuerpo_base.png",
+      "description": "Cuerpo base sin ropa ni accesorios",
+      "width": 1145,
+      "height": 1374,
+      "mode": "RGB",
+      "bytes": 1885651,
+      "sha256": "e55fea80039d995990825e368f0bd1adf7c6af965d962bda50a0f84f971856ea"
+    }
+  ]
+}
