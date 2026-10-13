@@ -4,7 +4,7 @@
     blender -b source/morfi_master.blend --python scripts/dump_skin.py -- --out work/calib/skin.npz
 
 points (N,3) world, bones (B) names, heads (B,3) rest bone heads, parents (B),
-idx (N,4) bone indices, w (N,4) weights.
+idx (N,4) bone indices, w (N,4) weights, labels (N) object index into names.
 """
 import argparse
 import os
@@ -40,7 +40,7 @@ def main():
     heads = np.array([(RW @ np.append(np.array(b.head_local), 1.0))[:3] for b in rig.data.bones])
     parents = np.array([bi[b.parent.name] if b.parent else -1 for b in rig.data.bones])
     dg = bpy.context.evaluated_depsgraph_get()
-    P_all, I_all, W_all = [], [], []
+    P_all, I_all, W_all, L_all, names = [], [], [], [], []
     for ob in bpy.data.objects:
         if ob.type != 'MESH' or ob.name.startswith(('Studio', 'Cornea', 'Laptop')) or ob.hide_render:
             continue
@@ -76,10 +76,13 @@ def main():
         P_all += [co, cen, mid]
         I_all += [idx, idx[tri[:, 0]], idx[tri[:, 0]]]
         W_all += [w, w[tri[:, 0]], w[tri[:, 0]]]
+        L_all.append(np.full(n + 2 * len(tri), len(names), np.int16))
+        names.append(ob.name)
         ev.to_mesh_clear()
         print('[skin]', ob.name, n)
     np.savez_compressed(a.out, points=np.vstack(P_all).astype(np.float32), idx=np.vstack(I_all), w=np.vstack(W_all),
-                        bones=np.array(bones), heads=heads.astype(np.float32), parents=parents)
+                        bones=np.array(bones), heads=heads.astype(np.float32), parents=parents,
+                        labels=np.concatenate(L_all), names=np.array(names))
     print('[skin] saved', a.out)
 
 

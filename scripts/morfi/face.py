@@ -106,7 +106,45 @@ def build_eyes(cfg, shape, head, col, tex_dir):
         co = mu.mesh_object(name.replace('Eye', 'Cornea'), cv[idx], faces_c, collection=col, parent=ob)
         mu.assign_material(co, cmat)
         co.visible_shadow = False
+    add_eye_highlights(cfg, eyes, R, col)
     return eyes
+
+
+def add_eye_highlights(cfg, eyes, R, col):
+    """Stylised catch-light of the references: a crisp white dot on each eye,
+    up and toward the nose (the left eye's dot sits up-right, the right eye's
+    up-left in the front shot). It is a small unlit disk just outside the
+    cornea, parented to the eye so it turns with the gaze; only camera rays see
+    it, so it casts no shadow and shows in no reflection."""
+    h = cfg['face'].get('highlight', {})
+    hx, hz = h.get('dir', [0.19, 0.28])
+    r = h.get('radius', 0.0105)
+    mat = mats.eye_highlight('M_EyeHighlight', h.get('strength', 2.5))
+    for e in eyes:
+        side = 1.0 if e.name.endswith('_R') else -1.0  # toward the nose: +X for the right eye (world -X)
+        d = np.array([side * hx, -math.sqrt(max(1.0 - hx * hx - hz * hz, 0.0)), hz])
+        c = d * (R + 0.0028)
+        # disk in the tangent plane, bent onto the sphere so it hugs the cornea
+        t1 = np.cross(d, [0.0, 0.0, 1.0])
+        t1 /= np.linalg.norm(t1)
+        t2 = np.cross(t1, d)
+        n = 24
+        verts = [c]
+        for k in range(n):
+            a = 2 * math.pi * k / n
+            p = c + r * (math.cos(a) * t1 + math.sin(a) * t2)
+            verts.append(p / np.linalg.norm(p) * (R + 0.0028))
+        faces = [(0, 1 + k, 1 + (k + 1) % n) for k in range(n)]
+        if np.dot(np.cross(verts[1] - verts[0], verts[2] - verts[0]), d) < 0:
+            faces = [(f[0], f[2], f[1]) for f in faces]
+        ob = mu.mesh_object(e.name.replace('Eye', 'EyeHighlight'), np.array(verts), faces, collection=col, parent=e)
+        mu.assign_material(ob, mat)
+        ob.data.shade_smooth()
+        ob.visible_shadow = False
+        ob.visible_diffuse = False
+        ob.visible_glossy = False
+        ob.visible_transmission = False
+        ob.visible_volume_scatter = False
 
 
 def _bvh(ob):

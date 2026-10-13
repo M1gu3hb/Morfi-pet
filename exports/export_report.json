@@ -1,6 +1,6 @@
 {
  "master": {
-  "triangles": 924816,
+  "triangles": 924864,
   "objects": [
    {
     "name": "Body_Base",
@@ -30,6 +30,16 @@
    {
     "name": "Cornea_L",
     "triangles": 1224,
+    "materials": 1
+   },
+   {
+    "name": "EyeHighlight_R",
+    "triangles": 24,
+    "materials": 1
+   },
+   {
+    "name": "EyeHighlight_L",
+    "triangles": 24,
     "materials": 1
    },
    {
@@ -140,7 +150,7 @@
   ]
  },
  "web": {
-  "triangles": 215796,
+  "triangles": 215844,
   "objects": [
    {
     "name": "Body_Base",
@@ -170,6 +180,16 @@
    {
     "name": "Cornea_L",
     "triangles": 1224,
+    "materials": 1
+   },
+   {
+    "name": "EyeHighlight_R",
+    "triangles": 24,
+    "materials": 1
+   },
+   {
+    "name": "EyeHighlight_L",
+    "triangles": 24,
     "materials": 1
    },
    {

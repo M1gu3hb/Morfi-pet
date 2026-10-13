@@ -56,7 +56,7 @@ class ShoeSDF:
         x, y, z = P
         L = p['half_len']
         zb = p['toe_spring'] * S.smoothstep(-0.07, -L, y) ** 2
-        d2 = self.foot2d(x, y, grow=0.004)
+        d2 = self.foot2d(x, y, grow=p.get('sole_grow', 0.004))
         d = S.extrude(d2, z - (p['sole_h'] + zb) / 2, (p['sole_h'] - zb) / 2, 0.010)
         # foxing groove around the sidewall
         gz = p['groove_z']

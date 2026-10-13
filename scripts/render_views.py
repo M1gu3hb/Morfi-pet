@@ -31,6 +31,8 @@ def main():
                     help='use the single estimated camera instead of the per-view calibrated ones')
     ap.add_argument('--no-eyes-follow', dest='eyes_follow', action='store_false',
                     help='keep the modelled forward gaze instead of looking at each camera')
+    ap.add_argument('--world-lights', dest='camera_lights', action='store_false',
+                    help='keep the light rig fixed in the world instead of turning it with each camera')
     a = ap.parse_args(argv)
     sc = bpy.context.scene
     sc.cycles.samples = a.samples
@@ -81,8 +83,15 @@ def main():
             sc.frame_set(1)
             bpy.context.view_layer.update()
         sc.render.filepath = os.path.join(a.out, v + a.suffix + '.png')
-        restore = scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK.get(v, 1.0) if a.eyes_follow else 0.0)
+        gaze = cfg.get('view_gaze', {}).get(v) if (a.calibrated and a.eyes_follow) else None
+        restore = scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK.get(v, 1.0) if a.eyes_follow else 0.0,
+                                  gaze=gaze)
+        # light rig turns with the camera, as in the reference shots
+        cv = cfg.get('camera_views', {})
+        az = cv[v]['az'] - cv.get('front', {}).get('az', 0.0) if (a.calibrated and a.camera_lights and v in cv) else 0.0
+        unturn = scene.turn_lights(az) if az else (lambda: None)
         bpy.ops.render.render(write_still=True)
+        unturn()
         restore()
         print(f'[render] {v} {time.time() - t0:.1f}s -> {sc.render.filepath}')
 

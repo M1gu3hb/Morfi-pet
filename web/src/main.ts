@@ -32,6 +32,9 @@ const DIST = 2.5;
 const CAM_H = 0.756;
 
 const controls = new OrbitControls(camera, canvas);
+// frames still to draw (render on demand); declared early because setView and
+// the UI handlers below call invalidate() while the page is being set up
+let dirtyFrames = 4;
 controls.enableDamping = true;
 controls.target.copy(TARGET);
 controls.minDistance = 0.6;
@@ -39,7 +42,20 @@ controls.maxDistance = 8;
 controls.autoRotateSpeed = 1.5;
 
 // Studio lights (key upper-left/front, fill right, rim back), soft shadow.
+// The reference images are product shots: the lights keep their place relative
+// to the camera, so the back and profile shots are as bright as the front one.
+// The directional lights live in a group that turns with the camera azimuth
+// (checkbox "Luz sigue a la cámara").
 scene.add(new THREE.HemisphereLight(0xffffff, 0xe8e6e0, 1.1));
+const lightRig = new THREE.Group();
+scene.add(lightRig);
+let lightsFollow = true;
+function turnLights() {
+  const dx = camera.position.x - controls.target.x;
+  const dz = camera.position.z - controls.target.z;
+  lightRig.rotation.y = lightsFollow ? Math.atan2(dx, dz) : 0;
+  lightRig.updateMatrixWorld(true);
+}
 const key = new THREE.DirectionalLight(0xffffff, 2.2);
 key.position.set(-2.2, 2.9, 3.0);
 key.castShadow = true;
@@ -47,13 +63,13 @@ const LOWPOWER = new URLSearchParams(location.search).has('lowpower');
 key.shadow.mapSize.set(LOWPOWER ? 512 : 2048, LOWPOWER ? 512 : 2048);
 key.shadow.camera.left = -1; key.shadow.camera.right = 1; key.shadow.camera.top = 1.6; key.shadow.camera.bottom = -0.4;
 key.shadow.radius = 6; key.shadow.bias = -0.0004;
-scene.add(key);
+lightRig.add(key);
 const fill = new THREE.DirectionalLight(0xffffff, 0.8);
 fill.position.set(3.0, 1.3, 2.4);
-scene.add(fill);
+lightRig.add(fill);
 const rim = new THREE.DirectionalLight(0xffffff, 0.9);
 rim.position.set(1.2, 2.6, -2.6);
-scene.add(rim);
+lightRig.add(rim);
 const ground = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.ShadowMaterial({ opacity: 0.16 }));
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
@@ -297,6 +313,10 @@ document.getElementById('reset')!.addEventListener('click', () => setView('front
   eyesFollow = (e.target as HTMLInputElement).checked;
   invalidate(3);
 });
+(document.getElementById('lightsFollow') as HTMLInputElement).addEventListener('change', (e) => {
+  lightsFollow = (e.target as HTMLInputElement).checked;
+  invalidate(3);
+});
 (document.getElementById('anim') as HTMLSelectElement).addEventListener('change', (e) => playClip((e.target as HTMLSelectElement).value));
 document.getElementById('play')!.addEventListener('click', (e) => {
   playing = !playing;
@@ -323,6 +343,7 @@ document.getElementById('shot')!.addEventListener('click', () => {
   if (bg === 'light') renderer.setClearColor(0xfdfdf9, 1);
   if (bg === 'dark') renderer.setClearColor(0x14161c, 1);
   aimEyes();
+  turnLights();
   // capture at the reference image size (1145x1374) so a shot taken from a
   // reference view is framed exactly like that reference
   const size = renderer.getSize(new THREE.Vector2());
@@ -370,7 +391,6 @@ setBackground('light');
 // Render on demand: redraw only while something moves (camera damping,
 // auto-rotate, a looping animation) or after a UI change.
 const clock = new THREE.Clock();
-let dirtyFrames = 4;
 export function invalidate(frames = 3) { dirtyFrames = Math.max(dirtyFrames, frames); }
 controls.addEventListener('change', () => invalidate(2));
 document.getElementById('panel')!.addEventListener('click', () => invalidate(6));
@@ -383,6 +403,7 @@ renderer.setAnimationLoop(() => {
   const moving = controls.update() || controls.autoRotate;
   if (animating || moving || dirtyFrames > 0) {
     aimEyes();
+    turnLights();
     renderer.render(scene, camera);
     if (dirtyFrames > 0) dirtyFrames--;
   }

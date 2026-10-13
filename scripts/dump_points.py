@@ -19,6 +19,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--pose', default='neutral', choices=['neutral', 'hero'])
     ap.add_argument('--out', required=True)
+    ap.add_argument('--keep-laptop', action='store_true', help='keep the laptop in the neutral pose (part renders)')
     a = ap.parse_args(argv)
     sc = bpy.context.scene
     rig = bpy.data.objects.get('Morfi_Rig')
@@ -34,7 +35,8 @@ def main():
     else:
         rig.animation_data.action = bpy.data.actions['Pose_Neutral']
         sc.frame_set(1)
-    if lap is not None and a.pose == 'neutral':
+    drop_laptop = a.pose == 'neutral' and not a.keep_laptop
+    if lap is not None and drop_laptop:
         lap.hide_render = True
     bpy.context.view_layer.update()
     dg = bpy.context.evaluated_depsgraph_get()
@@ -42,7 +44,7 @@ def main():
     for ob in bpy.data.objects:
         if ob.type != 'MESH' or ob.name.startswith('Studio') or ob.name.startswith('Cornea'):
             continue
-        if a.pose == 'neutral' and ob.name.startswith('Laptop'):
+        if drop_laptop and ob.name.startswith('Laptop'):
             continue
         if ob.hide_render and not ob.name.startswith('Laptop'):
             continue

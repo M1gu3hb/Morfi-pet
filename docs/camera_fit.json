@@ -1,0 +1,121 @@
+{
+ "front": {
+  "reference": "02_Morfi_frente.png",
+  "iou_shared_camera": 0.9147,
+  "iou_fitted_camera": 0.9293,
+  "camera": {
+   "az": -0.74928,
+   "height": 0.75702,
+   "distance": 2.45967,
+   "lens": 65.23437,
+   "target": [
+    0.00259,
+    0.0,
+    0.52231
+   ],
+   "roll": -0.05856
+  }
+ },
+ "profile_left": {
+  "reference": "03_Morfi_perfil_izquierdo.png",
+  "iou_shared_camera": 0.9095,
+  "iou_fitted_camera": 0.9202,
+  "camera": {
+   "az": 89.49702,
+   "height": 0.74812,
+   "distance": 2.52733,
+   "lens": 65.23368,
+   "target": [
+    0.00772,
+    0.0,
+    0.51564
+   ],
+   "roll": 0.8002
+  }
+ },
+ "back": {
+  "reference": "04_Morfi_espalda.png",
+  "iou_shared_camera": 0.9226,
+  "iou_fitted_camera": 0.9243,
+  "camera": {
+   "az": 181.15805,
+   "height": 0.75477,
+   "distance": 2.50004,
+   "lens": 65.19958,
+   "target": [
+    -0.0013,
+    0.0,
+    0.52005
+   ],
+   "roll": 0.21729
+  }
+ },
+ "profile_right": {
+  "reference": "05_Morfi_perfil_derecho.png",
+  "iou_shared_camera": 0.8764,
+  "iou_fitted_camera": 0.9043,
+  "camera": {
+   "az": -86.54274,
+   "height": 1.17951,
+   "distance": 2.46931,
+   "lens": 65.03673,
+   "target": [
+    -0.00342,
+    0.0,
+    0.51342
+   ],
+   "roll": 0.17879
+  }
+ },
+ "three_quarter_front": {
+  "reference": "06_Morfi_tres_cuartos_frontal.png",
+  "iou_shared_camera": 0.8335,
+  "iou_fitted_camera": 0.8659,
+  "camera": {
+   "az": 21.18967,
+   "height": 0.71101,
+   "distance": 2.54609,
+   "lens": 65.05038,
+   "target": [
+    0.0046,
+    0.0,
+    0.5072
+   ],
+   "roll": -1.29528
+  }
+ },
+ "three_quarter_back": {
+  "reference": "07_Morfi_tres_cuartos_posterior.png",
+  "iou_shared_camera": 0.8383,
+  "iou_fitted_camera": 0.8718,
+  "camera": {
+   "az": -149.26977,
+   "height": 0.41791,
+   "distance": 2.51033,
+   "lens": 65.06512,
+   "target": [
+    -0.01686,
+    0.0,
+    0.50998
+   ],
+   "roll": 2.24071
+  }
+ },
+ "hero": {
+  "reference": "00_Morfi_master_wordmark.png",
+  "iou_shared_camera": 0.8376,
+  "iou_fitted_camera": 0.9024,
+  "camera": {
+   "az": -28.44768,
+   "height": 0.34057,
+   "distance": 2.19088,
+   "lens": 54.91165,
+   "target": [
+    -0.01868,
+    0.0,
+    0.47874
+   ],
+   "roll": 1.98407
+  }
+ }
+}

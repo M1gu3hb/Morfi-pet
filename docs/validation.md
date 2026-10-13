@@ -4,37 +4,28 @@ Este documento recoge **cómo se comprobó** el modelo y **qué diferencias qued
 
 ## 1. Comparación visual con las referencias
 
-Cada vista se renderiza con la **misma cámara estimada** de las referencias (lente 65.2 mm, distancia 2.5, altura 0.756; ver `art-direction.md` §2) y el mismo fondo `#FDFDF9`. En `renders/comparisons/` hay, por vista, una lámina con la referencia, el render y la superposición de siluetas (gris = coinciden, rojo = solo en la referencia, verde = solo en el 3D).
+Cada vista se renderiza como si fuera **la misma foto que la referencia**: la cámara de cada toma está calibrada contra su silueta (`camera_views`), el personaje tiene la pose de esa toma (`Ref_<vista>`, ajustada por contorno y por zonas de color), los ojos miran donde miran en la foto (`view_gaze`) y el set de luces gira con la cámara, como en las fotos de producto de referencia. Fondo `#FDFDF9`. En `renders/comparisons/` hay, por vista, una lámina con la referencia, el render y la superposición de siluetas (gris = coinciden, rojo = solo en la referencia, verde = solo en el 3D), y `before_after_*` con la referencia, la versión anterior (ronda 2) y la actual.
 
-| Vista | Referencia | IoU de silueta |
-|---|---|---|
-| Frente | `02_Morfi_frente.png` | 0.848 |
-| Perfil izquierdo | `03_Morfi_perfil_izquierdo.png` | 0.850 |
-| Espalda | `04_Morfi_espalda.png` | 0.885 |
-| Perfil derecho | `05_Morfi_perfil_derecho.png` | 0.821 |
-| 3/4 frontal | `06_Morfi_tres_cuartos_frontal.png` | 0.786 |
-| 3/4 posterior | `07_Morfi_tres_cuartos_posterior.png` | 0.796 |
+| Vista | Referencia | IoU silueta ronda 2 | IoU silueta ahora | ΔE mediana ronda 2 | ΔE mediana ahora | IoU por zonas de color |
+|---|---|---|---|---|---|---|
+| Frente | `02_Morfi_frente.png` | 0.914 | **0.944** | 11.8 | **11.4** | 0.676 |
+| Perfil izquierdo | `03_Morfi_perfil_izquierdo.png` | 0.910 | **0.942** | 16.2 | **15.2** | 0.670 |
+| Espalda | `04_Morfi_espalda.png` | 0.925 | **0.946** | 10.9 | **7.7** | 0.755 |
+| Perfil derecho | `05_Morfi_perfil_derecho.png` | 0.879 | **0.915** | 17.3 | **13.1** | 0.632 |
+| 3/4 frontal | `06_Morfi_tres_cuartos_frontal.png` | 0.835 | **0.903** | 18.4 | **12.1** | 0.631 |
+| 3/4 posterior | `07_Morfi_tres_cuartos_posterior.png` | 0.840 | **0.903** | 13.9 | **8.3** | 0.727 |
 
-El IoU (intersección / unión de las siluetas) se calcula con la silueta exacta del render (canal alfa) contra una segmentación automática de la referencia; la sombra del piso y los tenis blancos sobre fondo blanco añaden algo de error a la medida, así que es un indicador de proporciones, no una nota de parecido. En las vistas 3/4 la referencia está encuadrada algo más a la izquierda y un poco más grande que con la cámara común (la superposición muestra la franja roja a un lado y la verde al otro), lo que baja su IoU aunque las formas coincidan. La segunda ronda cambió sobre todo formas *dentro* de la silueta (piernas separadas, manos, tenis, cuello, ojos, colores), por eso el IoU apenas varía respecto a la primera versión y las láminas `before_after_*` muestran mejor el avance.
+- **IoU de silueta**: intersección / unión entre el canal alfa del render y la silueta de la referencia segmentada con BiRefNet (`references_masks/`, `scripts/ref_masks.py`). La segmentación por umbral de color que se usaba antes no veía los tenis blancos y sí las sombras del piso, y subestimaba el parecido; la columna "ronda 2" está remedida con las máscaras nuevas para que la comparación sea justa.
+- **ΔE**: diferencia de color CIELAB (1976) píxel a píxel dentro de la silueta común, a ¼ de resolución con un desenfoque leve. Es una medida exigente: un desplazamiento de pocos píxeles de un borde de alto contraste (montura, pupila, cremallera) cuenta como diferencia de color. Como referencia, ΔE ≈ 2 es apenas perceptible y la mediana de la ronda 2 estaba entre 11 y 17.
+- **IoU por zonas de color**: media de la coincidencia de las zonas azul (piel), negra (sudadera, montura) y blanca/gris (playera, tenis, ojos) entre la referencia y el modelo posado (`docs/pose_fit.json`).
 
 Además:
 
 - `cmp_hero_master.png`: render hero con wordmark junto a la imagen maestra `00`.
-- `cmp_part_*.png`: cada pieza (sudadera, playera, tenis, lentes, cubos, laptop, cuerpo base) junto a su lámina `08–14`.
-- `before_after_*.png`: primera versión completa (izquierda) frente a la final (derecha), para ver el efecto de la segunda ronda de ajustes.
+- `cmp_part_*.png`: cada pieza junto a su lámina `08–14`, fotografiada con la cámara calibrada de esa lámina (`part_cameras`) y, para piezas sueltas, su colocación (tenis escalonados, cubos separados).
+- `posefit_*`, `semfit_*`, `camfit_*`, `partfit_*`: diagnósticos de los ajustes (silueta, zonas de color, cámara y piezas).
 
-### Qué se midió y corrigió en la segunda ronda
-
-| Medida (vista frontal, filas de la imagen proyectadas al plano del cuerpo) | Antes | Después | Referencia |
-|---|---|---|---|
-| Ancho de hombros a z≈0.44 | ±0.28 | ±0.265 | ±0.25 |
-| Ancho del dobladillo | ±0.19 | ±0.22 | ±0.22 |
-| Piernas: separación interior / ancho | unidas hasta z≈0.15 / 0.12 | separadas desde el dobladillo / 0.13 | separadas desde el dobladillo / 0.137 |
-| Color medio playera (sRGB, 0–255) | 182–192 | 223–228 | 211–226 |
-| Color medio sudadera, panel en sombra | 44–49 | 40–45 | 29–43 |
-| Azul de la pierna iluminada (canal G/B) | 75 / 226 | 78 / 230 | 115 / 252 |
-
-Las dos últimas filas muestran diferencias que siguen abiertas: la sudadera de la referencia tiene sombras algo más profundas y las piernas están más iluminadas (luz de estudio distinta, no un color distinto del material).
+Las técnicas usadas en cada ronda, con sus números, están en `art-direction.md` §7 y §8.
 
 ## 2. Validación de los GLB (Khronos glTF-Validator)
 
@@ -42,18 +33,18 @@ Las dos últimas filas muestran diferencias que siguen abiertas: la sudadera de 
 
 | Archivo | Errores | Avisos | Triángulos | Materiales | Animaciones | Tamaño |
 |---|---|---|---|---|---|---|
-| `exports/morfi_master.glb` | 0 | 0 | 924 816 | 20 | 6 | 57 MB |
-| `exports/morfi_web.glb` | 0 | 0 | 215 796 | 20 | 6 | 11 MB |
-| `parts/morfi_head.glb` | 0 | 0 | 218 544 | 4 | – | 17 MB |
-| `parts/morfi_hoodie.glb` | 0 | 0 | 113 496 | 5 | – | 9.3 MB |
-| `parts/morfi_shoes.glb` | 0 | 0 | 56 000 | 4 | – | 6.2 MB |
-| `parts/morfi_body_base.glb` | 0 | 0 | 40 000 | 1 | – | 4.4 MB |
-| `parts/morfi_tshirt.glb` | 0 | 0 | 19 000 | 2 | – | 4.0 MB |
-| `parts/morfi_pixels.glb` | 0 | 0 | 20 736 | 1 | – | 3.7 MB |
-| `parts/morfi_glasses.glb` | 0 | 0 | 25 280 | 2 | – | 0.97 MB |
-| `parts/morfi_laptop.glb` | 0 | 0 | 14 400 | 2 | – | 0.48 MB |
+| `exports/morfi_master.glb` | 0 | 0 | 924 864 | 21 | 12 | 62 MB |
+| `exports/morfi_web.glb` | 0 | 0 | 215 844 | 21 | 12 | 12 MB |
+| `parts/morfi_head.glb` | 0 | 0 | 218 592 | 5 | – | 19 MB |
+| `parts/morfi_hoodie.glb` | 0 | 0 | 113 496 | 5 | – | 10.0 MB |
+| `parts/morfi_shoes.glb` | 0 | 0 | 56 000 | 4 | – | 6.5 MB |
+| `parts/morfi_body_base.glb` | 0 | 0 | 40 000 | 1 | – | 4.8 MB |
+| `parts/morfi_tshirt.glb` | 0 | 0 | 19 000 | 2 | – | 4.2 MB |
+| `parts/morfi_pixels.glb` | 0 | 0 | 20 736 | 1 | – | 4.1 MB |
+| `parts/morfi_glasses.glb` | 0 | 0 | 25 280 | 2 | – | 0.99 MB |
+| `parts/morfi_laptop.glb` | 0 | 0 | 14 400 | 2 | – | 0.50 MB |
 
-Extensiones usadas: `KHR_materials_sheen`, `KHR_materials_transmission`, `KHR_materials_clearcoat`, `KHR_materials_specular`, `KHR_materials_ior`. Todas las mallas llevan UV, normales y tangentes válidas (se reparan tangentes nulas tras la exportación con `scripts/fix_glb_tangents.py`); las mallas con piel son nodos raíz, como recomienda la especificación.
+Extensiones usadas: `KHR_materials_clearcoat`, `KHR_materials_emissive_strength`, `KHR_materials_ior`, `KHR_materials_sheen`, `KHR_materials_specular`, `KHR_materials_transmission`. Todas las mallas llevan UV, normales y tangentes válidas (se reparan tangentes nulas tras la exportación con `scripts/fix_glb_tangents.py`); las mallas con piel son nodos raíz, como recomienda la especificación.
 
 ## 3. Reimportación
 
@@ -61,24 +52,28 @@ Extensiones usadas: `KHR_materials_sheen`, `KHR_materials_transmission`, `KHR_ma
 
 | | web | master |
 |---|---|---|
-| Mallas | 27 | 27 |
+| Mallas | 29 | 29 |
 | Esqueletos | 1 | 1 |
 | Texturas faltantes | 0 | 0 |
-| Acciones | Idle, Pose_Hero, Pose_Neutral, Run, Walk, Wave | ídem |
-| Caja (m) | x ±0.408, y −0.277…0.319, z −0.003…1.143 | ídem |
+| Acciones | Idle, Pose_Hero, Pose_Neutral, Run, Walk, Wave + Ref_front, Ref_profile_left, Ref_back, Ref_profile_right, Ref_three_quarter_front, Ref_three_quarter_back | ídem |
+| Caja (m) | x ±0.386, y −0.278…0.319, z −0.003…1.143 | ídem |
+
+Las acciones `Ref_<vista>` son las poses por toma (una pose estática por referencia); el visor no las muestra en el desplegable de animaciones, sino al pulsar el botón de cada vista.
 
 La altura sin cubos es 1.0 (convención del proyecto) y 1.143 con los cubos.
 
 ## 4. Visor web
 
-`cd web && npm run build && npm run test:e2e`: Chromium headless (SwiftShader, sin GPU) carga el GLB real, recorre las vistas, la pose hero, la animación de caminar, el preset cuerpo base, los modos gris/alambre, el fondo oscuro, la captura PNG y una ventana de móvil (390×844). Falla ante cualquier error de consola. Resultado: **SMOKE TEST PASSED** — 215 796 triángulos · 34 mallas · 20 materiales · 6 animaciones. Capturas en `renders/viewer/`.
+`cd web && npm run build && npm run test:e2e`: Chromium headless (SwiftShader, sin GPU) carga el GLB real, recorre las vistas (cámara y pose calibradas de cada referencia), la espalda con y sin "Luz sigue a la cámara", la pose hero, la animación de caminar, el preset cuerpo base, los modos gris/alambre, el fondo oscuro, la captura PNG y una ventana de móvil (390×844). Falla ante cualquier error de consola. Resultado: **SMOKE TEST PASSED** — 215 844 triángulos · 36 mallas · 21 materiales · 12 animaciones. Capturas en `renders/viewer/`.
+
+Al repetirlo en esta ronda apareció un error real que las comprobaciones anteriores no habían cubierto: el visor llamaba a `invalidate()` (desde la vista inicial) antes de declarar su contador de fotogramas, y la página no terminaba de cargar. Se corrigió declarando el contador al principio.
 
 ## 5. Animaciones y giro 360°
 
 - `renders/animations/animaciones_preview_workbench.png`: fotogramas de Idle, Caminar, Correr y Saludar (sombreado rápido de Workbench, sin texturas ni cristales) para revisar la deformación.
 - Al revisarlas se detectó que el dobladillo de la sudadera se despegaba al saludar y correr (recibía influencia de los huesos del brazo porque las manos cuelgan a su altura). Se corrigió en `rig.compute_weights`: los brazos solo influyen fuera de la columna del cuerpo o por encima del codo.
 - También se detectó que girar los huesos de los ojos hacia la cámara se perdía al renderizar (la acción activa vuelve a aplicar sus claves) y la córnea quedaba desalineada en 3/4; ahora se giran los objetos del ojo respecto a su hueso.
-- `renders/morfi_turntable.mp4`: giro completo de 6 s (144 fotogramas, 24 fps, 600×720, Cycles) con los ojos siguiendo al espectador mientras la cara es visible.
+- `renders/morfi_turntable.mp4`: giro completo de 6 s (144 fotogramas, 24 fps, 600×720, Cycles) con los ojos siguiendo al espectador mientras la cara es visible; las luces giran con la cámara, como en las referencias.
 
 ## 6. Invariantes del encargo
 
@@ -86,7 +81,8 @@ La altura sin cubos es 1.0 (convención del proyecto) y 1.143 con los cubos.
 |---|---|
 | 3 cubos en la cabeza (grande izq., mediano arriba der., pequeño abajo der.) | ✔ objetos `Pixel_01..03` |
 | 2 cuadrados azules en la laptop | ✔ |
-| Zona facial celeste (no máscara blanca) | ✔ `#8EC4FB` horneado en el atlas |
+| Zona facial celeste (no máscara blanca) | ✔ albedo `#89BAF9` (calibrado contra las referencias) horneado en el atlas |
+| Ojos: pupila negra con un brillo blanco nítido | ✔ pupila `#000000`, brillo `EyeHighlight_L/R` |
 | Lentes cuadrados redondeados | ✔ |
 | Sudadera abierta, M solo en la playera gris | ✔ |
 | Textura suave y fina | ✔ laberinto fino + terciopelo, sin alterar la silueta |
@@ -95,13 +91,15 @@ La altura sin cubos es 1.0 (convención del proyecto) y 1.143 con los cubos.
 
 ## 7. Diferencias pendientes (honestas)
 
-Las 15 imágenes de referencia son renders de IA generados por separado; **no son vistas de un mismo objeto 3D** y se contradicen entre sí. Un modelo físico único no puede reproducirlas todas píxel a píxel. Las diferencias que quedan, y por qué:
+Las 15 imágenes de referencia son renders de IA generados por separado; **no son vistas de un mismo objeto 3D** y se contradicen entre sí (encuadre, pose, altura del piso, tamaño de manos y pies, disposición de los cubos). Por eso cada toma tiene su cámara, su pose, su mirada y su luz (§1), y aun así un único modelo físico no puede coincidir píxel a píxel con todas. Lo que queda, y por qué:
 
-1. **Perfil (03 y 05).** En los perfiles de referencia la cara, el ojo y el aro de los lentes se ven casi de frente, como si la cara "envolviera" el costado de la cabeza; en el frente (02) los mismos lentes son planos y frontales. El modelo sigue el frente y la imagen maestra: en perfil el ojo queda casi oculto tras la montura (los ojos giran 35 % hacia la cámara para acercarse).
-2. **Cubos en perfil.** Los perfiles de referencia muestran los tres cubos "de frente"; con la disposición del frente y la espalda (que coinciden entre sí) en perfil se ven superpuestos. Se respetó el orden del encargo.
-3. **Perspectiva de manos y pies en perfil.** En los perfiles de referencia la mano cercana aparece más alta y el pie lejano no asoma; eso implica una cámara distinta a la de las vistas frontal y trasera. Se usa una sola cámara para todas las vistas (la que ajusta la cabeza con error medio ≈3 px), así que en perfil la mano cercana se ve algo más baja y grande.
-4. **Pose hero.** Reproduce la composición del master (cabeza hacia cámara e inclinada, laptop bajo el brazo derecho, puño izquierdo al frente, wordmark), pero no es un calco: la mano derecha queda detrás de la laptop y los pies se apoyan de forma ligeramente distinta.
-5. **Detalle fino de tela.** Arrugas y pliegues están modelados de forma procedural (pliegues de manga, fruncido sobre el dobladillo, acanalados); no hay simulación de tela, por lo que la caída es más limpia que en las referencias.
-6. **Tenis.** Tienen las piezas de la lámina 10 (suela con muescas, puntera, lengüeta, cuello acolchado, dos correas con ojales, talón azul), pero la puntera es algo más ancha y redonda y las correas más bajas que en la lámina; en primer plano (`cmp_part_tenis.png`) se nota más que en las vistas completas.
-7. **Textura laberinto en primer plano.** Su escala está ajustada a las vistas completas; en los renders de piezas cercanos (cubos, playera) se ve más marcada que en las láminas de producto, que muestran un tejido más liso.
-8. **Visor web vs. Cycles.** El visor usa iluminación en tiempo real (Three.js); los colores y sombras son cercanos pero no idénticos a los renders de Cycles (por ejemplo, el iris se ve más oscuro). Los renders finales son los de `renders/`.
+1. **Cara en los perfiles (03 y 05).** En los perfiles de referencia el ojo, el aro del lente y la boca se ven casi de frente, como si la cara "envolviera" el costado de la cabeza; en el frente (02) los mismos lentes son planos y frontales. El modelo sigue el frente y la imagen maestra, así que en perfil el ojo queda casi oculto tras la montura. Es la mayor diferencia que queda en esas dos vistas (ΔE mediana 13–15, sobre todo en la cabeza).
+2. **Cubos y mano en perfil.** Los cubos se resuelven con un giro del grupo por toma (trampa de cámara en `Ref_<vista>`); la mano cercana de los perfiles de referencia cuelga más abajo y es más grande que en el frente, y el modelo no la puede igualar sin deformarse.
+3. **Sudadera.** En las referencias la sudadera es más mullida: más volumen de capucha junto al cuello y elástico de la cintura más recogido. El modelo se acercó (dobladillo 0.222 → 0.210, rollo de capucha más ancho), pero el bajo sigue algo más abierto. En la lámina 08 la capucha está levantada porque no hay cabeza dentro; en el modelo descansa sobre la espalda. No hay simulación de tela: los pliegues son procedurales y la caída es más limpia.
+4. **Tenis.** Tienen las piezas de la lámina 10, pero la puntera es más cuadrada y las correas más planas; en las vistas completas de la referencia se ven cordones/correas más marcados.
+5. **Toma hero.** La inclinación de la cabeza ya coincide (lentes a ≈10–11° como en la maestra), pero en la maestra los ojos están ~10 % más juntos de lo que permite el modelo en ese encuadre, y la laptop y la mano derecha no son un calco.
+6. **Color residual (ΔE 7–15).** Las zonas planas (piel, sudadera, blancos) quedan a pocos ΔE; lo que pesa en la mediana son bordes de alto contraste desplazados unos píxeles (montura, pupilas, cremallera, cubos) y diferencias de luz propias de cada referencia.
+7. **Suelo.** Las referencias tienen fondo blanco uniforme (254); el suelo del render queda en 246–248, con la sombra de contacto bajo los pies.
+8. **Prendas sueltas (láminas 08 y 09).** La playera y la sudadera están modeladas para ir puestas: en las fotos de pieza, con su cámara calibrada, la playera muestra las mangas cortas casi fundidas con el cuerpo y la abertura del cuello por dentro, y la capucha de la sudadera queda tumbada en vez de levantada. En el personaje completo no se ve, pero esas dos láminas son las menos parecidas.
+9. **Textura laberinto en primer plano.** Su escala está ajustada a las vistas completas; en los renders de piezas cercanos se ve más marcada que en las láminas de producto.
+10. **Visor web vs. Cycles.** El visor usa iluminación en tiempo real (Three.js, con la misma idea de luz que sigue a la cámara); colores y sombras son cercanos pero no idénticos a los renders de Cycles. Los renders finales son los de `renders/`.

@@ -38,7 +38,7 @@ PARTS = {
     'pixels': ['Pixel_01', 'Pixel_02', 'Pixel_03'],
     'laptop': ['Laptop', 'Laptop_Logo'],
     'body_base': ['Body_Base'],
-    'head': ['Head', 'Eye_L', 'Eye_R', 'Cornea_L', 'Cornea_R', 'Brow_L', 'Brow_R'],
+    'head': ['Head', 'Eye_L', 'Eye_R', 'Cornea_L', 'Cornea_R', 'EyeHighlight_L', 'EyeHighlight_R', 'Brow_L', 'Brow_R'],
 }
 
 

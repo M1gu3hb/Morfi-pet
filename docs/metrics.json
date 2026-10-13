@@ -1,32 +1,44 @@
 {
  "front": {
   "reference": "02_Morfi_frente.png",
-  "silhouette_iou": 0.8475,
-  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+  "silhouette_iou": 0.9435,
+  "color_delta_e_median": 11.4,
+  "color_delta_e_mean": 16.45,
+  "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "profile_left": {
   "reference": "03_Morfi_perfil_izquierdo.png",
-  "silhouette_iou": 0.8497,
-  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+  "silhouette_iou": 0.9423,
+  "color_delta_e_median": 15.2,
+  "color_delta_e_mean": 20.55,
+  "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "back": {
   "reference": "04_Morfi_espalda.png",
-  "silhouette_iou": 0.885,
-  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+  "silhouette_iou": 0.9458,
+  "color_delta_e_median": 7.66,
+  "color_delta_e_mean": 11.4,
+  "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "profile_right": {
   "reference": "05_Morfi_perfil_derecho.png",
-  "silhouette_iou": 0.8211,
-  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+  "silhouette_iou": 0.9146,
+  "color_delta_e_median": 13.06,
+  "color_delta_e_mean": 21.93,
+  "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "three_quarter_front": {
   "reference": "06_Morfi_tres_cuartos_frontal.png",
-  "silhouette_iou": 0.7858,
-  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+  "silhouette_iou": 0.9026,
+  "color_delta_e_median": 12.08,
+  "color_delta_e_mean": 17.9,
+  "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "three_quarter_back": {
   "reference": "07_Morfi_tres_cuartos_posterior.png",
-  "silhouette_iou": 0.7958,
-  "note": "reference mask is auto-segmented; white shoes / floor shadow add error"
+  "silhouette_iou": 0.9028,
+  "color_delta_e_median": 8.28,
+  "color_delta_e_mean": 14.55,
+  "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  }
 }

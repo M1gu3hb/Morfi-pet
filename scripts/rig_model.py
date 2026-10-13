@@ -84,6 +84,10 @@ def make_cyclic(act):
             kp.interpolation = 'BEZIER'
 
 
+# head of the hero pose (degrees about world Z = turn, Y = tilt, X = nod); config "hero_pose" -> "head"
+HERO_HEAD = {'turn': -22.0, 'tilt': -8.0, 'nod': 0.0}
+
+
 def pose_hero(rig):
     """Master-image pose: laptop tucked under the right arm, left fist on the hip."""
     R.reset_pose(rig)
@@ -92,7 +96,7 @@ def pose_hero(rig):
     set_rot(rig, 'spine', ((0, 1, 0), -1.5))
     bpy.context.view_layer.update()
     # head turned toward the hero camera (-33 deg) and tilted, as in the master image
-    set_rot(rig, 'head', ((0, 0, 1), -22.0), ((0, 1, 0), -8.0))
+    set_rot(rig, 'head', ((1, 0, 0), HERO_HEAD['nod']), ((0, 0, 1), HERO_HEAD['turn']), ((0, 1, 0), HERO_HEAD['tilt']))
     # right arm hugs the laptop against the body
     aim(rig, 'upper_arm.R', (-0.42, 0.10, -1.0))
     aim(rig, 'forearm.R', (-0.10, -0.85, -0.55), twist=-20)
@@ -203,6 +207,7 @@ def main():
     R.reset_pose(rig)
     key_all(rig, 1)
     new_action(rig, 'Pose_Hero')
+    HERO_HEAD.update(cfg.get('hero_pose', {}).get('head', {}))
     pose_hero(rig)
     key_all(rig, 1)
     anim_idle(rig, 48)

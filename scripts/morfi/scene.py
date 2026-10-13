@@ -77,7 +77,11 @@ def build_studio(cfg, col):
     L = cfg.get('lights', {})
     area('Light_Key', L.get('key_loc', (-2.2, -3.0, 2.9)), L.get('key_target', (0, 0, 0.5)), L.get('key_size', 2.6), L.get('key_power', 95.0))
     area('Light_Fill', L.get('fill_loc', (3.0, -2.4, 1.3)), (0, 0, 0.5), L.get('fill_size', 3.0), L.get('fill_power', 30.0))
-    area('Light_Rim', L.get('rim_loc', (1.2, 2.6, 2.6)), (0, 0, 0.7), L.get('rim_size', 2.0), L.get('rim_power', 45.0))
+    rim = area('Light_Rim', L.get('rim_loc', (1.2, 2.6, 2.6)), (0, 0, 0.7), L.get('rim_size', 2.0), L.get('rim_power', 45.0))
+    # the rim light sits behind the camera axis, so its shadow falls toward the
+    # camera over the whole floor; the references only show a soft contact
+    # shadow under the feet, so the rim light casts none
+    rim.data.use_shadow = L.get('rim_shadow', False)
     area('Light_Top', L.get('top_loc', (0.0, -0.6, 3.6)), (0, 0, 0.5), L.get('top_size', 3.0), L.get('top_power', 30.0))
     w = bpy.data.worlds.get('World') or bpy.data.worlds.new('World')
     bpy.context.scene.world = w
@@ -188,14 +192,58 @@ EYE_LOOK = {'front': 1.0, 'three_quarter_front': 1.0, 'profile_left': 0.35, 'pro
             'back': 0.0, 'three_quarter_back': 0.0, 'hero': 1.0}
 
 
-def eyes_look(cam_loc, k):
+LIGHTS = ('Light_Key', 'Light_Fill', 'Light_Rim', 'Light_Top', 'Light_EyeCatch')
+
+
+def turn_lights(az_deg):
+    """Turn the whole light rig about the vertical axis through the origin.
+
+    The reference renders were lit like product shots: the lights keep their
+    place relative to the camera (the back and profile references are as
+    bright as the front one). Rendering a view whose camera has azimuth az with
+    the rig turned by az reproduces that. Returns a restore() callable.
+    """
+    from mathutils import Matrix
+    M = Matrix.Rotation(math.radians(az_deg), 4, 'Z')
+    saved = []
+    for n in LIGHTS:
+        ob = bpy.data.objects.get(n)
+        if ob is None:
+            continue
+        saved.append((ob, ob.matrix_world.copy()))
+        ob.matrix_world = M @ ob.matrix_world
+    bpy.context.view_layer.update()
+
+    def restore():
+        for ob, m in saved:
+            ob.matrix_world = m
+        bpy.context.view_layer.update()
+    return restore
+
+
+def gaze_rotation(d, yaw, pitch):
+    """Rotation turning look direction d by yaw (about world Z, + = toward +X when
+    looking down -Y) and pitch (+ = up), in degrees."""
+    from mathutils import Matrix, Vector
+    d = Vector(d).normalized()
+    q = Matrix.Rotation(math.radians(yaw), 3, 'Z')
+    d2 = q @ d
+    right = d2.cross(Vector((0, 0, 1)))
+    if right.length < 1e-6:
+        return q
+    p = Matrix.Rotation(math.radians(pitch), 3, -right.normalized())
+    return p @ q
+
+
+def eyes_look(cam_loc, k, gaze=None):
     """Turn both eyes toward a camera (same rotation for both, so the modelled
-    convergence is kept). Works on the rigged file and on an unrigged build.
-    Returns a restore() callable.
+    convergence is kept), then apply the per-shot gaze offsets of each eye
+    (config "view_gaze", fitted by scripts/fit_gaze.py: {"L": [yaw, pitch], "R": ...}).
+    Works on the rigged file and on an unrigged build. Returns a restore() callable.
     """
     from mathutils import Matrix, Vector
     eyes = [bpy.data.objects.get('Eye_L'), bpy.data.objects.get('Eye_R')]
-    if k <= 0 or any(e is None for e in eyes):
+    if (k <= 0 and not gaze) or any(e is None for e in eyes):
         return lambda: None
     bpy.context.view_layer.update()
     cs = [e.matrix_world.translation.copy() for e in eyes]
@@ -209,8 +257,11 @@ def eyes_look(cam_loc, k):
     # bone). Rotating the pose bones would be undone at render time, when the
     # active action (whose keys include every bone) is evaluated again.
     undo = []
-    for e, c in zip(eyes, cs):
-        M = Matrix.Translation(c) @ rq.to_matrix().to_4x4() @ Matrix.Translation(-c)
+    for e, c, side in zip(eyes, cs, ('L', 'R')):
+        R3 = rq.to_matrix()
+        if gaze and side in gaze:
+            R3 = gaze_rotation(R3 @ ds[0 if side == 'L' else 1], *gaze[side]) @ R3
+        M = Matrix.Translation(c) @ R3.to_4x4() @ Matrix.Translation(-c)
         undo.append((e, e.matrix_basis.copy()))
         e.matrix_world = M @ e.matrix_world
     bpy.context.view_layer.update()

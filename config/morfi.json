@@ -23,13 +23,13 @@
   "q_top_profile_front": 2.75
  },
  "face": {
-  "eye_center_x": 0.15,
+  "eye_center_x": 0.138,
   "eye_center_z": -0.045,
   "eye_radius": 0.125,
   "eye_protrusion": 0.018,
   "eye_open_half": [
-   0.083,
-   0.077
+   0.08,
+   0.075
   ],
   "eye_open_exponent": 2.4,
   "eye_look_target": [
@@ -37,18 +37,18 @@
    -0.85,
    0.012
   ],
-  "iris_angle_deg": 32.0,
-  "pupil_angle_deg": 19.5,
+  "iris_angle_deg": 27.5,
+  "pupil_angle_deg": 18.5,
   "brow_center": [
-   0.147,
-   0.106
+   0.138,
+   0.086
   ],
-  "brow_length": 0.092,
+  "brow_length": 0.084,
   "brow_thickness": 0.025,
-  "mouth_center_z": -0.1065,
-  "mouth_half_width": 0.051,
+  "mouth_center_z": -0.127,
+  "mouth_half_width": 0.047,
   "mouth_top_sag": 0.008,
-  "mouth_bottom_sag": 0.035,
+  "mouth_bottom_sag": 0.028,
   "mouth_depth": 0.022,
   "socket_depth": 0.008,
   "lid_band": [
@@ -63,21 +63,30 @@
   "celeste_wrap": [
    0.66,
    0.36
-  ]
+  ],
+  "limbal_strength": 0.5,
+  "highlight": {
+   "dir": [
+    0.17,
+    0.26
+   ],
+   "radius": 0.0105,
+   "strength": 2.5
+  }
  },
  "colors": {
-  "skin": "#0757F5",
-  "skin_dark": "#0647D8",
-  "celeste": "#8EC4FB",
+  "skin": "#014EF0",
+  "skin_dark": "#013FD3",
+  "celeste": "#89BAF9",
   "brow": "#050B1C",
   "lid_line": "#081230",
   "mouth_interior": "#3A1512",
   "tongue": "#9A4038",
   "sclera": "#F6F7FA",
-  "iris_outer": "#0A1E5E",
-  "iris_mid": "#1452D4",
-  "iris_inner": "#3C82F0",
-  "pupil": "#050608",
+  "iris_outer": "#4D7EC4",
+  "iris_mid": "#123C88",
+  "iris_inner": "#061A3A",
+  "pupil": "#000000",
   "hoodie": "#121316",
   "tshirt": "#DEDBDB",
   "tshirt_logo": "#1F6BFF",
@@ -89,7 +98,12 @@
   "laptop_logo": "#0757F5",
   "metal": "#C9CDD3",
   "cord": "#141518",
-  "background": "#FDFDF9"
+  "background": "#FDFDF9",
+  "iris_collarette": "#000818",
+  "iris_limbal": "#001040",
+  "iris_top": "#000D30",
+  "iris_side": "#002A80",
+  "iris_bottom": "#0066DE"
  },
  "camera": {
   "lens": 65.2,
@@ -104,34 +118,37 @@
  },
  "glasses": {
   "end_x": [
-   0.262,
-   0.314
+   0.253,
+   0.305
   ],
   "temple_front": [
-   0.309,
-   0.022
+   0.3,
+   0.0105
   ],
   "temple_back": [
    0.343,
    0.125,
-   -0.024
+   -0.0355
   ],
   "outer_half": [
-   0.125,
+   0.12,
    0.107
   ],
-  "lens_cz": -0.026,
+  "lens_cz": -0.0375,
   "clearance": -0.002,
   "depth_half": 0.0095,
   "outer_r": 0.092,
   "edge_r": 0.0075,
-  "rim": 0.024
+  "rim": 0.019,
+  "lens_cx": 0.148,
+  "bridge_cz": 0.0005,
+  "end_cz": -0.0015
  },
  "shoes": {
   "upper_top": {
    "toe": 0.0791,
-   "instep": 0.103,
-   "collar": 0.1122
+   "instep": 0.098,
+   "collar": 0.1052
   },
   "opening": {
    "cx": -0.022,
@@ -178,19 +195,19 @@
    ],
    [
     0.45,
-    0.1012
+    0.0962
    ],
    [
     0.66,
-    0.1122
+    0.1052
    ],
    [
     1.0,
-    0.1122
+    0.1052
    ]
   ],
-  "top_side_drop": 0.01,
-  "upper_inset": 0.006,
+  "top_side_drop": 0.016,
+  "upper_inset": 0.009,
   "collar_r": 0.0085,
   "notches": true,
   "tongue": {
@@ -210,7 +227,8 @@
    "R": 0.0125,
    "r": 0.0042
   },
-  "strap_end": 0.071
+  "strap_end": 0.071,
+  "sole_grow": 0.004
  },
  "clothes": {
   "sleeve_start": [
@@ -219,9 +237,9 @@
    0.433
   ],
   "sleeve_r": [
-   0.058,
-   0.062,
-   0.066
+   0.055,
+   0.06,
+   0.064
   ],
   "box": {
    "c": [
@@ -236,7 +254,7 @@
    ],
    "p_h": 2.7,
    "q_top": 2.7,
-   "q_bot": 3.0
+   "q_bot": 2.5
   },
   "cuff_len": 0.068,
   "cuff_r": [
@@ -250,7 +268,7 @@
    "z1": 0.246,
    "inset": 0.008,
    "thick": 0.014,
-   "a": 0.222,
+   "a": 0.21,
    "b": 0.16,
    "cy": -0.016,
    "p": 2.7,
@@ -317,10 +335,10 @@
     0.474
    ],
    "R": [
-    0.14,
-    0.122
+    0.152,
+    0.124
    ],
-   "r": 0.04,
+   "r": 0.046,
    "tilt": 12.0
   }
  },
@@ -403,14 +421,49 @@
    0.1,
    0.05,
    -1.0
-  ]
+  ],
+  "hand": {
+   "down": [
+    0.22,
+    0.0,
+    -1.0
+   ],
+   "palm_c": 0.04232,
+   "palm_r": [
+    0.03312,
+    0.04784,
+    0.04416
+   ],
+   "finger_r": 0.01886,
+   "finger_base": 0.06808,
+   "seg1": 0.02392,
+   "seg2": 0.02392,
+   "finger_f": [
+    -0.02392,
+    0.0,
+    0.02392
+   ],
+   "finger_curl": 0.85,
+   "thumb_base": [
+    0.0276,
+    0.0368,
+    0.0184
+   ],
+   "thumb_dir": [
+    0.7,
+    0.45,
+    0.35
+   ],
+   "thumb_len": 0.03864,
+   "thumb_r": 0.01886
+  }
  },
  "lights": {
   "world_glossy": 0.3,
   "key_power": 85.0,
   "world": 0.45,
   "catch_size": 0.75,
-  "catch_power": 70.0,
+  "catch_power": 0.0,
   "key_loc": [
    -1.6,
    -3.2,
@@ -433,76 +486,76 @@
  },
  "camera_views": {
   "front": {
-   "az": -0.84133,
-   "height": 0.74947,
-   "distance": 2.4498,
+   "az": -0.14931,
+   "height": 0.74972,
+   "distance": 2.44937,
    "lens": 65.23437,
    "target": [
-    0.00285,
+    0.00464,
     0.0,
-    0.52377
+    0.52279
    ],
-   "roll": -0.16322
+   "roll": -0.16049
   },
   "profile_left": {
-   "az": 89.85554,
-   "height": 0.56287,
-   "distance": 2.49762,
+   "az": 90.53059,
+   "height": 0.39813,
+   "distance": 2.51116,
    "lens": 65.23368,
    "target": [
-    0.01484,
+    0.01628,
     0.0,
-    0.52521
+    0.52498
    ],
-   "roll": 0.46693
+   "roll": 0.2136
   },
   "back": {
-   "az": 180.84023,
-   "height": 0.73638,
-   "distance": 2.50384,
+   "az": 180.42018,
+   "height": 0.71736,
+   "distance": 2.50294,
    "lens": 65.19958,
    "target": [
-    -0.00113,
+    -0.00103,
     0.0,
-    0.51989
+    0.51971
    ],
-   "roll": 0.51718
+   "roll": 0.52867
   },
   "profile_right": {
-   "az": -87.10914,
-   "height": 1.13938,
-   "distance": 2.4653,
+   "az": -90.32482,
+   "height": 1.09338,
+   "distance": 2.49559,
    "lens": 65.03673,
    "target": [
-    0.01341,
+    0.01802,
     0.0,
-    0.51388
+    0.51053
    ],
-   "roll": 0.17381
+   "roll": 0.35219
   },
   "three_quarter_front": {
-   "az": 17.11828,
-   "height": 0.66259,
-   "distance": 2.50394,
+   "az": 20.04267,
+   "height": 0.5761,
+   "distance": 2.55962,
    "lens": 65.05038,
    "target": [
-    -0.00705,
+    -0.00453,
     0.0,
-    0.50358
+    0.50118
    ],
-   "roll": -0.46249
+   "roll": 0.14535
   },
   "three_quarter_back": {
-   "az": -150.04913,
-   "height": 0.41048,
-   "distance": 2.50508,
+   "az": -148.45581,
+   "height": 0.44224,
+   "distance": 2.50555,
    "lens": 65.06512,
    "target": [
-    -0.00938,
+    -0.00909,
     0.0,
-    0.51017
+    0.50671
    ],
-   "roll": 2.25863
+   "roll": 2.23206
   },
   "hero": {
    "az": -28.44768,
@@ -542,51 +595,57 @@
   }
  },
  "view_poses": {
+  "_doc": "Pose por toma (grados, ejes del mundo en la cabeza de cada hueso en reposo), ajustada a la silueta de cada referencia con scripts/fit_view_poses.py",
   "front": {
    "head": [
-    0.257,
-    0.026,
-    1.538
+    0.443,
+    0.167,
+    1.271
    ],
    "upper_arm.L": [
-    -0.173,
-    -3.084,
+    2.293,
+    -2.734,
     0.0
    ],
    "upper_arm.R": [
-    1.572,
-    2.606,
+    1.767,
+    2.212,
     0.0
    ],
    "forearm.L": [
-    -0.154,
+    -0.711,
     0.0,
     0.0
    ],
    "forearm.R": [
-    2.134,
+    -0.775,
     0.0,
     0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    2.173
    ]
   },
   "profile_left": {
    "head": [
-    0.713,
-    1.428,
-    1.43
+    -0.253,
+    3.809,
+    1.574
    ],
    "upper_arm.L": [
-    -0.69,
-    -0.157,
+    -6.541,
+    -2.459,
     0.0
    ],
    "upper_arm.R": [
-    -0.0,
-    0.0,
+    0.49,
+    -0.208,
     0.0
    ],
    "forearm.L": [
-    -0.407,
+    0.021,
     0.0,
     0.0
    ],
@@ -594,116 +653,367 @@
     0.0,
     0.0,
     0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    81.788
    ]
   },
   "back": {
    "head": [
-    -1.254,
-    0.387,
-    -0.919
+    -1.013,
+    0.367,
+    -2.026
    ],
    "upper_arm.L": [
-    -8.985,
-    -1.065,
+    -20.329,
+    -1.219,
     0.0
    ],
    "upper_arm.R": [
-    -6.493,
-    2.794,
+    -21.586,
+    1.901,
     0.0
    ],
    "forearm.L": [
-    -6.835,
+    -3.981,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -4.289,
+    -3.333,
     0.0,
     0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    5.38
    ]
   },
   "profile_right": {
    "head": [
-    0.138,
-    1.807,
-    -1.061
+    -1.75,
+    4.791,
+    -3.4
    ],
    "upper_arm.L": [
-    0.0,
-    0.0,
+    -0.282,
+    -0.107,
     0.0
    ],
    "upper_arm.R": [
-    -2.169,
-    0.667,
+    1.107,
+    12.283,
     0.0
    ],
    "forearm.L": [
-    -0.0,
+    -0.106,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -0.665,
+    -1.747,
     0.0,
     0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    -81.393
    ]
   },
   "three_quarter_front": {
    "head": [
-    1.068,
-    -4.6,
-    15.387
+    4.125,
+    -2.43,
+    3.167
    ],
    "upper_arm.L": [
-    8.191,
-    15.961,
+    0.582,
+    11.266,
     0.0
    ],
    "upper_arm.R": [
-    -0.458,
-    1.596,
+    -7.385,
+    0.666,
     0.0
    ],
    "forearm.L": [
-    5.647,
+    2.192,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -2.45,
+    -5.286,
     0.0,
     0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    -28.342
    ]
   },
   "three_quarter_back": {
    "head": [
-    5.631,
-    2.935,
-    2.552
+    0.76,
+    0.784,
+    -2.237
    ],
    "upper_arm.L": [
-    -4.539,
-    -8.215,
+    1.13,
+    -5.311,
     0.0
    ],
    "upper_arm.R": [
-    7.632,
-    -1.999,
+    21.803,
+    0.295,
     0.0
    ],
    "forearm.L": [
-    -2.704,
+    -2.883,
     0.0,
     0.0
    ],
    "forearm.R": [
-    4.392,
+    5.443,
     0.0,
     0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    -104.542
+   ]
+  }
+ },
+ "part_cameras": {
+  "lentes": {
+   "sheet": "11_Morfi_lentes.png",
+   "res": [
+    1536,
+    1024
+   ],
+   "az": 14.4839,
+   "el": 16.8046,
+   "distance": 1.86887,
+   "lens": 75.3749,
+   "target": [
+    0.0422,
+    -0.06613,
+    0.69655
+   ],
+   "roll": 5.2928,
+   "place": {}
+  },
+  "cubos": {
+   "sheet": "12_Morfi_tres_cubos.png",
+   "res": [
+    1145,
+    1374
+   ],
+   "az": -0.2767,
+   "el": 33.4527,
+   "distance": 0.45302,
+   "lens": 69.8902,
+   "target": [
+    -0.04068,
+    -0.012,
+    1.06561
+   ],
+   "roll": -7.6684,
+   "place": {
+    "Pixel_01": {
+     "mode": "shift",
+     "value": [
+      0.00355,
+      0.00049,
+      0.00368
+     ],
+     "center": [
+      -0.08299,
+      -0.012,
+      1.0488
+     ]
+    },
+    "Pixel_02": {
+     "mode": "shift",
+     "value": [
+      -0.01064,
+      0.01133,
+      -0.00226
+     ],
+     "center": [
+      0.00799,
+      -0.01,
+      1.10484
+     ]
+    },
+    "Pixel_03": {
+     "mode": "shift",
+     "value": [
+      -0.00095,
+      0.00676,
+      -0.01281
+     ],
+     "center": [
+      0.015,
+      -0.012,
+      1.03334
+     ]
+    }
+   }
+  },
+  "_doc": "Camara (y colocacion de piezas sueltas) por lamina de producto 08-14, ajustada a su silueta con scripts/fit_part_cameras.py; la usa scripts/render_parts.py",
+  "sudadera": {
+   "sheet": "08_Morfi_sudadera.png",
+   "res": [
+    1312,
+    1199
+   ],
+   "az": -23.537,
+   "el": 19.9872,
+   "distance": 1.47821,
+   "lens": 71.5371,
+   "target": [
+    -0.00984,
+    0.02413,
+    0.32307
+   ],
+   "roll": 7.9982,
+   "place": {}
+  },
+  "playera": {
+   "sheet": "09_Morfi_playera.png",
+   "res": [
+    1312,
+    1199
+   ],
+   "az": 1.2936,
+   "el": 17.6444,
+   "distance": 1.1107,
+   "lens": 69.9514,
+   "target": [
+    -0.00879,
+    -0.00546,
+    0.36058
+   ],
+   "roll": -0.4495,
+   "place": {}
+  },
+  "tenis": {
+   "sheet": "10_Morfi_tenis.png",
+   "res": [
+    1374,
+    1145
+   ],
+   "az": -53.7741,
+   "el": 25.9358,
+   "distance": 1.09832,
+   "lens": 74.0889,
+   "target": [
+    -0.05996,
+    -0.04432,
+    0.04974
+   ],
+   "roll": 7.8639,
+   "place": {
+    "Shoe_L": {
+     "mode": "floor",
+     "value": [
+      -0.0156,
+      -0.01608,
+      -13.25118
+     ],
+     "center": [
+      0.14995,
+      -0.04805,
+      0.06857
+     ]
+    },
+    "Shoe_R": {
+     "mode": "floor",
+     "value": [
+      -0.00096,
+      0.0115,
+      12.46449
+     ],
+     "center": [
+      -0.14999,
+      -0.04791,
+      0.06854
+     ]
+    }
+   }
+  },
+  "laptop": {
+   "sheet": "13_Morfi_laptop.png",
+   "res": [
+    1312,
+    1199
+   ],
+   "az": -17.3554,
+   "el": 43.1545,
+   "distance": 0.52568,
+   "lens": 69.6672,
+   "target": [
+    -0.61986,
+    0.1,
+    -0.00604
+   ],
+   "roll": 7.9989,
+   "place": {}
+  },
+  "cuerpo_base": {
+   "sheet": "14_Morfi_cuerpo_base.png",
+   "res": [
+    1145,
+    1374
+   ],
+   "az": 1.1728,
+   "el": 8.3769,
+   "distance": 2.21032,
+   "lens": 72.6795,
+   "target": [
+    -0.00077,
+    0.02116,
+    0.49734
+   ],
+   "roll": 0.0603,
+   "place": {}
+  }
+ },
+ "view_gaze": {
+  "front": {
+   "L": [
+    -4.521,
+    -0.228
+   ],
+   "R": [
+    3.129,
+    1.019
    ]
   },
-  "_doc": "Pose por toma (grados, ejes del mundo en la cabeza de cada hueso en reposo), ajustada a la silueta de cada referencia con scripts/fit_view_poses.py"
+  "three_quarter_front": {
+   "L": [
+    -7.55,
+    0.74
+   ],
+   "R": [
+    -7.55,
+    0.74
+   ]
+  },
+  "_doc": "Desvio de la mirada por toma y por ojo [giro, inclinacion] en grados, tras mirar a la camara; ajustado a la posicion de las pupilas de cada referencia con scripts/fit_gaze.py (la toma hero no se corrige: alli la diferencia viene de la pose de la cabeza)"
+ },
+ "hero_pose": {
+  "head": {
+   "turn": -22.0,
+   "tilt": -14.5,
+   "nod": 0.0
+  },
+  "_doc": "Cabeza de la pose hero (grados: turn = giro Z, tilt = inclinacion Y, nod = cabeceo X). La inclinacion se midio con la linea de los lentes: 10.7 grados en la imagen maestra 00 (antes 4.9 en el render, ahora ~10)."
  }
 }

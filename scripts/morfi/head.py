@@ -366,13 +366,24 @@ def eye_texture(cfg, size=1024):
     base = np.where(t[..., None] < 0.55,
                     i_in[None, None, :] * (1 - t[..., None] / 0.55) + i_mid[None, None, :] * (t[..., None] / 0.55),
                     i_mid[None, None, :] * (1 - (t[..., None] - 0.55) / 0.45) + i_out[None, None, :] * ((t[..., None] - 0.55) / 0.45))
+    # stylised vertical gradient (references: dark navy at the top of the iris,
+    # royal blue at the sides, bright azure at the bottom where the light pools)
+    if 'iris_top' in col:
+        i_top, i_side, i_bot = _hexrgb(col['iris_top']), _hexrgb(col['iris_side']), _hexrgb(col['iris_bottom'])
+        vn = np.clip(v / ri, -1, 1)
+        wt = smoothstep(0.0, 0.9, vn)[..., None]
+        wb = smoothstep(0.0, 0.9, -vn)[..., None]
+        base = i_side[None, None, :] * (1 - wt - wb) + i_top[None, None, :] * wt + i_bot[None, None, :] * wb
     # darker collarette right around the pupil
+    i_coll = _hexrgb(col.get('iris_collarette', col['iris_outer']))
     coll = np.exp(-((t - 0.08) / 0.07) ** 2)[..., None] * 0.15
-    base = base * (1 - coll) + i_out[None, None, :] * coll
+    base = base * (1 - coll) + i_coll[None, None, :] * coll
     base = base * (1.0 + 0.18 * fib[..., None] * (0.3 + t[..., None]))
     # limbal ring
+    i_limb = _hexrgb(col['iris_limbal']) if 'iris_limbal' in col else i_out * 0.5
+    ls = f.get('limbal_strength', 0.9)
     limb = smoothstep(ri * 0.80, ri * 0.97, rho)[..., None]
-    base = base * (1 - limb * 0.9) + i_out[None, None, :] * 0.5 * limb * 0.9
+    base = base * (1 - limb * ls) + i_limb[None, None, :] * limb * ls
     iris_m = smoothstep(ri + 0.006, ri - 0.006, rho)[..., None]
     pupil_m = smoothstep(rp + 0.006, rp - 0.004, rho)[..., None]
     sclera = scl[None, None, :] * (1 - 0.06 * smoothstep(0.55, 1.0, rho))[..., None]

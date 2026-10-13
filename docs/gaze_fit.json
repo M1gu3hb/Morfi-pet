@@ -1,0 +1,75 @@
+{
+ "front": {
+  "L": {
+   "reference_px": [
+    690.1,
+    498.6
+   ],
+   "camera_look_px": [
+    701.1,
+    499.1
+   ],
+   "fitted_px": [
+    690.1,
+    498.6
+   ],
+   "yaw_pitch": [
+    -4.521,
+    -0.228
+   ]
+  },
+  "R": {
+   "reference_px": [
+    449.5,
+    501.7
+   ],
+   "camera_look_px": [
+    441.8,
+    499.2
+   ],
+   "fitted_px": [
+    449.5,
+    501.7
+   ],
+   "yaw_pitch": [
+    3.129,
+    1.019
+   ]
+  }
+ },
+ "three_quarter_front": {
+  "L": {
+   "reference_px": null,
+   "camera_look_px": [
+    642.1,
+    478.8
+   ],
+   "fitted_px": [
+    624.4,
+    480.8
+   ],
+   "yaw_pitch": [
+    -7.55,
+    0.74
+   ]
+  },
+  "R": {
+   "reference_px": [
+    393.1,
+    495.4
+   ],
+   "camera_look_px": [
+    410.6,
+    493.9
+   ],
+   "fitted_px": [
+    393.1,
+    495.4
+   ],
+   "yaw_pitch": [
+    -7.55,
+    0.74
+   ]
+  }
+ }
+}

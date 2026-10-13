@@ -30,6 +30,11 @@ try {
         await page.waitForTimeout(800);
         await page.screenshot({ path: join(outDir, `${label}_${v}.png`) });
       }
+      // back view with the light rig fixed in the world (darker, like before the product lighting)
+      await page.click('#lightsFollow');
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: join(outDir, `${label}_back_world_lights.png`) });
+      await page.click('#lightsFollow');
       await page.click('#views button[data-view="front"]');
       await page.selectOption('#anim', 'Pose_Hero');
       await page.waitForTimeout(1200);

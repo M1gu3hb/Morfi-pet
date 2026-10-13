@@ -27,7 +27,7 @@ Los binarios (`*.blend`, `*.glb`, `*.mp4`) se versionan con **Git LFS** (`.gitat
 - **Laptop** cerrada con **dos cuadrados azules**; aparece en la pose Hero, sujeta por la mano derecha.
 - **Textura fina** tipo laberinto (la que se ve en piel, sudadera y playera de las referencias) como mapas de color + normal tileables, idénticos en Cycles y en glTF.
 - **Esqueleto** (cadera, columna, cuello, cabeza, ojos, cubos, brazos, manos, dedos, pulgar, piernas, pies) con pesos calculados; la ropa se deforma con el cuerpo.
-- **Acciones**: `Pose_Neutral`, `Pose_Hero`, `Idle`, `Walk`, `Run`, `Wave`.
+- **Acciones**: `Pose_Neutral`, `Pose_Hero`, `Idle`, `Walk`, `Run`, `Wave`, más una pose por toma de referencia (`Ref_front`, `Ref_back`, …).
 
 ## Requisitos (versiones probadas)
 
@@ -35,7 +35,7 @@ Los binarios (`*.blend`, `*.glb`, `*.mp4`) se versionan con **Git LFS** (`.gitat
 |---|---|
 | Blender | 4.5.14 LTS (headless funciona) |
 | Python de Blender | 3.11 + `numpy 1.26.4`, `scikit-image 0.26`, `scipy 1.17`, `pillow 12.3` |
-| Python del sistema (comparativas) | 3.x + `numpy`, `scipy`, `pillow` |
+| Python del sistema (comparativas y calibración) | 3.x + `numpy`, `scipy`, `pillow`, `rembg` (BiRefNet) |
 | Node.js / npm | 22.x / 10.x |
 | ffmpeg | 6.x (solo para el MP4 del giro 360°) |
 | Git LFS | 3.x |
@@ -73,6 +73,31 @@ blender -b --factory-startup --python scripts/validate_assets.py -- --glb export
 python3 scripts/make_comparisons.py           # -> renders/comparisons/, docs/metrics.json
 ```
 
+### Calce con las referencias (cámara y pose por toma)
+
+Cada imagen de referencia se "fotografía" con su propia cámara y pose, calibradas contra su silueta (ver `docs/art-direction.md` §7):
+
+```bash
+pip install "rembg[cpu]" scipy pillow numpy          # Python del sistema
+python3 scripts/ref_masks.py                          # siluetas exactas -> references_masks/
+blender -b source/morfi_master.blend --python scripts/dump_points.py -- --pose neutral --out work/calib/points_neutral.npz
+blender -b source/morfi_master.blend --python scripts/dump_points.py -- --pose hero --out work/calib/points_hero.npz
+python3 scripts/fit_cameras.py                        # camera_views en config/morfi.json
+blender -b source/morfi_master.blend --python scripts/dump_skin.py -- --out work/calib/skin.npz
+python3 scripts/fit_view_poses.py                     # view_poses (+ retoque de cámara, giro de los cubos)
+# después: rig_model.py crea las acciones Ref_<vista> y render_views.py las usa
+blender -b source/morfi_master.blend --python scripts/fit_gaze.py   # view_gaze: mirada por toma (pupilas)
+blender -b source/morfi_master.blend --python scripts/dump_points.py -- --pose neutral --keep-laptop --out work/calib/points_parts.npz
+python3 scripts/fit_part_cameras.py                   # part_cameras: cámara de cada lámina 08–14
+python3 scripts/eval_silhouettes.py work/calib/points_neutral.npz   # IoU rápido sin renderizar
+python3 scripts/residuals.py --overlays               # qué pieza causa cada píxel de diferencia, por vista
+python3 scripts/face_landmarks.py references/02_Morfi_frente.png renders/views/front.png   # rasgos de la cara
+scripts/iterate_shapes.sh prueba [config.json]        # ciclo rápido de formas: borrador -> IoU de las 6 vistas
+scripts/iterate_face.sh prueba [config.json]          # ciclo rápido de cara: borrador -> rig -> frente -> medidas
+```
+
+`fit_view_poses.py` compara contorno y zonas de color (azul / negro / blanco-gris) con un z-buffer del modelo; `--outline-only` usa solo el contorno. Las vistas se renderizan con el set de luces girado con la cámara de cada toma (como en las fotos de producto de referencia); `--world-lights` lo desactiva.
+
 `--quality draft` genera una versión rápida (≈1–2 min) para iterar. Todos los parámetros (medidas, colores, cámara, luces) están en `config/morfi.json`.
 
 ## Visor web
@@ -85,12 +110,12 @@ npm run build        # build estático en web/dist (base relativa, se puede serv
 npm run test:e2e     # prueba de humo con Chromium headless -> renders/viewer/*.png
 ```
 
-Funciones: órbita / zoom / táctil, 6 vistas predefinidas (mismos ángulos que las referencias), mostrar/ocultar sudadera, playera, tenis, lentes, cubos y laptop, preset "cuerpo base", fondo claro/oscuro/transparente, modos arcilla y alambre, animaciones (Neutral, Hero, Idle, Caminar, Correr, Saludar), captura PNG y descarga del GLB. Parámetros de URL: `?model=morfi_master.glb` para cargar el master, `?lowpower=1` para equipos sin GPU.
+Funciones: órbita / zoom / táctil, 6 vistas predefinidas con la cámara y la pose calibradas de cada referencia, luz de estudio que gira con la cámara (como en las referencias; casilla "Luz sigue a la cámara"), mostrar/ocultar sudadera, playera, tenis, lentes, cubos y laptop, preset "cuerpo base", fondo claro/oscuro/transparente, modos arcilla y alambre, animaciones (Neutral, Hero, Idle, Caminar, Correr, Saludar), captura PNG al tamaño de las referencias (1145×1374, mismo encuadre) y descarga del GLB. Parámetros de URL: `?model=morfi_master.glb` para cargar el master, `?lowpower=1` para equipos sin GPU.
 
 ## Uso en otras herramientas
 
 - **Blender**: abrir `source/morfi_master.blend`; las acciones están en el *Action Editor* del objeto `Morfi_Rig`. La cámara `Cam_hero` reproduce el encuadre principal.
-- **Three.js / Babylon / Unity / Unreal / Godot**: importar `exports/morfi_web.glb` (o el master). Usa `KHR_materials_sheen`, `KHR_materials_transmission`, `KHR_materials_clearcoat`, `KHR_materials_specular` y `KHR_materials_ior`; las 6 animaciones van incluidas como clips separados.
+- **Three.js / Babylon / Unity / Unreal / Godot**: importar `exports/morfi_web.glb` (o el master). Usa `KHR_materials_sheen`, `KHR_materials_transmission`, `KHR_materials_clearcoat`, `KHR_materials_specular`, `KHR_materials_ior` y `KHR_materials_emissive_strength` (brillo de los ojos); las 6 animaciones van incluidas como clips separados, más las 6 poses por toma `Ref_<vista>` (una pose estática por referencia).
 - Convención de ejes y unidades: ver `docs/art-direction.md` §1 (altura sin cubos = 1.0).
 
 ## Limitaciones conocidas

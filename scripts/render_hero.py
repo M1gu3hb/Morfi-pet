@@ -109,7 +109,7 @@ def main():
         scene.place_camera(cam, cfg['camera_views']['hero'])
     sc.camera = cam
     bpy.context.view_layer.update()
-    scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK['hero'])
+    scene.eyes_look(cam.matrix_world.translation, scene.EYE_LOOK['hero'], gaze=cfg.get('view_gaze', {}).get('hero'))
     sc.cycles.samples = a.samples
     sc.render.resolution_percentage = int(round(100 * a.scale))
     os.makedirs(os.path.join(a.out, 'transparent'), exist_ok=True)

@@ -182,6 +182,17 @@ def eye(name, img):
     return m
 
 
+def eye_highlight(name='M_EyeHighlight', strength=2.5):
+    """Painted catch-light: an unlit white disk on the eye (exports as emissive glTF)."""
+    m, nt, b = _new(name)
+    b.inputs['Base Color'].default_value = (1, 1, 1, 1)
+    b.inputs['Roughness'].default_value = 1.0
+    b.inputs['Specular IOR Level'].default_value = 0.0
+    b.inputs['Emission Color'].default_value = (1, 1, 1, 1)
+    b.inputs['Emission Strength'].default_value = strength
+    return m
+
+
 def cornea(name='M_Cornea'):
     """Clear wet cornea shell: thin-glass in Cycles, transmission in glTF."""
     m = glass(name)
@@ -190,7 +201,9 @@ def cornea(name='M_Cornea'):
         if n.type == 'BSDF_GLOSSY':
             n.inputs['Roughness'].default_value = 0.0
         if n.type == 'FRESNEL':
-            n.inputs['IOR'].default_value = 1.376
+            # weak reflection: the references show pure black pupils with one
+            # crisp catch-light dot (the glossy-only catch light is boosted to match)
+            n.inputs['IOR'].default_value = 1.05
     nt.nodes['Principled BSDF'].inputs['IOR'].default_value = 1.376
     return m
 
@@ -217,7 +230,7 @@ def glass(name='M_Lens'):
     gl = nt.nodes.new('ShaderNodeBsdfGlossy')
     gl.inputs['Roughness'].default_value = 0.015
     fr = nt.nodes.new('ShaderNodeFresnel')
-    fr.inputs['IOR'].default_value = 1.18
+    fr.inputs['IOR'].default_value = 1.05  # faint, like the references (black pupils stay black)
     thin = nt.nodes.new('ShaderNodeMixShader')
     nt.links.new(fr.outputs['Fac'], thin.inputs['Fac'])
     nt.links.new(tr.outputs['BSDF'], thin.inputs[1])

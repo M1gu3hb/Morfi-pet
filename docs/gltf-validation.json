@@ -2,16 +2,17 @@
  "morfi_master.glb": {
   "errors": 0,
   "warnings": 0,
-  "infos": 33,
+  "infos": 37,
   "hints": 0,
   "info": {
-   "triangles": 924816,
-   "vertices": 531712,
-   "materials": 20,
-   "animations": 6,
+   "triangles": 924864,
+   "vertices": 531056,
+   "materials": 21,
+   "animations": 12,
    "extensionsUsed": [
     "KHR_materials_clearcoat",
     "KHR_materials_transmission",
+    "KHR_materials_emissive_strength",
     "KHR_materials_specular",
     "KHR_materials_sheen",
     "KHR_materials_ior"
@@ -22,16 +23,17 @@
  "morfi_web.glb": {
   "errors": 0,
   "warnings": 0,
-  "infos": 33,
+  "infos": 37,
   "hints": 0,
   "info": {
-   "triangles": 215796,
-   "vertices": 146104,
-   "materials": 20,
-   "animations": 6,
+   "triangles": 215844,
+   "vertices": 145910,
+   "materials": 21,
+   "animations": 12,
    "extensionsUsed": [
     "KHR_materials_clearcoat",
     "KHR_materials_transmission",
+    "KHR_materials_emissive_strength",
     "KHR_materials_specular",
     "KHR_materials_sheen",
     "KHR_materials_ior"
@@ -46,7 +48,7 @@
   "hints": 0,
   "info": {
    "triangles": 40000,
-   "vertices": 22930,
+   "vertices": 22989,
    "materials": 1,
    "animations": 0,
    "extensionsUsed": [
@@ -63,7 +65,7 @@
   "hints": 0,
   "info": {
    "triangles": 25280,
-   "vertices": 17384,
+   "vertices": 17436,
    "materials": 2,
    "animations": 0,
    "extensionsUsed": [
@@ -78,15 +80,16 @@
  "parts/morfi_head.glb": {
   "errors": 0,
   "warnings": 0,
-  "infos": 10,
+  "infos": 14,
   "hints": 0,
   "info": {
-   "triangles": 218544,
-   "vertices": 113228,
-   "materials": 4,
+   "triangles": 218592,
+   "vertices": 113134,
+   "materials": 5,
    "animations": 0,
    "extensionsUsed": [
     "KHR_materials_transmission",
+    "KHR_materials_emissive_strength",
     "KHR_materials_specular",
     "KHR_materials_ior",
     "KHR_materials_sheen"
@@ -101,7 +104,7 @@
   "hints": 0,
   "info": {
    "triangles": 113496,
-   "vertices": 78973,
+   "vertices": 78968,
    "materials": 5,
    "animations": 0,
    "extensionsUsed": [
@@ -148,7 +151,7 @@
   "hints": 0,
   "info": {
    "triangles": 56000,
-   "vertices": 41686,
+   "vertices": 41203,
    "materials": 4,
    "animations": 0,
    "extensionsUsed": [
@@ -165,7 +168,7 @@
   "hints": 0,
   "info": {
    "triangles": 19000,
-   "vertices": 13585,
+   "vertices": 13596,
    "materials": 2,
    "animations": 0,
    "extensionsUsed": [

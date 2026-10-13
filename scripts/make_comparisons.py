@@ -1,11 +1,18 @@
-"""Side-by-side comparisons + silhouette overlays + IoU metrics.
+"""Side-by-side comparisons + silhouette overlays + IoU and colour metrics.
 
-    python3 scripts/make_comparisons.py   (needs numpy, pillow, scipy)
+    python3 scripts/make_comparisons.py [--before DIR]   (needs numpy, pillow, scipy, scikit-image)
 
 Writes renders/comparisons/*.png and docs/metrics.json. Overlays are
 diagnostic only (red = reference only, green = render only, grey = both);
 final renders are never modified.
+
+Metrics per view: silhouette IoU (render alpha vs. the reference mask from
+scripts/ref_masks.py) and the colour difference in CIELAB (Delta E 1976)
+inside the region where both silhouettes agree, measured at quarter resolution
+after a light blur so a few pixels of misalignment count less than shading or
+colour. --before DIR adds before_after_<view>.png sheets (reference | DIR | now).
 """
+import argparse
 import json
 import os
 
@@ -65,6 +72,19 @@ def alpha_mask(path, size):
     return np.asarray(im)[..., 3] > 128
 
 
+def delta_e(ref_rgb, out_rgb, mask):
+    """Median and mean CIELAB Delta E (1976) inside mask, quarter resolution, light blur."""
+    from skimage.color import rgb2lab
+    size = (ref_rgb.width // 4, ref_rgb.height // 4)
+    m = np.asarray(Image.fromarray(mask.astype(np.uint8) * 255).resize(size, Image.BILINEAR)) > 200
+
+    def lab(im):
+        a = np.asarray(im.resize(size, Image.LANCZOS)).astype(float) / 255
+        return rgb2lab(np.clip(ndi.gaussian_filter(a, (1.5, 1.5, 0)), 0, 1))
+    d = np.sqrt(((lab(out_rgb) - lab(ref_rgb)) ** 2).sum(-1))[m]
+    return float(np.median(d)), float(d.mean())
+
+
 def label(img, text):
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, img.size[0], 34], fill=(255, 255, 255))
@@ -73,6 +93,9 @@ def label(img, text):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--before', help='folder with earlier view renders for before/after sheets')
+    a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     metrics = {}
     for view, ref in PAIRS:
@@ -87,8 +110,11 @@ def main():
         mr = ref_mask(rp, r.size)
         mv = alpha_mask(tp, r.size)
         iou = float((mr & mv).sum() / (mr | mv).sum())
+        de_med, de_mean = delta_e(r, v, mr & mv)
         metrics[view] = {'reference': ref + '.png', 'silhouette_iou': round(iou, 4),
-                         'note': 'reference mask is auto-segmented; white shoes / floor shadow add error'}
+                         'color_delta_e_median': round(de_med, 2), 'color_delta_e_mean': round(de_mean, 2),
+                         'note': 'reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view '
+                                 'from config camera_views / view_poses; Delta E inside the shared silhouette'}
         o = np.full(mr.shape + (3,), 255, np.uint8)
         o[mr & mv] = (160, 160, 160)
         o[mr & ~mv] = (225, 45, 45)
@@ -100,7 +126,15 @@ def main():
         sheet.paste(label(Image.fromarray(o), f'Siluetas  IoU={iou:.3f}  rojo=solo ref  verde=solo 3D'), (2 * W, 0))
         sheet = sheet.resize((W * 3 // 2, H // 2), Image.LANCZOS)
         sheet.save(os.path.join(OUT, f'cmp_{view}.png'))
-        print(view, 'IoU', round(iou, 4))
+        print(view, 'IoU', round(iou, 4), 'dE median', round(de_med, 2), 'mean', round(de_mean, 2))
+        bp = os.path.join(a.before, view + '.png') if a.before else None
+        if bp and os.path.exists(bp):
+            b = Image.open(bp).convert('RGB').resize(r.size)
+            ba = Image.new('RGB', (W * 3, H), 'white')
+            ba.paste(label(r.copy(), f'Referencia {ref}.png'), (0, 0))
+            ba.paste(label(b, 'Antes'), (W, 0))
+            ba.paste(label(v.copy(), 'Ahora'), (2 * W, 0))
+            ba.resize((W * 3 // 2, H // 2), Image.LANCZOS).save(os.path.join(OUT, f'before_after_{view}.png'))
     hero = os.path.join(ROOT, 'renders', 'hero_wordmark.png')
     if os.path.exists(hero):
         r = Image.open(os.path.join(REF, '00_Morfi_master_wordmark.png')).convert('RGB')

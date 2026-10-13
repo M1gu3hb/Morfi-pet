@@ -29,9 +29,12 @@ def main():
     ap.add_argument('--out', default=os.path.join(ROOT, 'source', 'morfi_master.blend'))
     ap.add_argument('--quality', default='final', choices=['draft', 'final'])
     ap.add_argument('--skip', default='')
+    ap.add_argument('--config', default=os.path.join(ROOT, 'config', 'morfi.json'))
+    ap.add_argument('--tex-dir', default=os.path.join(ROOT, 'textures', 'master'),
+                    help='where textures are written (keep the default for the master file)')
     a = ap.parse_args(argv)
     skip = set(filter(None, a.skip.split(',')))
-    cfg = json.load(open(os.path.join(ROOT, 'config', 'morfi.json')))
+    cfg = json.load(open(a.config))
     q = a.quality
     t0 = time.time()
 
@@ -39,7 +42,7 @@ def main():
     sc = bpy.context.scene
     sc.unit_settings.system = 'METRIC'
     sc.unit_settings.scale_length = 1.0
-    tex = os.path.join(ROOT, 'textures', 'master')
+    tex = os.path.abspath(a.tex_dir)
     os.makedirs(tex, exist_ok=True)
 
     morfi = mu.get_collection('Morfi')
