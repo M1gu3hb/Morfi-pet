@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader.js';
 import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShader.js';
+import { patchShader as patchDualQuat } from './dqskin';
 
 export class ContactShadow {
   readonly plane: THREE.Mesh;
@@ -33,11 +34,13 @@ export class ContactShadow {
     // darkness fades with height above the floor
     this.depthMat = new THREE.MeshDepthMaterial();
     this.depthMat.onBeforeCompile = (s) => {
+      patchDualQuat(s); // the character deforms with dual quaternions (dqskin.ts)
       s.fragmentShader = s.fragmentShader.replace(
         'gl_FragColor = vec4( vec3( 1.0 - fragCoordZ ), opacity );',
         'gl_FragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * ( 1.0 - fragCoordZ ) );',
       );
     };
+    this.depthMat.customProgramCacheKey = () => 'contact|dq';
     this.depthMat.depthTest = false;
     this.depthMat.depthWrite = false;
     this.hBlur = new THREE.ShaderMaterial(HorizontalBlurShader);

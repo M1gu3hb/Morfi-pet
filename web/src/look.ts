@@ -42,9 +42,12 @@ const shared = { mix: { value: 1 } };
 
 // Patch a glTF material so it can be shaded with its reference matcap.
 export function applyReferenceLook(mat: THREE.Material, atlas: THREE.Texture, info: LookInfo) {
-  const m = mat as THREE.MeshStandardMaterial;
+  const m = mat as THREE.MeshStandardMaterial & { __reflook?: boolean };
   const entry = info.materials[m.name];
   if (!entry || !(m as THREE.MeshStandardMaterial).isMeshStandardMaterial) return false;
+  // shared by several meshes (both shoes, both eyes...): patch it once
+  if (m.__reflook) return true;
+  m.__reflook = true;
   const rows = Math.ceil(Object.keys(info.materials).length / info.cols);
   const tileOf = (k: number) => new THREE.Vector4((k % info.cols) / info.cols, 1 - (Math.floor(k / info.cols) + 1) / rows, 1 / info.cols, 1 / rows);
   // two-tone material (the head): a second matcap for the celeste texels
@@ -59,7 +62,11 @@ export function applyReferenceLook(mat: THREE.Material, atlas: THREE.Texture, in
     refLog: { value: new THREE.Vector2(info.log2[0], info.log2[1] - info.log2[0]) },
     refExposure: { value: info.exposure },
   };
-  m.onBeforeCompile = (shader) => {
+  // chained after any other patch of the same material (dual quaternion skinning)
+  const prev = m.onBeforeCompile;
+  const prevKey = m.customProgramCacheKey.bind(m);
+  m.onBeforeCompile = (shader, renderer) => {
+    prev.call(m, shader, renderer);
     Object.assign(shader.uniforms, u);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
@@ -91,7 +98,7 @@ uniform float refExposure;`)
 }
 #include <opaque_fragment>`);
   };
-  m.customProgramCacheKey = () => 'reflook';
+  m.customProgramCacheKey = () => prevKey() + '|reflook';
   m.needsUpdate = true;
   return true;
 }

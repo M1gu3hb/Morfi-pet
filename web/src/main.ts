@@ -6,6 +6,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { applyReferenceLook, loadLook, setReferenceMix, setShotMorph } from './look';
 import { sfx, setMusic, setSfxEnabled, setVolume, unlockAudio } from './sfx';
 import { ContactShadow } from './contact';
+import { useDualQuatSkinning } from './dqskin';
 
 // ------------------------------------------------------------------ setup
 const params = new URLSearchParams(location.search);
@@ -207,6 +208,8 @@ let playing = true;
 const originalMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
 const clayMat = new THREE.MeshStandardMaterial({ color: 0xb9bcc4, roughness: 0.75, metalness: 0 });
 const wireMat = new THREE.MeshBasicMaterial({ color: 0x1b2a4a, wireframe: true });
+useDualQuatSkinning(clayMat);
+useDualQuatSkinning(wireMat);
 
 function setGroup(name: string, on: boolean) {
   groupState[name] = on;
@@ -369,6 +372,13 @@ loader.load(
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
       m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+      // deform like Blender's "Preserve Volume" (dual quaternions), also in the shadow map
+      if ((m as THREE.SkinnedMesh).isSkinnedMesh && params.get('dq') !== '0') {
+        (Array.isArray(m.material) ? m.material : [m.material]).forEach(useDualQuatSkinning);
+        const dm = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+        useDualQuatSkinning(dm);
+        m.customDepthMaterial = dm;
+      }
       // clear lenses as in the photos: a faint reflection, no frosted look
       for (const mt of Array.isArray(m.material) ? m.material : [m.material]) {
         // (the same for the corneas: a transmissive cornea blurs the iris
