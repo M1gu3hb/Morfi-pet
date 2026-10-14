@@ -200,8 +200,9 @@ Medido sobre los renders finales de la ronda 3 con las cámaras y poses calibrad
    - El agujero es medio elipsoide (semiejes 10.5 × 12.5 × 7 cm, centro a z 0.532) inclinado 30°: baja más adelante que atrás.
    - Por arriba sigue como cilindro, para que la tela no trepe por el cuello.
    - El rib del cuello es un tubo de 8.5 mm que sigue exactamente la curva donde el agujero corta la playera (`shirt_neck`). Solo se conserva la mitad de abajo, para que no suba por el cuello.
+   - La playera sola de la lámina 09 (`Tshirt_Product`) subía por la nuca hasta el borde trasero del agujero inclinado y se veía con cuello alto. En ese estado, la parte de atrás del escote es un corte justo encima de los hombros. El corte sube un poco hacia atrás y se curva hacia los lados para no rozar los hombros (`shirt_neck.cap`), y se funde con el agujero. `Tshirt_Product_Collar` sigue ese escote. Puesta, la playera no cambia: su espalda va bajo la capucha. IoU de la lámina 09: 0.906 → 0.939.
 3. **Bolsillos.** El bolsillo canguro es más grande y está más alto, como en 02 (11.6 × 10.4 cm, centro a 14.8 cm del eje y z 0.322). Tiene la boca curva en la esquina exterior de arriba (`r_out` 6 cm) y un labio de 2.5 mm a lo largo de la abertura.
-4. **Piso.** El piso de los renders tenía un velo gris (≈247) donde las fotos tienen 253–254. El compositor quita un 5 % de velo del alfa de la sombra (`studio.floor_veil`): el piso queda como en las fotos y la sombra de contacto se conserva.
+4. **Piso.** El piso de los renders tenía un velo gris: junto a la figura 244–246, donde la foto 02 tiene 246–250 y sus esquinas 253. El compositor quita un 5 % de velo del alfa de la sombra (`studio.floor_veil`). Ahora el piso queda en 250–252 junto a la figura (un poco más claro que la foto) y la sombra de contacto se conserva.
 5. **Perfiles: lente y celeste.**
    - Con la trampa de cámara el lente se veía más alto que en 03/05 (220 px frente a 199). Ahora los lentes de los perfiles se escalan en altura ×0.91 alrededor del centro del ojo (`face_cheat.glasses_z`).
    - En la máscara celeste de la cara, las vistas con trampa pesan más (`facetrace.sample_multi`), así que la mejilla de los perfiles sigue lo dibujado en 03/05.
@@ -220,3 +221,9 @@ Medido sobre los renders finales de la ronda 3 con las cámaras y poses calibrad
    - comparación con la foto (superponer, cortina, diferencia, lado a lado);
    - efectos de sonido sintetizados con WebAudio (cámara, pasos, saludo, pose hero, toque) y música opcional;
    - la ronda y el commit de lo que se ve.
+
+**Números de la ronda 10** (render final contra la ronda 9; detalle en `validation.md` §1):
+- Siluetas casi iguales, porque los cambios son interiores (pliegue de la axila, escote, bolsillos): frente 0.945 → 0.944, perfil izquierdo 0.920 → 0.923, espalda 0.943 → 0.939, perfil derecho 0.908 → 0.907, 3/4 frontal 0.909 → 0.912, 3/4 posterior 0.897 → 0.892. ΔE mediano entre −0.2 y +0.2 según la vista.
+- Láminas: playera 0.928 → 0.939 (ΔE 8.3 → 7.3), sudadera 0.864 → 0.857.
+- Visor web con el shader de las fotos: ΔE mediano 4.6–9.2, frente a 7.3–17.8 de los renders Cycles.
+- Pendiente: en 02 el brazo se abre un poco y deja un hueco blanco bajo la axila. En el modelo, con el brazo más pegado, solo queda el pliegue (`validation.md` §7.4).
