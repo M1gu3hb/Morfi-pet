@@ -123,7 +123,7 @@ class Garments:
         if nk:
             # crew neck (02, 09): a round hole round the neck, tilted so that
             # the front dips; the shirt goes on over the shoulders up to it
-            d = np.maximum(d, -self.neck_hole(P))
+            d = np.maximum(d, -self.neck_cut(P))
         else:
             # neckline: tilted plane (front lower) + neck hole
             col = p['shirt_collar']
@@ -153,13 +153,29 @@ class Garments:
         k1 = np.sqrt((x / rx ** 2) ** 2 + (y / ry ** 2) ** 2 + (z / rz ** 2) ** 2)
         return k0 * (k0 - 1.0) / np.maximum(k1, 1e-9)
 
+    def neck_cut(self, P):
+        """What the neckline removes. Worn, the hole alone (the back of the
+        neck is under the hood and the shoulder line cut). The T-shirt on its
+        own (sheet 09) would otherwise run up the back of the neck to the hole's
+        high back edge: there the back of the neckline is a plane just above
+        the shoulders, rising a little toward the back ("cap")."""
+        nk = self.p['shirt_neck']
+        hole = self.neck_hole(P)
+        cap = nk.get('cap')
+        if not cap or self.variant != 'product':
+            return hole
+        # curving up toward the sides: it must not graze the shoulder tops
+        zc = cap['z'] + cap.get('slope', 0.0) * P[1] + cap.get('curv', 0.0) * P[0] ** 2
+        # rounded where the two meet, so the collar turns the corner smoothly
+        return S.smin(hole, np.maximum(zc - P[2], cap.get('y0', 0.0) - P[1]), cap.get('k', 0.03))
+
     def shirt_collar(self, P):
         nk = self.p.get('shirt_neck')
         if nk:
             # ribbed band following the neckline: the curve where the shirt
             # surface leaves the neck hole, thickened into a tube
             so = self.shirt_outer(P) - nk.get('rib_off', 0.002)
-            d = np.sqrt(self.neck_hole(P) ** 2 + so ** 2) - nk.get('rib_r', 0.0085)
+            d = np.sqrt(self.neck_cut(P) ** 2 + so ** 2) - nk.get('rib_r', 0.0085)
             # only along the real neckline (the lower, ellipsoidal half of the
             # hole): above it the hole's wall runs up beside the neck
             _, _, zl = S.to_local(P, nk['c'], S.rot_matrix(nk.get('tilt', 0.0), 0, 0))
@@ -629,6 +645,15 @@ def build(cfg, col, parent, tex_dir, h, quality):
         mu.assign_material(tp, M['shirt'])
         mu.cube_project_uv(tp, 5.0)
         tp.hide_render = True
+        if p.get('shirt_neck', {}).get('cap'):
+            # its collar follows the product neckline (lower at the back)
+            g.variant = 'product'
+            pc = mu.fast_mesh_object('Tshirt_Product_Collar', *S.polygonize(g.shirt_collar, (-0.13, -0.13, 0.44), (0.13, 0.15, 0.55), hh * 0.6),
+                                     collection=mu.get_collection('ProductShots'))
+            g.variant = 'worn'
+            pc.matrix_world = tp.matrix_world.copy()
+            mu.assign_material(pc, M['shirt'])
+            pc.hide_render = True
 
     # --- Hoodie shell (+hood, pockets)
     hv, hf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.17), (0.40, 0.26, 0.58), hh)

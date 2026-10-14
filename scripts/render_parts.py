@@ -129,6 +129,8 @@ def main():
                 names = [n.replace('Hoodie_Cuff', 'Hoodie_Product_Cuff') for n in names]
         if key == 'playera' and bpy.data.objects.get('Tshirt_Product'):
             names = ['Tshirt_Product'] + [n for n in names if n != 'Tshirt']  # with sleeves, as in sheet 09
+            if bpy.data.objects.get('Tshirt_Product_Collar'):  # neckline lower at the back
+                names = [n.replace('Tshirt_Collar', 'Tshirt_Product_Collar') for n in names]
         visible_set(names)
         undo = None
         if key in pcams:

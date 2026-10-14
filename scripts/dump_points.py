@@ -46,7 +46,7 @@ def main():
             continue
         if drop_laptop and ob.name.startswith('Laptop'):
             continue
-        if ob.hide_render and not ob.name.startswith('Laptop') and not (a.keep_laptop and (ob.name.startswith('Hoodie_Product') or ob.name == 'Tshirt_Product')):
+        if ob.hide_render and not ob.name.startswith('Laptop') and not (a.keep_laptop and (ob.name.startswith('Hoodie_Product') or ob.name.startswith('Tshirt_Product'))):
             continue
         ev = ob.evaluated_get(dg)
         me = ev.to_mesh()

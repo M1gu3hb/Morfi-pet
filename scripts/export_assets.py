@@ -276,9 +276,14 @@ def main():
         tp = bpy.data.objects.get('Tshirt_Product')
         if tp is not None:
             decimate_to(tp, MASTER_TRIS['Tshirt'] // 2)
+        tc = bpy.data.objects.get('Tshirt_Product_Collar')
+        if tc is not None:
+            decimate_to(tc, MASTER_TRIS['Tshirt_Collar'] // 2)
         for part, names in PARTS.items():
             if tp is not None:
                 names = ['Tshirt_Product' if n == 'Tshirt' else n for n in names]
+            if tc is not None:
+                names = ['Tshirt_Product_Collar' if n == 'Tshirt_Collar' else n for n in names]
             objs = [bpy.data.objects[n] for n in names if n in bpy.data.objects]
             # include children (e.g. eyes under head handled explicitly)
             export(os.path.join(OUT, 'parts', f'morfi_{part}.glb'), objs, animations=False, skins=False)
