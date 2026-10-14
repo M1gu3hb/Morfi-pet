@@ -166,10 +166,12 @@ def anim_wave(rig, length=48):
         # the head is 0.65 m wide and the arm short: the upper arm goes out to
         # the side and the forearm swings up and outward, so the waving hand
         # stays a hand's width outside the head (it went into its side)
-        aim(rig, 'upper_arm.R', (-0.95, -0.12, 0.30))
+        # (searched on the rig: over the whole cycle the hand stays at least
+        # 1 cm outside the head; the earlier keys put it up to 3 cm inside)
+        aim(rig, 'upper_arm.R', (-0.97, -0.12, 0.22))
         sw = math.sin(t * 2)
-        aim(rig, 'forearm.R', (-0.62 + 0.16 * sw, -0.22, 0.76))
-        aim(rig, 'hand.R', (-0.50 + 0.22 * sw, -0.28, 0.82))
+        aim(rig, 'forearm.R', (-0.85 + 0.12 * sw, -0.20, 0.55))
+        aim(rig, 'hand.R', (-0.75 + 0.18 * sw, -0.25, 0.62))
         key_all(rig, f + 1)
 
 

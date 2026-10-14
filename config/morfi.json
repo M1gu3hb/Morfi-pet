@@ -650,76 +650,76 @@
  },
  "camera_views": {
   "front": {
-   "az": 1.6948,
-   "height": 0.74825,
-   "distance": 2.44878,
+   "az": 0.94261,
+   "height": 0.75478,
+   "distance": 2.44851,
    "lens": 65.23437,
    "target": [
-    0.00539,
+    0.00552,
     0.0,
-    0.52557
+    0.52548
    ],
-   "roll": -0.25452
+   "roll": -0.26612
   },
   "profile_left": {
-   "az": 89.94747,
-   "height": 0.32548,
-   "distance": 2.49686,
+   "az": 89.73716,
+   "height": 0.30968,
+   "distance": 2.49139,
    "lens": 65.23368,
    "target": [
-    0.02187,
+    0.02597,
     0.0,
-    0.52099
+    0.52185
    ],
-   "roll": -0.53323
+   "roll": -0.56532
   },
   "back": {
-   "az": 182.17286,
-   "height": 0.71628,
-   "distance": 2.49617,
+   "az": 180.70682,
+   "height": 0.71645,
+   "distance": 2.49609,
    "lens": 65.19958,
    "target": [
-    8e-05,
+    -0.00023,
     0.0,
-    0.52353
+    0.52346
    ],
-   "roll": 0.44151
+   "roll": 0.44826
   },
   "profile_right": {
-   "az": -88.29881,
+   "az": -87.17608,
    "height": 0.4,
-   "distance": 2.5701,
+   "distance": 2.57437,
    "lens": 65.03673,
    "target": [
-    0.04731,
+    0.04463,
     0.0,
-    0.52639
+    0.52821
    ],
-   "roll": 2.04308
+   "roll": 1.9733
   },
   "three_quarter_front": {
-   "az": 25.11399,
-   "height": 0.54051,
-   "distance": 2.53606,
+   "az": 25.54015,
+   "height": 0.53445,
+   "distance": 2.53592,
    "lens": 65.05038,
    "target": [
-    -0.00811,
+    -0.0099,
     0.0,
-    0.50947
+    0.50974
    ],
-   "roll": 0.39569
+   "roll": 0.30367
   },
   "three_quarter_back": {
-   "az": -146.00018,
-   "height": 0.39322,
-   "distance": 2.51933,
+   "az": -147.59784,
+   "height": 0.37321,
+   "distance": 2.50776,
    "lens": 65.06512,
    "target": [
-    -0.00273,
+    -0.00276,
     0.0,
-    0.51236
+    0.51239
    ],
-   "roll": 1.99283
+   "roll": 2.02678
   },
   "hero": {
    "az": -28.44768,
@@ -764,91 +764,27 @@
   "_doc": "Pose por toma (grados, ejes del mundo en la cabeza de cada hueso en reposo), ajustada a la silueta de cada referencia con scripts/fit_view_poses.py",
   "front": {
    "head": [
-    -2.091,
-    0.294,
-    3.192
+    -2.012,
+    0.411,
+    1.919
    ],
    "upper_arm.L": [
-    -6.738,
-    -4.129,
+    -4.223,
+    -8.5,
     0.0
    ],
    "upper_arm.R": [
-    -4.636,
-    3.841,
+    -3.535,
+    8.5,
     0.0
    ],
    "forearm.L": [
-    -2.023,
+    -0.61,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -2.046,
-    0.0,
-    0.0
-   ],
-   "pixels": [
-    0.0,
-    0.0,
-    0.458
-   ]
-  },
-  "profile_left": {
-   "head": [
-    -0.733,
-    5.068,
-    1.791
-   ],
-   "upper_arm.L": [
-    -8.0,
-    28.0,
-    0.0
-   ],
-   "upper_arm.R": [
-    1.024,
-    1.288,
-    0.0
-   ],
-   "forearm.L": [
-    -25.0,
-    0.0,
-    0.0
-   ],
-   "forearm.R": [
-    0.445,
-    0.0,
-    0.0
-   ],
-   "pixels": [
-    0.0,
-    0.0,
-    89.68
-   ]
-  },
-  "back": {
-   "head": [
-    2.65,
-    0.793,
-    0.695
-   ],
-   "upper_arm.L": [
-    -10.232,
-    -4.681,
-    0.0
-   ],
-   "upper_arm.R": [
-    -20.349,
-    3.055,
-    0.0
-   ],
-   "forearm.L": [
-    -1.895,
-    0.0,
-    0.0
-   ],
-   "forearm.R": [
-    -1.823,
+    -2.022,
     0.0,
     0.0
    ],
@@ -858,15 +794,79 @@
     1.2
    ]
   },
-  "profile_right": {
+  "profile_left": {
    "head": [
-    -3.154,
-    -6.988,
-    -0.933
+    -1.341,
+    3.017,
+    1.278
    ],
    "upper_arm.L": [
-    3.315,
-    -0.667,
+    -8.0,
+    28.0,
+    0.0
+   ],
+   "upper_arm.R": [
+    2.4,
+    0.982,
+    0.0
+   ],
+   "forearm.L": [
+    -25.0,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    0.046,
+    0.0,
+    0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    88.25
+   ]
+  },
+  "back": {
+   "head": [
+    1.931,
+    0.313,
+    -1.454
+   ],
+   "upper_arm.L": [
+    -7.898,
+    -3.945,
+    0.0
+   ],
+   "upper_arm.R": [
+    -16.454,
+    4.693,
+    0.0
+   ],
+   "forearm.L": [
+    -1.983,
+    0.0,
+    0.0
+   ],
+   "forearm.R": [
+    -3.279,
+    0.0,
+    0.0
+   ],
+   "pixels": [
+    0.0,
+    0.0,
+    1.151
+   ]
+  },
+  "profile_right": {
+   "head": [
+    -3.074,
+    -5.197,
+    -0.067
+   ],
+   "upper_arm.L": [
+    -1.275,
+    -0.822,
     0.0
    ],
    "upper_arm.R": [
@@ -875,7 +875,7 @@
     0.0
    ],
    "forearm.L": [
-    -0.079,
+    0.46,
     0.0,
     0.0
    ],
@@ -887,71 +887,71 @@
    "pixels": [
     0.0,
     0.0,
-    -90.27
+    -89.99
    ]
   },
   "three_quarter_front": {
    "head": [
-    1.807,
-    -3.583,
-    6.792
+    1.188,
+    -2.617,
+    6.429
    ],
    "upper_arm.L": [
-    -32.909,
-    2.989,
+    -15.942,
+    3.789,
     0.0
    ],
    "upper_arm.R": [
-    -14.097,
-    3.778,
+    -13.171,
+    4.602,
     0.0
    ],
    "forearm.L": [
-    -5.34,
+    -2.968,
     0.0,
     0.0
    ],
    "forearm.R": [
-    -2.747,
+    -3.51,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    58.051
+    -45.16
    ]
   },
   "three_quarter_back": {
    "head": [
-    -1.378,
-    1.512,
-    -7.712
+    2.321,
+    3.068,
+    -2.502
    ],
    "upper_arm.L": [
-    10.567,
-    -5.193,
+    1.198,
+    -9.79,
     0.0
    ],
    "upper_arm.R": [
-    11.781,
-    1.682,
+    8.621,
+    -0.042,
     0.0
    ],
    "forearm.L": [
-    -1.607,
+    -2.608,
     0.0,
     0.0
    ],
    "forearm.R": [
-    4.58,
+    1.252,
     0.0,
     0.0
    ],
    "pixels": [
     0.0,
     0.0,
-    -102.612
+    28.984
    ]
   }
  },
@@ -1039,16 +1039,16 @@
     1312,
     1199
    ],
-   "az": -12.7145,
-   "el": 10.9753,
-   "distance": 1.44085,
-   "lens": 70.2479,
+   "az": -9.9135,
+   "el": 10.0331,
+   "distance": 1.41832,
+   "lens": 69.3265,
    "target": [
-    -0.00394,
-    0.01679,
-    0.35981
+    -0.00658,
+    0.01678,
+    0.35908
    ],
-   "roll": -0.2999,
+   "roll": 0.1004,
    "place": {}
   },
   "playera": {
@@ -1057,16 +1057,16 @@
     1312,
     1199
    ],
-   "az": -0.1924,
-   "el": 11.8839,
-   "distance": 1.09518,
-   "lens": 70.1322,
+   "az": 2.1402,
+   "el": 12.0058,
+   "distance": 1.09369,
+   "lens": 69.8155,
    "target": [
-    -0.00436,
+    -0.00372,
     -0.00546,
-    0.38015
+    0.37997
    ],
-   "roll": -1.9378,
+   "roll": -2.0678,
    "place": {}
   },
   "tenis": {
@@ -1154,22 +1154,22 @@
  "view_gaze": {
   "front": {
    "L": [
-    -4.471,
-    1.532
+    -3.845,
+    1.261
    ],
    "R": [
-    2.837,
-    3.101
+    3.503,
+    2.937
    ]
   },
   "three_quarter_front": {
    "L": [
-    -7.867,
-    0.8
+    -9.448,
+    2.195
    ],
    "R": [
-    -7.867,
-    0.8
+    -9.448,
+    2.195
    ]
   },
   "_doc": "Desvio de la mirada por toma y por ojo [giro, inclinacion] en grados, tras mirar a la camara; ajustado a la posicion de las pupilas de cada referencia con scripts/fit_gaze.py (la toma hero se ajusta aparte, despues de calzar la pose de la cabeza con los lentes de la imagen 00; cuerpo_base = lamina 14 con su camara de producto)",
@@ -1204,13 +1204,18 @@
   "spine_tilt": 2.0
  },
  "face_cheat": {
-  "_doc": "Trampa de camara de los perfiles (scripts/morfi/facecheat.py): grados que la cara se desliza sobre la cabeza hacia la camara en cada toma (el contorno de la cabeza no cambia) y fraccion del relieve que se conserva: depth en los ojos y la piel que los rodea, depth_face en el resto de la cara (hocico, boca) y depth_glasses en los lentes. Medido con el lente: ancho/alto 0.48 en 03 y 0.39 en 05. Solo en los renders por toma.",
+  "_doc": "Trampa de camara de los perfiles (scripts/morfi/facecheat.py): grados que la cara se desliza sobre la cabeza hacia la camara en cada toma (el contorno de la cabeza no cambia) y fraccion del relieve que se conserva: depth en los ojos y la piel que los rodea, depth_face en el resto de la cara (hocico, boca) y depth_glasses en los lentes. Medido con el lente: ancho/alto 0.48 en 03 y 0.39 en 05. Solo en los renders por toma. mouth_theta: fraccion del giro en la zona de la boca (1.5: la boca gira algo mas hacia la camara, abierta en el borde del perfil como en 03 / 05).",
   "profile_left": 26.0,
   "profile_right": -20.0,
   "depth": 0.35,
   "glasses_z": 0.91,
   "depth_face": 0.9,
-  "depth_glasses": 0.75
+  "depth_glasses": 0.75,
+  "mouth_theta": 1.5,
+  "mouth_region": [
+   0.13,
+   0.07
+  ]
  },
  "studio": {
   "floor_veil": 0.05

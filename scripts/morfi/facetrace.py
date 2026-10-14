@@ -277,12 +277,13 @@ class ViewTrace:
     def sample(self, Pw, Nw):
         """(celeste, weight) for world points / normals of the head at rest."""
         if self.cheat:
-            from .facecheat import delta, point_depth, slide
+            from .facecheat import delta, point_depth, point_theta, slide
             c = self.shape.center
-            phi = np.arctan2(Pw[:, 0] - c[0], c[1] - Pw[:, 1])
-            d = delta(phi, np.radians(self.cheat))
             Pl = Pw - c
-            Pw = slide(Pl, self.shape, self.cheat, point_depth('Head', Pl, self.shape, self.fc)) + c
+            th = point_theta('Head', Pl, self.shape, self.cheat, self.fc)
+            phi = np.arctan2(Pw[:, 0] - c[0], c[1] - Pw[:, 1])
+            d = delta(phi, np.radians(th))
+            Pw = slide(Pl, self.shape, th, point_depth('Head', Pl, self.shape, self.fc)) + c
             # normals turn with the slide (the change of curvature is left out)
             Nw = np.stack([Nw[:, 0] * np.cos(d) - Nw[:, 1] * np.sin(d),
                            Nw[:, 0] * np.sin(d) + Nw[:, 1] * np.cos(d), Nw[:, 2]], 1)

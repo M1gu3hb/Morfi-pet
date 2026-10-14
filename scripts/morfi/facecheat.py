@@ -46,7 +46,7 @@ def delta(phi, theta):
 def slide(P, shape, theta_deg, depth=1.0):
     """Head-local points (N,3), relative to the head centre -> slid points.
     depth < 1 also flattens the face toward the head surface (see apply)."""
-    th = math.radians(theta_deg)
+    th = np.radians(theta_deg)
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     phi = np.arctan2(x, -y)
     d = delta(phi, th)
@@ -60,6 +60,22 @@ def slide(P, shape, theta_deg, depth=1.0):
     h = np.linalg.norm(P, axis=1) / np.maximum(S0, 1e-9) - 1.0
     h = h * (1.0 - (1.0 - depth) * 0.5 * (1.0 + np.cos(phi)))
     return Q * (S1 * (1.0 + h) / np.maximum(np.linalg.norm(Q, axis=1), 1e-9))[:, None]
+
+
+def point_theta(name, P, shape, theta, fc):
+    """Slide per point (degrees). In 03 / 05 the eye and the lens are turned
+    toward the camera but the mouth sits on the profile line itself, an open
+    notch in the outline: round the mouth the head slides only `mouth_theta`
+    of theta (config face_cheat), fading out over the muzzle."""
+    k = fc.get('mouth_theta')
+    if name != 'Head' or k is None:
+        return theta
+    from .sdf import smoothstep
+    f = shape.f
+    rx, rz = fc.get('mouth_region', [0.13, 0.07])
+    d = np.sqrt((P[:, 0] / rx) ** 2 + ((P[:, 2] - f['mouth_center_z']) / rz) ** 2)
+    w = smoothstep(1.0, 0.35, d) * (P[:, 1] < 0)
+    return theta * (1.0 - w * (1.0 - k))
 
 
 def point_depth(name, P, shape, fc):
@@ -128,7 +144,8 @@ def apply(view, theta, shape, depth=1.0, glasses_z=1.0, fc=None):
             return
         M = Hi @ np.array(ob.matrix_world)
         P0 = _xf(M, _basis(ob))
-        Q = slide(P0, shape, theta, point_depth(ob.name, P0, shape, fc or {'depth': depth}))
+        fcd = fc or {'depth': depth}
+        Q = slide(P0, shape, point_theta(ob.name, P0, shape, theta, fcd), point_depth(ob.name, P0, shape, fcd))
         if ob.name.startswith('Glasses') and glasses_z != 1.0:
             # the lens of the drawn profiles is lower than the 3D one seen from
             # there (199 px against 220 in 03 / 05, the same height as in 02)
