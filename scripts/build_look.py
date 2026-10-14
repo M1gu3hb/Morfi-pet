@@ -20,6 +20,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LO, HI = -6.0, 4.0
 MIN_SAMPLES = 1500
 COLS = 6
+# the eye mixes white sclera, blue iris and black pupil under one material and
+# its iris always faces the camera: its measured ratio is blotchy and coloured
+# (rainbow fringes on the sclera). It keeps only the smooth part, in grey.
+SMOOTH_GREY = {'M_Eye'}
 
 
 def fill(G, w):
@@ -44,7 +48,7 @@ def sh_basis(n):
                      x * (5 * z * z - 1), z * (x * x - y * y), x * (x * x - 3 * y * y)], 1)
 
 
-def smooth_fit(G, n, N):
+def smooth_fit(G, n, N, residual=True):
     """Lighting of a product shot is smooth over the normals: least-squares
     spherical harmonics (band 3) in log space, plus the measured residual where
     the photos give many samples (keeps sharper features such as highlights)."""
@@ -64,6 +68,8 @@ def smooth_fit(G, n, N):
         coef = np.linalg.solve(A, Wb.T @ G.reshape(-1, 3)[sel, c])
         out[:, c] = B @ coef
     F = out.reshape(N, N, 3)
+    if not residual:
+        return F
     res = np.where((n > 0)[..., None], G - F, 0.0)
     num = np.stack([ndi.gaussian_filter(res[..., c] * np.minimum(n / 20.0, 1.0), 2.0) for c in range(3)], -1)
     den = ndi.gaussian_filter(np.minimum(n / 20.0, 1.0), 2.0)[..., None]
@@ -83,7 +89,11 @@ def main():
             print(f'{name:16s} {int(n.sum()):8d} samples  (too few, kept physically shaded)')
             continue
         G = np.clip(np.array(m['mean'], float).reshape(N, N, 3), LO, HI)
-        F = np.clip(smooth_fit(G, n, N), LO, HI)
+        if name in SMOOTH_GREY:
+            F = smooth_fit(G, n, N, residual=False)
+            F = np.clip(np.repeat(F.mean(-1, keepdims=True), 3, -1), LO, HI)
+        else:
+            F = np.clip(smooth_fit(G, n, N), LO, HI)
         enc = np.clip((F - LO) / (HI - LO), 0, 1)
         tiles.append((name, (enc[::-1] * 255 + 0.5).astype(np.uint8)))  # image rows top-down
         info[name] = {'tile': len(tiles) - 1, 'samples': int(n.sum())}
