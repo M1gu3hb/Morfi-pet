@@ -98,7 +98,7 @@ scripts/iterate_shapes.sh prueba [config.json]        # ciclo rápido de formas:
 scripts/iterate_face.sh prueba [config.json]          # ciclo rápido de cara: borrador -> rig -> frente -> medidas
 ```
 
-En los perfiles (03, 05) la cara está dibujada girada hacia la cámara sobre una cabeza de perfil puro; `render_views.py` reproduce esa trampa de cámara con `scripts/morfi/facecheat.py` (config `face_cheat`: grados por toma y relieve conservado), solo en el render de esa toma: el modelo y los GLB no cambian (`docs/art-direction.md` §11).
+En los perfiles (03, 05) la cara está dibujada girada hacia la cámara sobre una cabeza de perfil puro; `render_views.py` reproduce esa trampa de cámara con `scripts/morfi/facecheat.py` (config `face_cheat`: grados por toma y relieve conservado), solo en el render de esa toma: el `.blend` maestro no cambia, y el GLB web la lleva como morph `Shot_<vista>` que el visor activa cuando la cámara está alineada con esa foto (`docs/art-direction.md` §11–12).
 
 `fit_view_poses.py` compara contorno y zonas de color (azul / negro / blanco-gris) con un z-buffer del modelo; `--outline-only` usa solo el contorno. Las vistas se renderizan con el set de luces girado con la cámara de cada toma (como en las fotos de producto de referencia); `--world-lights` lo desactiva.
 
@@ -106,15 +106,26 @@ En los perfiles (03, 05) la cara está dibujada girada hacia la cámara sobre un
 
 ## Visor web
 
+Publicado en Vercel: **https://morfi-pet.vercel.app** (proyecto `morfi-pet`, carpeta `web/`, se redespliega con cada push a la rama). El panel muestra la ronda y el commit de lo que se ve.
+
 ```bash
 cd web
 npm ci
-npm run dev          # copia exports/*.glb a web/public/models y abre Vite
+npm run sync-assets  # copia exports/*.glb a web/public/models, comprime morfi.glb (meshopt) y escribe views.json
+npm run dev          # Vite en local
 npm run build        # build estático en web/dist (base relativa, se puede servir en cualquier ruta)
 npm run test:e2e     # prueba de humo con Chromium headless -> renders/viewer/*.png
 ```
 
-Funciones: órbita / zoom / táctil, 6 vistas predefinidas con la cámara y la pose calibradas de cada referencia, luz de estudio que gira con la cámara (como en las referencias; casilla "Luz sigue a la cámara"), mostrar/ocultar sudadera, playera, tenis, lentes, cubos y laptop, preset "cuerpo base", fondo claro/oscuro/transparente, modos arcilla y alambre, animaciones (Neutral, Hero, Idle, Caminar, Correr, Saludar), captura PNG al tamaño de las referencias (1145×1374, mismo encuadre) y descarga del GLB. Parámetros de URL: `?model=morfi_master.glb` para cargar el master, `?lowpower=1` para equipos sin GPU.
+Funciones:
+- **Cámara y vistas**: órbita, zoom y táctil. Seis vistas predefinidas con la cámara (lente y giro) y la pose calibradas de cada referencia. Mientras la cámara está alineada con una foto, la cara toma la forma de esa toma: ojos hacia la cámara con la mirada ajustada y, en los perfiles, la trampa de cámara (morphs `Shot_<vista>` del GLB). Al mover la cámara la cara vuelve a la normal.
+- **Shader "Fiel a la foto"** (por defecto). Las referencias son fotos de producto con la luz fija respecto de la cámara, así que el sombreado de cada material depende solo de la normal vista desde la cámara. `npm run capture-look` renderiza el propio GLB del visor con la cámara y la pose de cada toma (pasadas de albedo, normal y material), divide la foto por el albedo píxel a píxel y acumula la razón por material en una MatCap de 64×64. `scripts/build_look.py` la ajusta con armónicos esféricos de banda 3 más el residuo medido y la guarda en `web/public/look/`. En el visor cada material se pinta como albedo × MatCap(normal) × sombra de la luz principal, con un segundo MatCap para el celeste de la cara y una sombra de contacto suave en el piso. "Físico (PBR)" usa los materiales glTF con luz de estudio.
+- **Comparar con la foto**: superponer, cortina, diferencia y lado a lado, con la foto de esa vista al mismo encuadre.
+- **Sonido** sintetizado con WebAudio, sin archivos: transición de cámara, pasos sincronizados con caminar y correr, saludo, campanita de la pose hero, "boop" al tocar a Morfi (rebota) y música ambiental opcional.
+- **Ropa y accesorios** (mostrar/ocultar, preset "cuerpo base"), fondo claro/oscuro/transparente, modos arcilla y alambre, animaciones (Neutral, Hero, Idle, Caminar, Correr, Saludar), captura PNG al tamaño de las referencias (1145×1374, mismo encuadre) y descarga del GLB.
+- **Parámetros de URL**: `?model=…` para otro GLB, `?shading=pbr`, `?lowpower=1` para equipos sin GPU, `?clean=1` para ocultar el panel.
+
+Medir el shader contra las fotos: `npm run look-eval` (renderiza las 6 tomas en `work/look/eval/`) y `python3 scripts/eval_look.py` (ΔE por vista).
 
 ## Uso en otras herramientas
 

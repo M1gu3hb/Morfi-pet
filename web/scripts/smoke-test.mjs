@@ -57,6 +57,28 @@ try {
       await page.click('#bgs button[data-bg="dark"]');
       await page.waitForTimeout(600);
       await page.screenshot({ path: join(outDir, `${label}_dark.png`) });
+      await page.click('#bgs button[data-bg="light"]');
+      // physical shader, then back to the photo-matched one
+      await page.click('#shading button[data-shading="pbr"]');
+      await page.waitForTimeout(600);
+      await page.screenshot({ path: join(outDir, `${label}_pbr.png`) });
+      await page.click('#shading button[data-shading="ref"]');
+      // compare with the reference photo, every mode, on the profile (face cheat morph)
+      await page.click('#views button[data-view="profile_left"]');
+      for (const m of ['overlay', 'wipe', 'diff', 'side']) {
+        await page.click(`#compare-modes button[data-cmp="${m}"]`);
+        await page.waitForTimeout(700);
+        await page.screenshot({ path: join(outDir, `${label}_compare_${m}.png`) });
+      }
+      await page.click('#compare-modes button[data-cmp="off"]');
+      await page.click('#views button[data-view="front"]');
+      // sound: music on / off, and poke Morfi (boop + bounce)
+      await page.click('#music');
+      await page.waitForTimeout(300);
+      await page.click('#music');
+      const box = await page.locator('#view').boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.3);
+      await page.waitForTimeout(300);
       const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#shot')]);
       await dl.saveAs(join(outDir, 'capture_from_viewer.png'));
       const stats = await page.textContent('#stats');

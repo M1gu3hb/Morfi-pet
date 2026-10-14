@@ -431,6 +431,8 @@ loader.load(
 );
 
 // ------------------------------------------------------------------ UI wiring
+const ROUND = 10; // correction round of the model shown (docs/art-direction.md)
+document.getElementById('build-info')!.textContent = `Ronda ${ROUND} · versión ${__BUILD_INFO__.commit} · ${__BUILD_INFO__.date}`;
 document.querySelectorAll<HTMLButtonElement>('#views button').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view!)));
 document.getElementById('reset')!.addEventListener('click', () => setView('front'));
 (document.getElementById('autorotate') as HTMLInputElement).addEventListener('change', (e) => {

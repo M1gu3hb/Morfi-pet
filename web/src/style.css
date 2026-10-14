@@ -83,3 +83,5 @@ select { width: 100%; }
 }
 
 html.clean .panel, html.clean .panel-toggle, html.clean #status { display: none !important; }
+
+.panel .ver { margin: 2px 0 0; font-size: 11px; opacity: 0.6; font-variant-numeric: tabular-nums; }
