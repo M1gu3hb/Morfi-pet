@@ -150,7 +150,7 @@
   ]
  },
  "web": {
-  "triangles": 215839,
+  "triangles": 215837,
   "objects": [
    {
     "name": "Body_Base",
@@ -219,7 +219,7 @@
    },
    {
     "name": "Hoodie",
-    "triangles": 35997,
+    "triangles": 35995,
     "materials": 1
    },
    {

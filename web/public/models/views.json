@@ -1,76 +1,76 @@
 {
  "camera_views": {
   "front": {
-   "az": 0.58228,
-   "height": 0.74267,
-   "distance": 2.4488,
+   "az": 1.6948,
+   "height": 0.74825,
+   "distance": 2.44878,
    "lens": 65.23437,
    "target": [
-    0.00464,
+    0.00539,
     0,
-    0.52556
+    0.52557
    ],
-   "roll": -0.20621
+   "roll": -0.25452
   },
   "profile_left": {
-   "az": 90.26315,
-   "height": 0.3509,
-   "distance": 2.50478,
+   "az": 89.94747,
+   "height": 0.32548,
+   "distance": 2.49686,
    "lens": 65.23368,
    "target": [
-    0.02278,
+    0.02187,
     0,
-    0.52047
+    0.52099
    ],
-   "roll": -0.54867
+   "roll": -0.53323
   },
   "back": {
-   "az": 181.21679,
-   "height": 0.71632,
-   "distance": 2.4946,
+   "az": 182.17286,
+   "height": 0.71628,
+   "distance": 2.49617,
    "lens": 65.19958,
    "target": [
-    0.00109,
+    0.00008,
     0,
-    0.52372
+    0.52353
    ],
-   "roll": 0.47907
+   "roll": 0.44151
   },
   "profile_right": {
-   "az": -89.69006,
+   "az": -88.29881,
    "height": 0.4,
-   "distance": 2.5555,
+   "distance": 2.5701,
    "lens": 65.03673,
    "target": [
-    0.02812,
+    0.04731,
     0,
-    0.52736
+    0.52639
    ],
-   "roll": 1.95542
+   "roll": 2.04308
   },
   "three_quarter_front": {
-   "az": 23.81982,
-   "height": 0.52125,
-   "distance": 2.53116,
+   "az": 25.11399,
+   "height": 0.54051,
+   "distance": 2.53606,
    "lens": 65.05038,
    "target": [
-    -0.00639,
+    -0.00811,
     0,
-    0.50884
+    0.50947
    ],
-   "roll": 0.39873
+   "roll": 0.39569
   },
   "three_quarter_back": {
-   "az": -146.38087,
-   "height": 0.38841,
-   "distance": 2.50355,
+   "az": -146.00018,
+   "height": 0.39322,
+   "distance": 2.51933,
    "lens": 65.06512,
    "target": [
-    -0.00275,
+    -0.00273,
     0,
-    0.51241
+    0.51236
    ],
-   "roll": 1.99538
+   "roll": 1.99283
   },
   "hero": {
    "az": -28.44768,
@@ -87,10 +87,10 @@
  },
  "poses": [
   "front",
-  "back",
-  "three_quarter_front",
-  "three_quarter_back",
   "profile_left",
-  "profile_right"
+  "back",
+  "profile_right",
+  "three_quarter_front",
+  "three_quarter_back"
  ]
 }
