@@ -188,3 +188,35 @@ Medido sobre los renders finales de la ronda 3 con las cámaras y poses calibrad
 - Perfil izquierdo: ΔE 18.6 → 17.6, con la cara visible.
 - La IoU de los perfiles baja (0.932 → 0.920 y 0.928 → 0.908): los cubos y el brazo cercano se fijan ahora como están dibujados y no como prefiere el contorno (ver `validation.md` §1).
 - La 3/4 posterior baja un poco (0.902 → 0.897, ΔE 7.4 → 7.7).
+
+## 12. Calce con las referencias (ronda 10: axila, cuello redondo, shader de las fotos)
+
+1. **Manga separada del cuerpo en la axila.** En 02, 04 y 06 la manga cuelga junto al torso y entre los dos queda un pliegue oscuro desde la axila hasta el puño: se ve que son dos piezas. En la ronda 9 las mangas raglán se fundían con el cuerpo en toda su altura y el conjunto se leía como un bloque. Cambios:
+   - Las mangas nacen más afuera y más abajo (`sleeve_start` x 0.092 → 0.14, z 0.476 → 0.445) y son más delgadas (`sleeve_r` 0.060 / 0.054 / 0.058). Así abrazan el brazo en vez de rellenar el hueco bajo la axila.
+   - La unión manga–cuerpo cambia con la altura: es suave arriba de la axila (`sleeve_blend` 0.04 por encima de `sleeve_armpit_z` 0.40), para que el hombro no tenga costura, y casi seca debajo (`sleeve_blend_low` 0.004). Así queda el pliegue entre manga y torso.
+   - El cuerpo es más angosto en el pecho y se abre hacia el dobladillo (`box.flare` 0.40 por encima de z 0.25). Es la línea A de 02/04 y deja sitio a la manga. El torso de la sudadera puede acercarse más al cuerpo base (`torso_clear` 0.030 → 0.008).
+   - Probado y descartado: con un hombro caído la manga dejaba ver el brazo azul en el hueco, y con el brazo más abierto o el codo doblado la manga quedaba horizontal (IoU de la sudadera 0.77).
+2. **Cuello redondo de la playera.** El escote era un corte plano: visto de frente, una línea recta bajo el cuello. En 02 y 09 es un cuello redondo con su rib. Ahora:
+   - El agujero es medio elipsoide (semiejes 10.5 × 12.5 × 7 cm, centro a z 0.532) inclinado 30°: baja más adelante que atrás.
+   - Por arriba sigue como cilindro, para que la tela no trepe por el cuello.
+   - El rib del cuello es un tubo de 8.5 mm que sigue exactamente la curva donde el agujero corta la playera (`shirt_neck`). Solo se conserva la mitad de abajo, para que no suba por el cuello.
+3. **Bolsillos.** El bolsillo canguro es más grande y está más alto, como en 02 (11.6 × 10.4 cm, centro a 14.8 cm del eje y z 0.322). Tiene la boca curva en la esquina exterior de arriba (`r_out` 6 cm) y un labio de 2.5 mm a lo largo de la abertura.
+4. **Piso.** El piso de los renders tenía un velo gris (≈247) donde las fotos tienen 253–254. El compositor quita un 5 % de velo del alfa de la sombra (`studio.floor_veil`): el piso queda como en las fotos y la sombra de contacto se conserva.
+5. **Perfiles: lente y celeste.**
+   - Con la trampa de cámara el lente se veía más alto que en 03/05 (220 px frente a 199). Ahora los lentes de los perfiles se escalan en altura ×0.91 alrededor del centro del ojo (`face_cheat.glasses_z`).
+   - En la máscara celeste de la cara, las vistas con trampa pesan más (`facetrace.sample_multi`), así que la mejilla de los perfiles sigue lo dibujado en 03/05.
+6. **Shader "fiel a la foto" del visor web.** Las referencias son fotos de producto con la luz fija respecto de la cámara: en todas, la luz llega del mismo lado de la imagen. Entonces el sombreado de cada material es una función de la normal vista desde la cámara, que es justo lo que guarda una MatCap. En lugar de pintarla a mano, se mide:
+   - `web/scripts/capture-look.mjs` abre el propio GLB del visor en Chromium, con la cámara calibrada y la pose `Ref_` de cada toma. Renderiza tres pasadas en float: albedo (textura × color), normal en espacio de cámara y material.
+   - Para cada píxel estable (mismo material y misma clase de color de la foto en 7×7) acumula log2(foto / albedo) en una rejilla 64×64 indexada por la normal, una por material.
+   - La cabeza tiene dos: azul y celeste, según el tono del texel.
+   - Los lentes, la córnea y el brillo del ojo se ocultan en las pasadas, porque la foto muestra lo que está detrás.
+   - `scripts/build_look.py` ajusta cada rejilla con armónicos esféricos de banda 3, que es iluminación suave, más el residuo medido donde hay muchas muestras, que conserva brillos y bordes. El resultado es un atlas en log2 (`web/public/look/matcaps.png`, `look.json`).
+   - En el visor cada material se pinta como albedo × MatCap(normal) × sombra de la luz principal, sin curva de tono, más una sombra de contacto suave en el piso: el piso de la foto, renderizado desde abajo con desvanecido por altura y desenfocado.
+   - Medido con `npm run look-eval` + `scripts/eval_look.py`, el ΔE mediano contra las fotos queda entre 4.6 y 9.0 según la vista. Los renders Cycles de la ronda 9 daban entre 7.5 y 18.6.
+7. **La cara de cada foto en el visor.** El GLB web lleva, por toma, un morph `Shot_<vista>` (`export_assets.py → bake_shot_morphs`) con lo que `render_views.py` hace a la cara en el render de esa toma: los ojos girados hacia esa cámara con la mirada ajustada (`view_gaze`) y, en los perfiles, la trampa de cámara de §11.2. Mientras la cámara del visor está alineada con una foto, ese morph está a 1, así que la comparación muestra la misma cara. Al orbitar se desvanece y los ojos vuelven a seguir a la cámara.
+   - Las córneas y los lentes del visor ya no usan transmisión: con ella el navegador desenfocaba el iris y, en ángulos rasantes, mostraba el fondo blanco (los ojos se veían blancos en la 3/4).
+8. **Visor publicado en Vercel** (https://morfi-pet.vercel.app). Incluye:
+   - el shader, con el PBR como alternativa;
+   - comparación con la foto (superponer, cortina, diferencia, lado a lado);
+   - efectos de sonido sintetizados con WebAudio (cámara, pasos, saludo, pose hero, toque) y música opcional;
+   - la ronda y el commit de lo que se ve.
