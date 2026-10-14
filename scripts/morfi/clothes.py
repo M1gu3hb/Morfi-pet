@@ -119,11 +119,17 @@ class Garments:
         d = np.maximum(outer, -inner)
         # hem
         d = np.maximum(d, p['shirt_hem_z'] - P[2])
-        # neckline: tilted plane (front lower) + neck hole
-        col = p['shirt_collar']
-        tilt = math.tan(math.radians(col['tilt']))
-        zc = col['c'][2] + (P[1] - col['c'][1]) * tilt
-        d = np.maximum(d, P[2] - zc)
+        nk = p.get('shirt_neck')
+        if nk:
+            # crew neck (02, 09): a round hole round the neck, tilted so that
+            # the front dips; the shirt goes on over the shoulders up to it
+            d = np.maximum(d, -self.neck_hole(P))
+        else:
+            # neckline: tilted plane (front lower) + neck hole
+            col = p['shirt_collar']
+            tilt = math.tan(math.radians(col['tilt']))
+            zc = col['c'][2] + (P[1] - col['c'][1]) * tilt
+            d = np.maximum(d, P[2] - zc)
         sl = p.get('shoulder_slope')
         if sl and self.variant == 'worn':
             # under the hoodie, outside the front opening, keep the shirt below
@@ -134,7 +140,30 @@ class Garments:
             d = np.where(hidden, np.maximum(d, P[2] - z_top), d)
         return d
 
+    def neck_hole(self, P):
+        """Lower half of a tilted ellipsoid continued upward as an elliptic
+        cylinder: the shirt never climbs the neck, and where it meets the
+        shoulders and the chest the edge is a U, lower in front."""
+        nk = self.p['shirt_neck']
+        R = S.rot_matrix(nk.get('tilt', 0.0), 0, 0)
+        x, y, z = S.to_local(P, nk['c'], R)
+        z = np.minimum(z, 0.0)
+        rx, ry, rz = nk['r']
+        k0 = np.sqrt((x / rx) ** 2 + (y / ry) ** 2 + (z / rz) ** 2)
+        k1 = np.sqrt((x / rx ** 2) ** 2 + (y / ry ** 2) ** 2 + (z / rz ** 2) ** 2)
+        return k0 * (k0 - 1.0) / np.maximum(k1, 1e-9)
+
     def shirt_collar(self, P):
+        nk = self.p.get('shirt_neck')
+        if nk:
+            # ribbed band following the neckline: the curve where the shirt
+            # surface leaves the neck hole, thickened into a tube
+            so = self.shirt_outer(P) - nk.get('rib_off', 0.002)
+            d = np.sqrt(self.neck_hole(P) ** 2 + so ** 2) - nk.get('rib_r', 0.0085)
+            # only along the real neckline (the lower, ellipsoidal half of the
+            # hole): above it the hole's wall runs up beside the neck
+            _, _, zl = S.to_local(P, nk['c'], S.rot_matrix(nk.get('tilt', 0.0), 0, 0))
+            return np.maximum(d, zl - 0.006)
         col = self.p['shirt_collar']
         R = S.rot_matrix(col['tilt'], 0, 0)  # +X rotation: front edge lower, like the neckline
         return S.sd_torus(P, col['c'], col['R'], col['r'], Rm=R)
@@ -162,6 +191,14 @@ class Garments:
     # ------------------------------------------------------------ hoodie
     def box(self, P):
         k = self.p['box']
+        fl = k.get('flare', 0.0)
+        if fl:
+            # A-line: narrower at the chest and wider at the hem, so that below
+            # the armpit the sleeves hang clear of the body as in 02 / 04
+            c = k['c']
+            t = np.clip((k.get('flare_z', c[2]) - P[2]) / k['half'][2], -1.0, 1.0)
+            t = np.where(t < 0, t, t * k.get('flare_bottom', 1.0))
+            P = [c[0] + (P[0] - c[0]) / (1.0 + fl * t), P[1], P[2]]
         return S.sd_superquadric(P, k['c'], k['half'], k['p_h'], k['q_top'], k['q_bot'])
 
     def sleeve(self, P, side):
@@ -280,7 +317,7 @@ class Garments:
 
     def hoodie_outer(self, P):
         p = self.p
-        d = self.body.torso(P) - 0.030
+        d = self.body.torso(P) - p.get('torso_clear', 0.030)
         d = S.smin(d, self.box(P), 0.03)
         sl = p.get('shoulder_slope')
         if sl:
@@ -292,8 +329,16 @@ class Garments:
         z1 = self.hem_z('z1', P[1])
         roll = np.exp(-((P[2] - (z1 + 0.018)) / 0.016) ** 2)
         d = d - p.get('blouse', 0.0) * roll
+        # the sleeves melt into the body only round the shoulder; below the
+        # armpit (sleeve_armpit_z) they stay separate pieces of cloth
+        k = np.full_like(np.asarray(P[2], float), p.get('sleeve_blend', 0.035))
+        za = p.get('sleeve_armpit_z')
+        if za is not None:
+            k = p.get('sleeve_blend_low', 0.004) + (k - p.get('sleeve_blend_low', 0.004)) * S.smoothstep(za - 0.03, za + 0.02, P[2])
         for side in (-1, 1):
-            d = S.smin(d, self.sleeve(P, side), p.get('sleeve_blend', 0.035))
+            b = self.sleeve(P, side)
+            h = np.clip(0.5 + 0.5 * (b - d) / k, 0.0, 1.0)
+            d = b + (d - b) * h - k * h * (1.0 - h)
         return d
 
     def hoodie(self, P):
@@ -336,15 +381,27 @@ class Garments:
         for side in (-1, 1):
             u = P[0] - side * pk['cx']
             v = P[2] - pk['cz']
-            # opening edge slanted toward the zipper
             p2 = S.rrect2d(u, v, pk['hw'], pk['hh'], 0.012)
-            # big rounded opening corner at the top, toward the zipper
-            cxi = -side * (pk['hw'] - pk['r_in'])
-            czi = pk['hh'] - pk['r_in']
-            inner_corner = (u * side < -(pk['hw'] - pk['r_in'])) & (v > czi)
-            rc = np.sqrt((u - cxi) ** 2 + (v - czi) ** 2) - pk['r_in']
-            p2 = np.where(inner_corner, np.maximum(p2, rc), p2)
-            patch = np.maximum(outer - pk['raise'], p2)
+            ro = pk.get('r_out')
+            if ro:
+                # kangaroo-style pocket (02): square toward the zipper, the
+                # hand opening is a big curve at the top-outer corner
+                cxo = side * (pk['hw'] - ro)
+                czo = pk['hh'] - ro
+                corner = (u * side > pk['hw'] - ro) & (v > czo)
+                rc = np.sqrt((u - cxo) ** 2 + (v - czo) ** 2) - ro
+                p2 = np.where(corner, np.maximum(p2, rc), p2)
+                # thicker lip along the opening, where the fabric is folded
+                lip = np.where(corner, np.maximum(np.abs(rc + 0.004) - 0.004, -p2 - 0.012), 1.0)
+            else:
+                # big rounded opening corner at the top, toward the zipper
+                cxi = -side * (pk['hw'] - pk['r_in'])
+                czi = pk['hh'] - pk['r_in']
+                inner_corner = (u * side < -(pk['hw'] - pk['r_in'])) & (v > czi)
+                rc = np.sqrt((u - cxi) ** 2 + (v - czi) ** 2) - pk['r_in']
+                p2 = np.where(inner_corner, np.maximum(p2, rc), p2)
+                lip = 1.0
+            patch = np.maximum(outer - pk['raise'] - pk.get('lip', 0.0) * (np.asarray(lip) < 0), p2)
             patch = np.maximum(patch, P[1] + 0.06)
             patch = np.maximum(patch, -(outer + 0.004))
             d = np.minimum(d, patch)

@@ -80,6 +80,74 @@ def attach_laptop_hero():
     bpy.context.view_layer.update()
 
 
+def bake_shot_morphs():
+    """Shape keys 'Shot_<view>' for the web viewer: what render_views.py does to
+    the face at render time for each reference shot (eyes turned to that camera
+    with the fitted gaze, and in the profiles the face cheat of facecheat.py),
+    stored on the eyes / corneas / highlights and, for the profiles, on the head,
+    brows and glasses. The viewer turns a shot's key on while its camera is
+    aligned with that photo, so the comparison shows the same face."""
+    import numpy as np
+    sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+    from morfi import facecheat as FC
+    from morfi import scene as SC
+    from morfi.head import HeadShape
+    rig, head = bpy.data.objects.get('Morfi_Rig'), bpy.data.objects.get('Head')
+    if rig is None or head is None or rig.animation_data is None:
+        return []
+    cfg = json.load(open(os.path.join(ROOT, 'config', 'morfi.json')))
+    shape = HeadShape(cfg)
+    fc = cfg.get('face_cheat', {})
+    eyes = [n for e, kids in FC.EYES.items() for n in (e,) + kids if bpy.data.objects.get(n) is not None]
+    sc = bpy.context.scene
+    views = sorted(a.name[4:] for a in bpy.data.actions if a.name.startswith('Ref_'))
+    baked = []
+    for v in views:
+        rig.animation_data.action = bpy.data.actions['Ref_' + v]
+        sc.frame_set(1)
+        bpy.context.view_layer.update()
+        cam = SC.view_camera(v, cfg)
+        Hi = np.linalg.inv(np.array(head.matrix_world))
+        M0 = {n: Hi @ np.array(bpy.data.objects[n].matrix_world) for n in eyes}
+        restore = SC.eyes_look(cam.matrix_world.translation, SC.EYE_LOOK.get(v, 1.0),
+                               gaze=cfg.get('view_gaze', {}).get(v))
+        theta, depth = fc.get(v, 0.0), fc.get('depth', 1.0)
+        target = {}
+        for n in eyes:
+            ob = bpy.data.objects[n]
+            Q = FC._xf(Hi @ np.array(ob.matrix_world), FC._basis(ob))
+            if theta:
+                Q = FC.slide(Q, shape, theta, depth)
+            target[n] = FC._xf(np.linalg.inv(M0[n]), Q)
+        restore()
+        if theta:
+            for n in FC.FACE:
+                ob = bpy.data.objects.get(n)
+                if ob is None or ob.type != 'MESH':
+                    continue
+                M = Hi @ np.array(ob.matrix_world)
+                Q = FC.slide(FC._xf(M, FC._basis(ob)), shape, theta, depth)
+                if n.startswith('Glasses') and fc.get('glasses_z', 1.0) != 1.0:
+                    zc = shape.eye_centers[0][2]
+                    Q[:, 2] = zc + (Q[:, 2] - zc) * fc['glasses_z']
+                target[n] = FC._xf(np.linalg.inv(M), Q)
+        for n, co in target.items():
+            ob = bpy.data.objects[n]
+            if np.abs(co - FC._basis(ob)).max() < 1e-6:
+                continue
+            if not ob.data.shape_keys:
+                ob.shape_key_add(name='Basis', from_mix=False)
+            kb = ob.shape_key_add(name='Shot_' + v, from_mix=False)
+            kb.data.foreach_set('co', co.ravel())
+            kb.value = 0.0
+        baked.append(v)
+    rig.animation_data.action = bpy.data.actions['Pose_Neutral']
+    sc.frame_set(1)
+    bpy.context.view_layer.update()
+    print('[export] shot morphs', baked)
+    return baked
+
+
 def morfi_objects():
     col = bpy.data.collections['Morfi']
     return [o for o in col.all_objects]
@@ -126,7 +194,7 @@ def skinned_to_root(objects):
             o.matrix_world = mw
 
 
-def export(path, objects, animations=True, skins=True, image_format='AUTO', jpeg_quality=88):
+def export(path, objects, animations=True, skins=True, image_format='AUTO', jpeg_quality=88, morphs=False):
     ensure_uvs(objects)
     if skins:
         skinned_to_root(objects)
@@ -140,7 +208,7 @@ def export(path, objects, animations=True, skins=True, image_format='AUTO', jpeg
               export_yup=True, export_texcoords=True, export_normals=True, export_tangents=True,
               export_materials='EXPORT', export_image_format=image_format,
               export_jpeg_quality=jpeg_quality, export_animations=animations,
-              export_skins=skins, export_morph=False, export_extras=True,
+              export_skins=skins, export_morph=morphs, export_extras=True,
               export_cameras=False, export_lights=False)
     if animations:
         kw.update(export_animation_mode='ACTIONS', export_force_sampling=True, export_frame_range=False,
@@ -193,7 +261,9 @@ def main():
             if img.name.startswith('T_Head') and img.size[0] > 2048:
                 img.scale(2048, 2048)
         objs = morfi_objects()
-        export(os.path.join(OUT, 'morfi_web.glb'), objs, image_format='JPEG', jpeg_quality=90)
+        ensure_uvs(objs)  # (edits the meshes: before the shape keys are added)
+        shots = bake_shot_morphs()
+        export(os.path.join(OUT, 'morfi_web.glb'), objs, image_format='JPEG', jpeg_quality=90, morphs=bool(shots))
         report['web'] = stats(objs)
         bpy.ops.wm.open_mainfile(filepath=src)
     if 'parts' in todo:

@@ -84,7 +84,7 @@ def _kabsch(P, Q):
     return T
 
 
-def apply(view, theta, shape, depth=1.0):
+def apply(view, theta, shape, depth=1.0, glasses_z=1.0):
     """Turn the face of this shot by theta degrees. With depth < 1 the relief of
     the face (glasses in front of it, eyeballs out of it) is also flattened
     toward the head surface, so that, as in the drawn profiles, the eye sits
@@ -109,6 +109,11 @@ def apply(view, theta, shape, depth=1.0):
             return
         M = Hi @ np.array(ob.matrix_world)
         Q = slide(_xf(M, _basis(ob)), shape, theta, depth)
+        if ob.name.startswith('Glasses') and glasses_z != 1.0:
+            # the lens of the drawn profiles is lower than the 3D one seen from
+            # there (199 px against 220 in 03 / 05, the same height as in 02)
+            zc = shape.eye_centers[0][2]
+            Q[:, 2] = zc + (Q[:, 2] - zc) * glasses_z
         if not ob.data.shape_keys:
             ob.shape_key_add(name='Basis', from_mix=False)
         kb = ob.data.shape_keys.key_blocks.get(name) or ob.shape_key_add(name=name, from_mix=False)

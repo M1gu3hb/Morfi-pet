@@ -1,3 +1,5 @@
 *.blend filter=lfs diff=lfs merge=lfs -text
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
+# the web viewer's compressed model is served by Vercel as a plain file (no LFS)
+web/public/models/*.glb -filter binary

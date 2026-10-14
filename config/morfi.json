@@ -247,14 +247,14 @@
  },
  "clothes": {
   "sleeve_start": [
-   0.092,
-   0.003,
-   0.476
+   0.14,
+   0.004,
+   0.445
   ],
   "sleeve_r": [
-   0.068,
-   0.058,
-   0.066
+   0.06,
+   0.054,
+   0.058
   ],
   "box": {
    "c": [
@@ -269,7 +269,10 @@
    ],
    "p_h": 4.0,
    "q_top": 2.8,
-   "q_bot": 6.0
+   "q_bot": 6.0,
+   "flare": 0.4,
+   "flare_bottom": 0.0,
+   "flare_z": 0.25
   },
   "cuff_len": 0.068,
   "cuff_r": [
@@ -313,12 +316,14 @@
    "v_depth": 0.58
   },
   "pocket": {
-   "cx": 0.143,
-   "cz": 0.29,
-   "hw": 0.048,
-   "hh": 0.049,
-   "raise": 0.0045,
-   "r_in": 0.035
+   "cx": 0.148,
+   "cz": 0.322,
+   "hw": 0.058,
+   "hh": 0.052,
+   "raise": 0.003,
+   "r_in": 0.01,
+   "r_out": 0.06,
+   "lip": 0.0025
   },
   "cord": {
    "x": 0.1,
@@ -342,7 +347,7 @@
    "r": 0.0085,
    "tilt": 12.0
   },
-  "sleeve_mid_out": 0.008,
+  "sleeve_mid_out": 0.0,
   "collar": {
    "c": [
     0.0,
@@ -460,7 +465,25 @@
    0.0028
   ],
   "zip_pitch": 0.0066,
-  "hem_overlap": 0.03
+  "hem_overlap": 0.03,
+  "torso_clear": 0.008,
+  "sleeve_armpit_z": 0.4,
+  "sleeve_blend_low": 0.004,
+  "shirt_neck": {
+   "c": [
+    0.0,
+    0.0,
+    0.532
+   ],
+   "r": [
+    0.105,
+    0.125,
+    0.07
+   ],
+   "tilt": 30.0,
+   "rib_r": 0.0085,
+   "rib_off": 0.002
+  }
  },
  "laptop_place": {
   "loc": [
@@ -1168,6 +1191,10 @@
   "_doc": "Trampa de camara de los perfiles (scripts/morfi/facecheat.py): grados que la cara se desliza sobre la cabeza hacia la camara en cada toma (el contorno de la cabeza no cambia) y fraccion del relieve de la cara que se conserva (depth). Medido con el lente: ancho/alto 0.48 en 03 y 0.39 en 05. Solo en los renders por toma.",
   "profile_left": 26.0,
   "profile_right": -20.0,
-  "depth": 0.35
+  "depth": 0.35,
+  "glasses_z": 0.91
+ },
+ "studio": {
+  "floor_veil": 0.05
  }
 }

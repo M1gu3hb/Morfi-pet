@@ -1,0 +1,64 @@
+{
+ "size": 64,
+ "cols": 6,
+ "log2": [
+  -6.0,
+  4.0
+ ],
+ "materials": {
+  "M_Brow": {
+   "tile": 0,
+   "samples": 3145
+  },
+  "M_GlassesFrame": {
+   "tile": 1,
+   "samples": 57529
+  },
+  "M_Head": {
+   "tile": 2,
+   "samples": 1124032
+  },
+  "M_Head#2": {
+   "tile": 3,
+   "samples": 76779
+  },
+  "M_Hoodie": {
+   "tile": 4,
+   "samples": 553172
+  },
+  "M_HoodieHem": {
+   "tile": 5,
+   "samples": 18736
+  },
+  "M_HoodieRib": {
+   "tile": 6,
+   "samples": 35634
+  },
+  "M_ShoeBlue": {
+   "tile": 7,
+   "samples": 15063
+  },
+  "M_ShoeLeather": {
+   "tile": 8,
+   "samples": 73555
+  },
+  "M_ShoeSole": {
+   "tile": 9,
+   "samples": 66428
+  },
+  "M_ShoeStrap": {
+   "tile": 10,
+   "samples": 14801
+  },
+  "M_Skin": {
+   "tile": 11,
+   "samples": 198363
+  },
+  "M_Tshirt": {
+   "tile": 12,
+   "samples": 38473
+  }
+ },
+ "shadow": 0.55,
+ "exposure": 1.0
+}

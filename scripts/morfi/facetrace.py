@@ -178,7 +178,9 @@ class FaceTrace:
         den = wf + self.prior
         for v in self.views:
             c, w = v.sample(Pw, N)
-            w = w * (1.0 - 0.85 * wf)  # the sheet rules where it sees the face squarely
+            # the sheet rules where it sees the face squarely; the profiles,
+            # traced through the face cheat, keep more say on the cheeks
+            w = w * (1.0 - (0.5 if v.cheat else 0.85) * wf)
             num = num + w * c
             den = den + w
         return num / den

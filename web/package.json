@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "sync-assets": "node scripts/sync-assets.mjs",
-    "dev": "npm run sync-assets && vite",
-    "build": "npm run sync-assets && tsc --noEmit && vite build",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "capture-look": "node scripts/capture-look.mjs",
+    "look-eval": "node scripts/look-eval.mjs",
     "test:e2e": "node scripts/smoke-test.mjs",
     "validate": "node scripts/validate-gltf.mjs"
   },
@@ -15,6 +17,7 @@
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
     "@types/three": "^0.170.0",
     "gltf-validator": "^2.0.0-dev.3.10",
     "playwright-core": "^1.48.2",

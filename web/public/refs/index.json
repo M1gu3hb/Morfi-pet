@@ -1,0 +1,51 @@
+{
+ "front": {
+  "ref": "02_Morfi_frente",
+  "size": [
+   1145,
+   1374
+  ]
+ },
+ "profile_left": {
+  "ref": "03_Morfi_perfil_izquierdo",
+  "size": [
+   1145,
+   1374
+  ]
+ },
+ "back": {
+  "ref": "04_Morfi_espalda",
+  "size": [
+   1145,
+   1374
+  ]
+ },
+ "profile_right": {
+  "ref": "05_Morfi_perfil_derecho",
+  "size": [
+   1145,
+   1374
+  ]
+ },
+ "three_quarter_front": {
+  "ref": "06_Morfi_tres_cuartos_frontal",
+  "size": [
+   1145,
+   1374
+  ]
+ },
+ "three_quarter_back": {
+  "ref": "07_Morfi_tres_cuartos_posterior",
+  "size": [
+   1145,
+   1374
+  ]
+ },
+ "hero": {
+  "ref": "00_Morfi_master_wordmark",
+  "size": [
+   1145,
+   1374
+  ]
+ }
+}

@@ -146,7 +146,30 @@ def setup_compositor(cfg, enabled=True):
     ao.name = 'BG_Over'
     bg = mu.hex_to_linear(cfg['colors']['background'])
     ao.inputs[1].default_value = bg
-    nt.links.new(rl.outputs['Image'], ao.inputs[2])
+    veil = cfg.get('studio', {}).get('floor_veil', 0.0)
+    if veil > 0:
+        # the shadow catcher also darkens the open floor a little (the area
+        # lights and the world are only partly visible from it); the photos'
+        # floor is as white as their background, only the contact shadow
+        # under the feet shows: remove that uniform veil from the alpha
+        sep = nt.nodes.new('CompositorNodeSeparateColor')
+        sub = nt.nodes.new('CompositorNodeMath')
+        sub.operation = 'SUBTRACT'
+        sub.inputs[1].default_value = veil
+        div = nt.nodes.new('CompositorNodeMath')
+        div.operation = 'DIVIDE'
+        div.inputs[1].default_value = 1.0 - veil
+        div.use_clamp = True
+        comb = nt.nodes.new('CompositorNodeCombineColor')
+        nt.links.new(rl.outputs['Image'], sep.inputs[0])
+        for k in range(3):
+            nt.links.new(sep.outputs[k], comb.inputs[k])
+        nt.links.new(sep.outputs[3], sub.inputs[0])
+        nt.links.new(sub.outputs[0], div.inputs[0])
+        nt.links.new(div.outputs[0], comb.inputs[3])
+        nt.links.new(comb.outputs[0], ao.inputs[2])
+    else:
+        nt.links.new(rl.outputs['Image'], ao.inputs[2])
     nt.links.new(ao.outputs['Image'], comp.inputs['Image'])
     sc.render.use_compositing = enabled
     return nt

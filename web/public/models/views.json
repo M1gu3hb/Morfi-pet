@@ -1,0 +1,96 @@
+{
+ "camera_views": {
+  "front": {
+   "az": 0.58228,
+   "height": 0.74267,
+   "distance": 2.4488,
+   "lens": 65.23437,
+   "target": [
+    0.00464,
+    0,
+    0.52556
+   ],
+   "roll": -0.20621
+  },
+  "profile_left": {
+   "az": 90.26315,
+   "height": 0.3509,
+   "distance": 2.50478,
+   "lens": 65.23368,
+   "target": [
+    0.02278,
+    0,
+    0.52047
+   ],
+   "roll": -0.54867
+  },
+  "back": {
+   "az": 181.21679,
+   "height": 0.71632,
+   "distance": 2.4946,
+   "lens": 65.19958,
+   "target": [
+    0.00109,
+    0,
+    0.52372
+   ],
+   "roll": 0.47907
+  },
+  "profile_right": {
+   "az": -89.69006,
+   "height": 0.4,
+   "distance": 2.5555,
+   "lens": 65.03673,
+   "target": [
+    0.02812,
+    0,
+    0.52736
+   ],
+   "roll": 1.95542
+  },
+  "three_quarter_front": {
+   "az": 23.81982,
+   "height": 0.52125,
+   "distance": 2.53116,
+   "lens": 65.05038,
+   "target": [
+    -0.00639,
+    0,
+    0.50884
+   ],
+   "roll": 0.39873
+  },
+  "three_quarter_back": {
+   "az": -146.38087,
+   "height": 0.38841,
+   "distance": 2.50355,
+   "lens": 65.06512,
+   "target": [
+    -0.00275,
+    0,
+    0.51241
+   ],
+   "roll": 1.99538
+  },
+  "hero": {
+   "az": -28.44768,
+   "height": 0.34057,
+   "distance": 2.19088,
+   "lens": 54.91165,
+   "target": [
+    -0.01868,
+    0,
+    0.47874
+   ],
+   "roll": 1.98407
+  }
+ },
+ "poses": [
+  "front",
+  "back",
+  "three_quarter_front",
+  "three_quarter_back",
+  "profile_left",
+  "profile_right"
+ ]
+}
