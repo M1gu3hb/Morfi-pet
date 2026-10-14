@@ -2,43 +2,43 @@
  "front": {
   "reference": "02_Morfi_frente.png",
   "silhouette_iou": 0.9451,
-  "color_delta_e_median": 10.66,
-  "color_delta_e_mean": 14.56,
+  "color_delta_e_median": 10.91,
+  "color_delta_e_mean": 14.63,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "profile_left": {
   "reference": "03_Morfi_perfil_izquierdo.png",
   "silhouette_iou": 0.9199,
-  "color_delta_e_median": 17.59,
-  "color_delta_e_mean": 22.05,
+  "color_delta_e_median": 17.78,
+  "color_delta_e_mean": 21.93,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "back": {
   "reference": "04_Morfi_espalda.png",
   "silhouette_iou": 0.943,
-  "color_delta_e_median": 7.47,
-  "color_delta_e_mean": 12.26,
+  "color_delta_e_median": 7.36,
+  "color_delta_e_mean": 12.67,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "profile_right": {
   "reference": "05_Morfi_perfil_derecho.png",
   "silhouette_iou": 0.9079,
-  "color_delta_e_median": 12.03,
-  "color_delta_e_mean": 20.09,
+  "color_delta_e_median": 11.95,
+  "color_delta_e_mean": 19.63,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "three_quarter_front": {
   "reference": "06_Morfi_tres_cuartos_frontal.png",
   "silhouette_iou": 0.9091,
-  "color_delta_e_median": 11.96,
-  "color_delta_e_mean": 17.26,
+  "color_delta_e_median": 11.84,
+  "color_delta_e_mean": 16.58,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "three_quarter_back": {
   "reference": "07_Morfi_tres_cuartos_posterior.png",
   "silhouette_iou": 0.8974,
-  "color_delta_e_median": 7.69,
-  "color_delta_e_mean": 16.05,
+  "color_delta_e_median": 8.01,
+  "color_delta_e_mean": 16.94,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "parts": {

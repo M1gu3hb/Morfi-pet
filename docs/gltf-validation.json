@@ -6,7 +6,7 @@
   "hints": 0,
   "info": {
    "triangles": 921785,
-   "vertices": 534875,
+   "vertices": 536063,
    "materials": 21,
    "animations": 12,
    "extensionsUsed": [
@@ -26,8 +26,8 @@
   "infos": 37,
   "hints": 0,
   "info": {
-   "triangles": 215839,
-   "vertices": 150183,
+   "triangles": 215837,
+   "vertices": 150662,
    "materials": 21,
    "animations": 12,
    "extensionsUsed": [
@@ -103,8 +103,8 @@
   "infos": 4,
   "hints": 0,
   "info": {
-   "triangles": 113069,
-   "vertices": 83790,
+   "triangles": 113068,
+   "vertices": 83371,
    "materials": 5,
    "animations": 0,
    "extensionsUsed": [
@@ -168,7 +168,7 @@
   "hints": 0,
   "info": {
    "triangles": 19000,
-   "vertices": 13400,
+   "vertices": 14170,
    "materials": 2,
    "animations": 0,
    "extensionsUsed": [
