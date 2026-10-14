@@ -24,6 +24,7 @@ COLS = 6
 # its iris always faces the camera: its measured ratio is blotchy and coloured
 # (rainbow fringes on the sclera). It keeps only the smooth part, in grey.
 SMOOTH_GREY = {'M_Eye'}
+CHROMA = 0.3  # largest colour shift (log2) from a material's measured colour correction
 
 
 def fill(G, w):
@@ -77,6 +78,26 @@ def smooth_fit(G, n, N, residual=True):
     return F + conf * num / np.maximum(den, 1e-6)
 
 
+def rim_grey(F, n, N):
+    """Keep the colour correction measured where the photos give many samples
+    and let only the brightness vary toward the rim: at grazing normals the
+    few samples sit on anti-aliased edges against the background and the fit
+    turned orange there, which showed as a pink line round the blue head."""
+    yy, xx = np.mgrid[0:N, 0:N]
+    r = np.minimum(np.hypot((xx + 0.5) / N - 0.5, (yy + 0.5) / N - 0.5) / 0.495, 1.0)
+    nz = np.sqrt(1.0 - r ** 2)
+    L = F.mean(-1, keepdims=True)
+    C = F - L
+    w = (n * (nz > 0.5)).astype(float)
+    C0 = (C * w[..., None]).sum((0, 1)) / max(w.sum(), 1e-9)
+    t = np.clip((nz - 0.25) / (0.6 - 0.25), 0.0, 1.0)[..., None]
+    t = t * t * (3 - 2 * t)
+    # and nowhere more than CHROMA away from it: on the blue head the measured
+    # highlight is much redder than blue (it lightens a dark blue), and on the
+    # celeste texels at the edge of the face that tint turned pink
+    return np.clip(L + C0 + np.clip(C - C0, -CHROMA, CHROMA) * t, LO, HI)
+
+
 def main():
     raw = json.load(open(os.path.join(ROOT, 'work', 'look', 'raw.json')))
     N = raw['size']
@@ -94,6 +115,7 @@ def main():
             F = np.clip(np.repeat(F.mean(-1, keepdims=True), 3, -1), LO, HI)
         else:
             F = np.clip(smooth_fit(G, n, N), LO, HI)
+            F = rim_grey(F, n, N)
         enc = np.clip((F - LO) / (HI - LO), 0, 1)
         tiles.append((name, (enc[::-1] * 255 + 0.5).astype(np.uint8)))  # image rows top-down
         info[name] = {'tile': len(tiles) - 1, 'samples': int(n.sum())}

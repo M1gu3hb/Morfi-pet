@@ -148,6 +148,7 @@ const groupState: Record<string, boolean> = {};
 // ------------------------------------------------------------------ eyes follow the camera
 let eyesFollow = true;
 let eyeBones: THREE.Object3D[] = [];
+const EYE_MAX = (28 * Math.PI) / 180;
 let eyeBase: THREE.Quaternion[] = [];
 let headBone: THREE.Object3D | null = null;
 const headRestInv = new THREE.Quaternion();
@@ -169,6 +170,11 @@ function updateShot(dt: number) {
   return true;
 }
 function captureEyeBase() { eyeBase = eyeBones.map((b) => b.quaternion.clone()); }
+// put the eyes back to the animated pose once a frame is drawn: three.js only
+// writes a bone when its animated value changes, so with a still pose the
+// follow-the-camera turn would otherwise be taken as the next frame's base and
+// pile up (the eyes rolled until only the white showed)
+function unaimEyes() { eyeBones.forEach((b, i) => { if (eyeBase[i]) b.quaternion.copy(eyeBase[i]); }); }
 function aimEyes() {
   if (eyeBones.length < 2 || !headBone) return;
   eyeBones.forEach((b, i) => b.quaternion.copy(eyeBase[i]));
@@ -182,7 +188,9 @@ function aimEyes() {
   const toCam = _v.copy(camera.position).sub(_mid).normalize();
   const ang = _fwd.angleTo(toCam);
   const k = ang < 0.7 ? 1 : ang < 1.571 ? 1 - (0.65 * (ang - 0.7)) / 0.871 : Math.max(0, 0.35 * (1 - (ang - 1.571) / 0.5));
-  const kk = k * (1 - shotW); // the shot key already turns the eyes as in the photo
+  // the shot key already turns the eyes as in the photo; never more than
+  // EYE_MAX, so the iris stays inside its socket
+  const kk = Math.min(k * (1 - shotW), EYE_MAX / Math.max(ang, 1e-6));
   if (kk <= 0) return;
   _qk.identity().slerp(_q2.setFromUnitVectors(_fwd, toCam), kk);
   for (const b of eyeBones) {
@@ -505,6 +513,7 @@ document.getElementById('shot')!.addEventListener('click', () => {
   camera.fov = lensFov;
   camera.updateProjectionMatrix();
   renderer.render(scene, camera);
+  unaimEyes();
   const url = renderer.domElement.toDataURL('image/png');
   renderer.setPixelRatio(pr);
   renderer.setSize(size.x, size.y, false);
@@ -587,8 +596,24 @@ renderer.setAnimationLoop(() => {
       contact.update(renderer, scene, _centre);
     }
     renderer.render(scene, camera);
+    unaimEyes();
     if (dirtyFrames > 0) dirtyFrames--;
   }
 });
 (window as unknown as { __morfiInvalidate: () => void }).__morfiInvalidate = () => invalidate(4);
 (window as unknown as { __morfiSetView: (v: string) => void }).__morfiSetView = (v: string) => setView(v, false);
+// tests: hold an animation at a given time (seconds) and orbit the camera
+(window as unknown as { __morfiPose: (clip: string, t: number) => void }).__morfiPose = (clip: string, t: number) => {
+  playClip(clip, false);
+  if (action && mixer) { action.paused = true; action.time = t; mixer.update(0); captureEyeBase(); }
+  invalidate(6);
+};
+(window as unknown as { __morfiOrbit: (az: number, el: number, dist: number) => void }).__morfiOrbit = (az: number, el: number, dist: number) => {
+  aligned = false;
+  const a = (az * Math.PI) / 180, e = (el * Math.PI) / 180;
+  camera.position.set(controls.target.x + dist * Math.cos(e) * Math.sin(a), controls.target.y + dist * Math.sin(e), controls.target.z + dist * Math.cos(e) * Math.cos(a));
+  camera.lookAt(controls.target);
+  controls.update();
+  invalidate(6);
+};
+(window as unknown as { __morfiEyes: () => number[][] }).__morfiEyes = () => eyeBones.map((b) => b.quaternion.toArray().map((x) => +x.toFixed(4)));
