@@ -92,6 +92,12 @@ class Garments:
         p = self.p
         b = self.b
         d = self.body.torso(P) - p['shirt_offset']
+        if self.variant == 'worn' and p.get('shirt_worn_sleeveless'):
+            # worn under the hoodie the short sleeves are never seen and would
+            # only poke through the hoodie's slim raglan sleeves: as in game
+            # character pipelines the hidden part is left out (the product
+            # sheet 09 uses Tshirt_Product, with sleeves)
+            return d
         for side in (-1, 1):
             sh, el, wr = self.arm(side)
             n = el - sh
@@ -119,9 +125,10 @@ class Garments:
         zc = col['c'][2] + (P[1] - col['c'][1]) * tilt
         d = np.maximum(d, P[2] - zc)
         sl = p.get('shoulder_slope')
-        if sl:
+        if sl and self.variant == 'worn':
             # under the hoodie, outside the front opening, keep the shirt below
-            # the hoodie's sloping shoulder line so it never peeks out
+            # the hoodie's sloping shoulder line so it never peeks out (the
+            # T-shirt alone, sheet 09, keeps its shoulders and sleeves)
             z_top = sl[0] - sl[2] * np.maximum(np.abs(P[0]) - sl[1], 0.0) - 0.008
             hidden = (np.abs(P[0]) > 0.11) | (P[1] > 0.0)
             d = np.where(hidden, np.maximum(d, P[2] - z_top), d)
@@ -320,8 +327,10 @@ class Garments:
         xo = self.open_x(P[2])
         cut_open = np.maximum(np.abs(P[0]) - xo, P[1] + 0.03)
         d = np.maximum(d, -cut_open)
-        # hem: the ribbed waistband object covers below hem z1
-        d = np.maximum(d, self.hem_z('z1', P[1]) - 0.006 - P[2])
+        # hem: the ribbed waistband object covers below hem z1; the body goes
+        # on a little inside it so that from above (the back shot looks down)
+        # one never sees into the band
+        d = np.maximum(d, self.hem_z('z1', P[1]) - p.get('hem_overlap', 0.006) - P[2])
         # pockets: slightly raised patches on the lower front panels
         pk = p['pocket']
         for side in (-1, 1):
@@ -553,6 +562,16 @@ def build(cfg, col, parent, tex_dir, h, quality):
                                collection=col, parent=ts)
     mu.assign_material(logo, M['logo'])
     out.update(Tshirt=ts, Tshirt_Collar=collar, Tshirt_Logo=logo)
+    if p.get('shirt_worn_sleeveless'):
+        # the T-shirt alone (sheet 09) keeps its sleeves: second state, product shots only
+        g.variant = 'product'
+        tp = mu.fast_mesh_object('Tshirt_Product', *S.polygonize(g.shirt, (-0.30, -0.20, 0.20), (0.30, 0.18, 0.53), hh),
+                                 collection=mu.get_collection('ProductShots'))
+        g.variant = 'worn'
+        tp.matrix_world = parent.matrix_world.copy() if parent is not None else tp.matrix_world
+        mu.assign_material(tp, M['shirt'])
+        mu.cube_project_uv(tp, 5.0)
+        tp.hide_render = True
 
     # --- Hoodie shell (+hood, pockets)
     hv, hf = S.polygonize(g.hoodie, (-0.40, -0.25, 0.17), (0.40, 0.26, 0.58), hh)
@@ -635,8 +654,9 @@ def build(cfg, col, parent, tex_dir, h, quality):
     xo = g.open_x(zb)
     hit, _ = S.raycast(both, np.array([[xo + 0.004, -0.4, zb]]), np.array([[0, 1.0, 0]]), tmax=0.5)
     yb = hit[0, 1]
-    for half, c in (((0.0068, 0.0055, 0.0115), (xo - 0.002, yb - 0.001, zb)),
-                    ((0.0048, 0.0018, 0.0125), (xo - 0.002, yb - 0.006, zb - 0.017))):
+    # chunky slider and pull tab, as in 02 (body ~1.9 cm wide, tab ~2.7 cm long)
+    for half, c in (((0.0095, 0.0060, 0.0120), (xo - 0.002, yb - 0.001, zb)),
+                    ((0.0068, 0.0020, 0.0135), (xo - 0.002, yb - 0.007, zb - 0.020))):
         v, f = rounded_cube_mesh(half, e=3.2, N=5)
         zv.append(v + np.array(c))
         zf.append(f + off)

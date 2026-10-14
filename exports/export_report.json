@@ -1,6 +1,6 @@
 {
  "master": {
-  "triangles": 924858,
+  "triangles": 921785,
   "objects": [
    {
     "name": "Body_Base",
@@ -54,7 +54,7 @@
    },
    {
     "name": "Tshirt",
-    "triangles": 23996,
+    "triangles": 24000,
     "materials": 1
    },
    {
@@ -69,12 +69,12 @@
    },
    {
     "name": "Hoodie",
-    "triangles": 140000,
+    "triangles": 139993,
     "materials": 1
    },
    {
     "name": "Hoodie_Hem",
-    "triangles": 23998,
+    "triangles": 24000,
     "materials": 1
    },
    {
@@ -89,7 +89,7 @@
    },
    {
     "name": "Hoodie_Zipper",
-    "triangles": 18648,
+    "triangles": 15576,
     "materials": 1
    },
    {
@@ -150,7 +150,7 @@
   ]
  },
  "web": {
-  "triangles": 215842,
+  "triangles": 215839,
   "objects": [
    {
     "name": "Body_Base",
@@ -219,12 +219,12 @@
    },
    {
     "name": "Hoodie",
-    "triangles": 36000,
+    "triangles": 35997,
     "materials": 1
    },
    {
     "name": "Hoodie_Hem",
-    "triangles": 5998,
+    "triangles": 6000,
     "materials": 1
    },
    {
@@ -239,7 +239,7 @@
    },
    {
     "name": "Hoodie_Zipper",
-    "triangles": 8000,
+    "triangles": 7998,
     "materials": 1
    },
    {

@@ -98,6 +98,8 @@ scripts/iterate_shapes.sh prueba [config.json]        # ciclo rápido de formas:
 scripts/iterate_face.sh prueba [config.json]          # ciclo rápido de cara: borrador -> rig -> frente -> medidas
 ```
 
+En los perfiles (03, 05) la cara está dibujada girada hacia la cámara sobre una cabeza de perfil puro; `render_views.py` reproduce esa trampa de cámara con `scripts/morfi/facecheat.py` (config `face_cheat`: grados por toma y relieve conservado), solo en el render de esa toma: el modelo y los GLB no cambian (`docs/art-direction.md` §11).
+
 `fit_view_poses.py` compara contorno y zonas de color (azul / negro / blanco-gris) con un z-buffer del modelo; `--outline-only` usa solo el contorno. Las vistas se renderizan con el set de luces girado con la cámara de cada toma (como en las fotos de producto de referencia); `--world-lights` lo desactiva.
 
 `--quality draft` genera una versión rápida (≈1–2 min) para iterar. Todos los parámetros (medidas, colores, cámara, luces) están en `config/morfi.json`.

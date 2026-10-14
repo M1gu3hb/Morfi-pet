@@ -91,6 +91,17 @@ def classify(rgb):
     return np.clip((m - 0.3) / 0.4, 0, 1)
 
 
+def extrapolate(mask, head):
+    """Carry the mask past the head outline (each outside pixel takes the value
+    of the nearest head pixel). Where the head curves away from the camera
+    the texels project onto the outline itself, and its anti-aliased edge
+    (background = 0) turned the cheek wrap of the muzzle blue."""
+    from scipy import ndimage as ndi
+    inner = ndi.binary_erosion(head, iterations=3)
+    _, (iy, ix) = ndi.distance_transform_edt(~inner, return_indices=True)
+    return np.where(inner, mask, mask[iy, ix])
+
+
 def ref_landmarks(rgb):
     """Eye centres, head sides at eye level and top of the head (pixels)."""
     from scipy import ndimage as ndi
@@ -137,7 +148,7 @@ class FaceTrace:
         self.pc = cfg['part_cameras'][t.get('camera', 'cuerpo_base')]
         img = Image.open(os.path.join(root, 'references', t.get('ref', '14_Morfi_cuerpo_base') + '.png')).convert('RGB')
         rgb = np.asarray(img.resize((W, H), Image.LANCZOS))
-        self.mask = classify(rgb)
+        self.mask = extrapolate(classify(rgb), head_region(rgb))
         src = model_landmarks(shape, self.pc)
         dst = ref_landmarks(rgb)
         # affine model-image -> reference-image, least squares on the landmarks
@@ -149,8 +160,11 @@ class FaceTrace:
         self.center = shape.center
         self.landmarks = (src, dst)
         self.pos = _basis(self.pc)[0]
-        self.views = [ViewTrace(cfg, v, root) for v in t.get('views', [])]
+        self.views = [ViewTrace(cfg, v, root, shape) for v in t.get('views', [])]
         self.prior = t.get('prior_weight', 0.03)
+        # how squarely the sheet must see a texel to vote: low, so that the
+        # cheeks wrapping round the head corners take the (extrapolated) sheet
+        self.face_lo, self.face_hi = t.get('facing', [0.15, 0.55])
 
     def sample_multi(self, P_local, N):
         """Celeste of head points (local coords, unit normals): the sheet blended
@@ -159,7 +173,7 @@ class FaceTrace:
         Pw = P_local + self.center
         tc = self.pos - Pw
         tc /= np.linalg.norm(tc, axis=1, keepdims=True)
-        wf = _smooth(0.15, 0.55, np.sum(N * tc, 1))
+        wf = _smooth(self.face_lo, self.face_hi, np.sum(N * tc, 1))
         num = wf * self.sample(P_local)
         den = wf + self.prior
         for v in self.views:
@@ -224,7 +238,7 @@ class ViewTrace:
             'three_quarter_back': '07_Morfi_tres_cuartos_posterior'}
     PIVOT = np.array([0.0, 0.016, 0.53])  # rest head of the 'head' bone (morfi/rig.py)
 
-    def __init__(self, cfg, view, root):
+    def __init__(self, cfg, view, root, shape=None):
         from PIL import Image
         from scipy import ndimage as ndi
         from scipy.spatial.transform import Rotation
@@ -246,15 +260,28 @@ class ViewTrace:
         m = np.maximum(self.mask, lens_in.astype(float))
         _, (iy, ix) = ndi.distance_transform_edt(dark, return_indices=True)
         m = np.where(dark, m[iy, ix], m)
-        self.mask = ndi.gaussian_filter(m, 1.5) * head
+        self.mask = extrapolate(ndi.gaussian_filter(m, 1.5) * head, head)
         self.valid = ndi.gaussian_filter(head.astype(float), 1.5)
         self.pos = view_basis(self.cam)[0]
+        # profile shots are rendered with the face slid toward the camera
+        # (facecheat.py): project through the same slide
+        self.cheat = cfg.get('face_cheat', {}).get(view, 0.0) if shape is not None else 0.0
+        self.shape = shape
 
     def posed(self, Pw):
         return (Pw - self.PIVOT) @ self.R.T + self.PIVOT
 
     def sample(self, Pw, Nw):
         """(celeste, weight) for world points / normals of the head at rest."""
+        if self.cheat:
+            from .facecheat import delta, slide
+            c = self.shape.center
+            phi = np.arctan2(Pw[:, 0] - c[0], c[1] - Pw[:, 1])
+            d = delta(phi, np.radians(self.cheat))
+            Pw = slide(Pw - c, self.shape, self.cheat) + c
+            # normals turn with the slide (the change of curvature is left out)
+            Nw = np.stack([Nw[:, 0] * np.cos(d) - Nw[:, 1] * np.sin(d),
+                           Nw[:, 0] * np.sin(d) + Nw[:, 1] * np.cos(d), Nw[:, 2]], 1)
         Q = self.posed(Pw)
         Nq = Nw @ self.R.T
         to_cam = self.pos - Q

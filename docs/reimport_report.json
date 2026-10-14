@@ -3,7 +3,7 @@
   "file": "exports/morfi_web.glb",
   "meshes": 29,
   "armatures": 1,
-  "triangles": 215842,
+  "triangles": 215839,
   "materials": 21,
   "images": 12,
   "images_missing": [],
@@ -22,12 +22,12 @@
    "Wave"
   ],
   "bbox_min": [
-   -0.3863,
+   -0.3729,
    -0.2783,
    -0.007
   ],
   "bbox_max": [
-   0.3862,
+   0.373,
    0.3186,
    1.1429
   ],
@@ -38,7 +38,7 @@
   "file": "exports/morfi_master.glb",
   "meshes": 29,
   "armatures": 1,
-  "triangles": 924858,
+  "triangles": 921785,
   "materials": 21,
   "images": 12,
   "images_missing": [],
@@ -57,12 +57,12 @@
    "Wave"
   ],
   "bbox_min": [
-   -0.3862,
+   -0.373,
    -0.2783,
    -0.007
   ],
   "bbox_max": [
-   0.3862,
+   0.373,
    0.3186,
    1.1429
   ],

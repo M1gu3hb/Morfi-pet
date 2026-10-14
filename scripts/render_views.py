@@ -12,7 +12,8 @@ import bpy
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
-from morfi import scene  # noqa: E402
+from morfi import facecheat, scene  # noqa: E402
+from morfi.head import HeadShape  # noqa: E402
 
 
 def main():
@@ -26,6 +27,7 @@ def main():
     ap.add_argument('--hide', default='', help='comma separated object/collection names to hide')
     ap.add_argument('--suffix', default='')
     ap.add_argument('--eye-look', default='', help='JSON {view: k} overriding scene.EYE_LOOK (tests)')
+    ap.add_argument('--face-cheat', default='', help='JSON {view: degrees} overriding config "face_cheat" (tests)')
     ap.add_argument('--engine', default='CYCLES', choices=['CYCLES', 'WORKBENCH', 'EEVEE'])
     ap.add_argument('--res', default='', help='WxH override')
     ap.add_argument('--shared-camera', dest='calibrated', action='store_false',
@@ -88,12 +90,17 @@ def main():
         look = dict(scene.EYE_LOOK, **(json.loads(a.eye_look) if a.eye_look else {}))
         restore = scene.eyes_look(cam.matrix_world.translation, look.get(v, 1.0) if a.eyes_follow else 0.0,
                                   gaze=gaze)
+        # profile shots: the face is drawn turned toward the camera (face cheat)
+        fc = dict(cfg.get('face_cheat', {}), **(json.loads(a.face_cheat) if a.face_cheat else {}))
+        theta = fc.get(v, 0.0) if a.calibrated else 0.0
+        uncheat = facecheat.apply(v, theta, HeadShape(cfg), fc.get('depth', 1.0)) if theta else (lambda: None)
         # light rig turns with the camera, as in the reference shots
         cv = cfg.get('camera_views', {})
         az = cv[v]['az'] - cv.get('front', {}).get('az', 0.0) if (a.calibrated and a.camera_lights and v in cv) else 0.0
         unturn = scene.turn_lights(az) if az else (lambda: None)
         bpy.ops.render.render(write_still=True)
         unturn()
+        uncheat()
         restore()
         print(f'[render] {v} {time.time() - t0:.1f}s -> {sc.render.filepath}')
 

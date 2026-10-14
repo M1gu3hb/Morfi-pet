@@ -201,7 +201,14 @@ def main():
         for o in morfi_objects():
             if o.type == 'MESH' and o.name in WEB_TRIS:
                 decimate_to(o, MASTER_TRIS[o.name] // 2)
+        # the T-shirt on its own is the product state, with its short sleeves
+        # (worn under the hoodie it has none: they are never seen)
+        tp = bpy.data.objects.get('Tshirt_Product')
+        if tp is not None:
+            decimate_to(tp, MASTER_TRIS['Tshirt'] // 2)
         for part, names in PARTS.items():
+            if tp is not None:
+                names = ['Tshirt_Product' if n == 'Tshirt' else n for n in names]
             objs = [bpy.data.objects[n] for n in names if n in bpy.data.objects]
             # include children (e.g. eyes under head handled explicitly)
             export(os.path.join(OUT, 'parts', f'morfi_{part}.glb'), objs, animations=False, skins=False)

@@ -187,8 +187,10 @@ def make_camera(name, az_deg, cfg, col, target=None, dist=None, height=None, len
 
 
 # how much the eyes turn toward each camera (0 = modelled forward gaze, 1 = at the lens).
-# The references always show Morfi looking at the viewer in front / 3-4 shots.
-EYE_LOOK = {'front': 1.0, 'three_quarter_front': 1.0, 'profile_left': 0.35, 'profile_right': 0.35,
+# The references always show Morfi looking at the viewer in front / 3-4 shots; in
+# the profiles the face is also turned toward the camera (facecheat.py) and the
+# iris sits just in front of the middle of the lens, as in 03 / 05.
+EYE_LOOK = {'front': 1.0, 'three_quarter_front': 1.0, 'profile_left': 0.25, 'profile_right': 0.25,
             'back': 0.0, 'three_quarter_back': 0.0, 'hero': 1.0}
 
 

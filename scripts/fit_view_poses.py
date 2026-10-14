@@ -60,12 +60,23 @@ W_OUTLINE = 0.5  # share of the outline IoU in the semantic loss
 # fit gives for the other profile (03).
 HEIGHT_FIX = {'profile_right': 0.40}
 # bones whose pose is set by eye, not fitted: in the profiles the near arm hangs
-# along the body with the hand forward (03, 05); held out as at rest it points
-# at the camera and shows the open end of the cuff. Sleeve and body are both
-# black, so neither the outline nor the colour zones can see the difference.
-# Only the adduction is fixed; the forward swing and the elbow are still fitted.
-POSE_FIX = {'profile_left': {('upper_arm.L', 'y'): 18.0},
-            'profile_right': {('upper_arm.R', 'y'): -18.0}}
+# along the body with the hand forward at the height of the hem (03, 05); held
+# out as at rest (50 degrees from the body) it points at the camera and shows
+# the open end of the cuff, with the hand dangling under it. Sleeve and body
+# are both black, so neither the outline nor the colour zones can see the
+# difference (the outline is the same within a few thousandths of IoU): the
+# near arm is brought toward the body (28 degrees), swung a little forward (8)
+# and bent at the elbow (25), so the sleeve is seen from the side with the
+# hand just under the cuff, as drawn. Closer to the body it goes through the
+# torso; bent more, the hand sticks out in front of the hoodie.
+# The cube cluster of the profiles shows the front layout (a camera-facing
+# cheat, see validation.md): it turns to face the camera ('camera' = the view
+# azimuth minus the front view's), the outline of three small cubes is too
+# weak a signal for the fit to find that by itself.
+POSE_FIX = {'profile_left': {('upper_arm.L', 'y'): 28.0, ('upper_arm.L', 'x'): -8.0, ('forearm.L', 'x'): -25.0,
+                             ('pixels', 'z'): 'camera'},
+            'profile_right': {('upper_arm.R', 'y'): -28.0, ('upper_arm.R', 'x'): -8.0, ('forearm.R', 'x'): -25.0,
+                              ('pixels', 'z'): 'camera'}}
 NCLS = 3         # 0 blue skin, 1 black (hoodie, frame, brows), 2 white / grey (shirt, shoes, eye whites)
 
 
@@ -246,9 +257,12 @@ def main():
         RC4 = ref_classes(ref, (F.w // 2, F.h // 2), R4)
         base = cfg['camera_views'][view]
 
+        fixed = {k: (round(base['az'] - cfg['camera_views']['front']['az'], 2) if a == 'camera' else a)
+                 for k, a in POSE_FIX.get(view, {}).items()}
+
         def unpack(x):
             x = np.array(x, float)
-            for k, ang in POSE_FIX.get(view, {}).items():
+            for k, ang in fixed.items():
                 x[fix_index(k)] = ang
             rots, j = rots_from(x)
             c = dict(az=base['az'] + x[j], height=HEIGHT_FIX.get(view, base['height'] + x[j + 1]), distance=base['distance'] + x[j + 2],
@@ -340,7 +354,7 @@ def main():
                 ang['xyz'.index(a)] = round(float(res.x[j]), 3)
                 j += 1
             vp[bone] = ang
-        for (b, ax), ang in POSE_FIX.get(view, {}).items():
+        for (b, ax), ang in fixed.items():
             vp[b]['xyz'.index(ax)] = ang
         poses[view] = vp
         cams[view] = {k: (round(v, 5) if isinstance(v, float) else [round(t, 5) for t in v]) for k, v in cam.items()}

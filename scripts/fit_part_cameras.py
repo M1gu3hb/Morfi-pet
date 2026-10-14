@@ -118,6 +118,8 @@ def main():
             continue
         if key == 'sudadera' and 'Hoodie_Product_Cuff_L' in names:  # sleeves held out (product pose)
             objs = [o.replace('Hoodie_Cuff', 'Hoodie_Product_Cuff') for o in objs]
+        if key == 'playera' and 'Tshirt_Product' in names:  # the T-shirt alone keeps its sleeves
+            objs = ['Tshirt_Product'] + [o for o in objs if o != 'Tshirt']
         labs = [names.index(o) for o in objs if o in names]
         sel = np.isin(L_all, labs)
         P, L = P_all[sel], L_all[sel]

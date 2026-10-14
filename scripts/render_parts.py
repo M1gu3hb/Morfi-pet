@@ -127,6 +127,8 @@ def main():
             names = ['Hoodie_Product'] + [n for n in names if n != 'Hoodie']  # hood up, as in sheet 08
             if bpy.data.objects.get('Hoodie_Product_Cuff_L'):  # sleeves held out, cuffs with them
                 names = [n.replace('Hoodie_Cuff', 'Hoodie_Product_Cuff') for n in names]
+        if key == 'playera' and bpy.data.objects.get('Tshirt_Product'):
+            names = ['Tshirt_Product'] + [n for n in names if n != 'Tshirt']  # with sleeves, as in sheet 09
         visible_set(names)
         undo = None
         if key in pcams:
