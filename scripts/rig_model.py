@@ -163,10 +163,13 @@ def anim_wave(rig, length=48):
         set_rot(rig, 'spine', ((0, 1, 0), 3.0))
         set_rot(rig, 'head', ((0, 1, 0), -4 + 3 * math.sin(t)))
         bpy.context.view_layer.update()
-        aim(rig, 'upper_arm.R', (-0.92, -0.22, 0.38))
+        # the head is 0.65 m wide and the arm short: the upper arm goes out to
+        # the side and the forearm swings up and outward, so the waving hand
+        # stays a hand's width outside the head (it went into its side)
+        aim(rig, 'upper_arm.R', (-0.95, -0.12, 0.30))
         sw = math.sin(t * 2)
-        aim(rig, 'forearm.R', (-0.55 + 0.35 * sw, -0.30, 0.85))
-        aim(rig, 'hand.R', (-0.45 + 0.45 * sw, -0.35, 0.9))
+        aim(rig, 'forearm.R', (-0.62 + 0.16 * sw, -0.22, 0.76))
+        aim(rig, 'hand.R', (-0.50 + 0.22 * sw, -0.28, 0.82))
         key_all(rig, f + 1)
 
 

@@ -62,6 +62,25 @@ def slide(P, shape, theta_deg, depth=1.0):
     return Q * (S1 * (1.0 + h) / np.maximum(np.linalg.norm(Q, axis=1), 1e-9))[:, None]
 
 
+def point_depth(name, P, shape, fc):
+    """Relief kept per point (scalar or (N,) array). The eyes and the skin
+    round them keep only `depth` (so the eyeball stays under its lens at that
+    grazing angle); the rest of the face keeps `depth_face` (the muzzle and
+    the mouth stand out in front, as in 03 / 05) and the glasses
+    `depth_glasses` (the frame stands off the face)."""
+    d_eye = fc.get('depth', 1.0)
+    if name.startswith('Eye') or name.startswith('Cornea'):
+        return d_eye
+    if name.startswith('Glasses'):
+        return fc.get('depth_glasses', d_eye)
+    d_face = fc.get('depth_face', d_eye)
+    if name != 'Head' or d_face == d_eye:
+        return d_face
+    from .sdf import smoothstep
+    w = smoothstep(0.03, -0.01, shape.patch_sdf(P[:, 0], P[:, 2]))
+    return d_eye * w + d_face * (1.0 - w)
+
+
 def _basis(ob):
     me = ob.data
     co = np.empty(len(me.vertices) * 3)
@@ -84,7 +103,7 @@ def _kabsch(P, Q):
     return T
 
 
-def apply(view, theta, shape, depth=1.0, glasses_z=1.0):
+def apply(view, theta, shape, depth=1.0, glasses_z=1.0, fc=None):
     """Turn the face of this shot by theta degrees. With depth < 1 the relief of
     the face (glasses in front of it, eyeballs out of it) is also flattened
     toward the head surface, so that, as in the drawn profiles, the eye sits
@@ -108,7 +127,8 @@ def apply(view, theta, shape, depth=1.0, glasses_z=1.0):
         if ob is None or ob.type != 'MESH':
             return
         M = Hi @ np.array(ob.matrix_world)
-        Q = slide(_xf(M, _basis(ob)), shape, theta, depth)
+        P0 = _xf(M, _basis(ob))
+        Q = slide(P0, shape, theta, point_depth(ob.name, P0, shape, fc or {'depth': depth}))
         if ob.name.startswith('Glasses') and glasses_z != 1.0:
             # the lens of the drawn profiles is lower than the 3D one seen from
             # there (199 px against 220 in 03 / 05, the same height as in 02)

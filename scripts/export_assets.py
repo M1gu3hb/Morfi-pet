@@ -126,7 +126,8 @@ def bake_shot_morphs():
                 if ob is None or ob.type != 'MESH':
                     continue
                 M = Hi @ np.array(ob.matrix_world)
-                Q = FC.slide(FC._xf(M, FC._basis(ob)), shape, theta, depth)
+                P0 = FC._xf(M, FC._basis(ob))
+                Q = FC.slide(P0, shape, theta, FC.point_depth(n, P0, shape, fc))
                 if n.startswith('Glasses') and fc.get('glasses_z', 1.0) != 1.0:
                     zc = shape.eye_centers[0][2]
                     Q[:, 2] = zc + (Q[:, 2] - zc) * fc['glasses_z']

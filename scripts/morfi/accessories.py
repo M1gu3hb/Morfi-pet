@@ -77,7 +77,20 @@ def temple_sdf(P, gp, yg, side):
     side_v = np.cross(ax, up)
     c = (a + b) / 2
     R = np.stack([side_v, ax, up], 1)  # local x=thickness, y=length, z=width
-    return S.sd_round_box(P, c, (gp['temple_t'] / 2, L / 2, gp['temple_w'] / 2), 0.0055, R=R)
+    if 'temple_w_back' not in gp:
+        return S.sd_round_box(P, c, (gp['temple_t'] / 2, L / 2, gp['temple_w'] / 2), 0.0055, R=R)
+    # flat acetate arm as in 03 / 05 / 11: seen from the side a band that
+    # narrows a little toward the back and ends in a round tip; its thickness
+    # is extruded with soft edges
+    s, u, v = S.to_local(P, c, R)
+    k = np.clip(u / L + 0.5, 0.0, 1.0)
+    hw = 0.5 * (gp['temple_w'] + (gp['temple_w_back'] - gp['temple_w']) * k)
+    d2 = S.rrect2d(u, v, L / 2, hw, 0.0)
+    # round back end: a half disc of the band's height
+    rb = 0.5 * gp['temple_w_back']
+    ue = u - (L / 2 - rb)
+    d2 = np.where(ue > 0, np.sqrt(ue ** 2 + v ** 2) - rb, d2)
+    return S.extrude(d2, s, gp['temple_t'] / 2, gp.get('temple_edge_r', 0.005))
 
 
 def build_glasses(cfg, shape, head, col, h=0.0013):

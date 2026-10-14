@@ -268,6 +268,7 @@ class ViewTrace:
         # profile shots are rendered with the face slid toward the camera
         # (facecheat.py): project through the same slide
         self.cheat = cfg.get('face_cheat', {}).get(view, 0.0) if shape is not None else 0.0
+        self.fc = cfg.get('face_cheat', {})
         self.shape = shape
 
     def posed(self, Pw):
@@ -276,11 +277,12 @@ class ViewTrace:
     def sample(self, Pw, Nw):
         """(celeste, weight) for world points / normals of the head at rest."""
         if self.cheat:
-            from .facecheat import delta, slide
+            from .facecheat import delta, point_depth, slide
             c = self.shape.center
             phi = np.arctan2(Pw[:, 0] - c[0], c[1] - Pw[:, 1])
             d = delta(phi, np.radians(self.cheat))
-            Pw = slide(Pw - c, self.shape, self.cheat) + c
+            Pl = Pw - c
+            Pw = slide(Pl, self.shape, self.cheat, point_depth('Head', Pl, self.shape, self.fc)) + c
             # normals turn with the slide (the change of curvature is left out)
             Nw = np.stack([Nw[:, 0] * np.cos(d) - Nw[:, 1] * np.sin(d),
                            Nw[:, 0] * np.sin(d) + Nw[:, 1] * np.cos(d), Nw[:, 2]], 1)

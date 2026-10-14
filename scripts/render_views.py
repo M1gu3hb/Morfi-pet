@@ -93,7 +93,7 @@ def main():
         # profile shots: the face is drawn turned toward the camera (face cheat)
         fc = dict(cfg.get('face_cheat', {}), **(json.loads(a.face_cheat) if a.face_cheat else {}))
         theta = fc.get(v, 0.0) if a.calibrated else 0.0
-        uncheat = facecheat.apply(v, theta, HeadShape(cfg), fc.get('depth', 1.0), fc.get('glasses_z', 1.0)) if theta else (lambda: None)
+        uncheat = facecheat.apply(v, theta, HeadShape(cfg), fc.get('depth', 1.0), fc.get('glasses_z', 1.0), fc) if theta else (lambda: None)
         # light rig turns with the camera, as in the reference shots
         cv = cfg.get('camera_views', {})
         az = cv[v]['az'] - cv.get('front', {}).get('az', 0.0) if (a.calibrated and a.camera_lights and v in cv) else 0.0

@@ -72,7 +72,9 @@ class Garments:
         sh, el, wr = self.arm(side)
         n = wr - el
         n /= np.linalg.norm(n)
-        end = wr + n * 0.004
+        # where the cuff ends along the forearm (0 = at the wrist): in 02 / 06
+        # the rib ends above the wrist and the whole mitten shows under it
+        end = wr + n * self.p.get('cuff_end', 0.004)
         start = end - n * self.p['cuff_len']
         return start, end, n
 

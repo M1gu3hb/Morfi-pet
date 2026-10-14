@@ -73,7 +73,8 @@ HEIGHT_FIX = {'profile_right': 0.40}
 # cheat, see validation.md): it turns to face the camera ('camera' = the view
 # azimuth minus the front view's), the outline of three small cubes is too
 # weak a signal for the fit to find that by itself.
-POSE_FIX = {'profile_left': {('upper_arm.L', 'y'): 28.0, ('upper_arm.L', 'x'): -8.0, ('forearm.L', 'x'): -25.0,
+POSE_FIX = {'front': {('upper_arm.L', 'y'): -8.5, ('upper_arm.R', 'y'): 8.5},
+            'profile_left': {('upper_arm.L', 'y'): 28.0, ('upper_arm.L', 'x'): -8.0, ('forearm.L', 'x'): -25.0,
                              ('pixels', 'z'): 'camera'},
             'profile_right': {('upper_arm.R', 'y'): -28.0, ('upper_arm.R', 'x'): -8.0, ('forearm.R', 'x'): -25.0,
                               ('pixels', 'z'): 'camera'}}

@@ -87,7 +87,11 @@
   },
   "line_celeste_cut": 0.78,
   "nose_half_width": 0.036,
-  "brow_slope": 0.01
+  "brow_slope": 0.01,
+  "muzzle_amp": 0.032,
+  "muzzle_cz": -0.165,
+  "muzzle_rz": 0.105,
+  "muzzle_rx": 0.21
  },
  "colors": {
   "skin": "#014EF0",
@@ -138,12 +142,12 @@
   ],
   "temple_front": [
    0.3,
-   0.0105
+   0.0015
   ],
   "temple_back": [
    0.343,
-   0.125,
-   -0.0355
+   0.04,
+   -0.031
   ],
   "outer_half": [
    0.12,
@@ -157,7 +161,11 @@
   "rim": 0.019,
   "lens_cx": 0.148,
   "bridge_cz": 0.0005,
-  "end_cz": -0.0015
+  "end_cz": -0.0015,
+  "temple_w": 0.052,
+  "temple_w_back": 0.042,
+  "temple_t": 0.016,
+  "temple_edge_r": 0.006
  },
  "shoes": {
   "upper_top": {
@@ -490,7 +498,8 @@
     "curv": 1.6,
     "k": 0.02
    }
-  }
+  },
+  "cuff_end": -0.016
  },
  "laptop_place": {
   "loc": [
@@ -580,11 +589,11 @@
    ],
    "palm_c": 0.04361,
    "palm_r": [
-    0.03413,
-    0.0493,
-    0.0455
+    0.0375,
+    0.0505,
+    0.0475
    ],
-   "finger_r": 0.01943,
+   "finger_r": 0.0208,
    "finger_base": 0.07015,
    "seg1": 0.02465,
    "seg2": 0.02465,
@@ -605,7 +614,7 @@
     0.35
    ],
    "thumb_len": 0.03982,
-   "thumb_r": 0.01943
+   "thumb_r": 0.0212
   },
   "arm_r": [
    0.046,
@@ -1195,11 +1204,13 @@
   "spine_tilt": 2.0
  },
  "face_cheat": {
-  "_doc": "Trampa de camara de los perfiles (scripts/morfi/facecheat.py): grados que la cara se desliza sobre la cabeza hacia la camara en cada toma (el contorno de la cabeza no cambia) y fraccion del relieve de la cara que se conserva (depth). Medido con el lente: ancho/alto 0.48 en 03 y 0.39 en 05. Solo en los renders por toma.",
+  "_doc": "Trampa de camara de los perfiles (scripts/morfi/facecheat.py): grados que la cara se desliza sobre la cabeza hacia la camara en cada toma (el contorno de la cabeza no cambia) y fraccion del relieve que se conserva: depth en los ojos y la piel que los rodea, depth_face en el resto de la cara (hocico, boca) y depth_glasses en los lentes. Medido con el lente: ancho/alto 0.48 en 03 y 0.39 en 05. Solo en los renders por toma.",
   "profile_left": 26.0,
   "profile_right": -20.0,
   "depth": 0.35,
-  "glasses_z": 0.91
+  "glasses_z": 0.91,
+  "depth_face": 0.9,
+  "depth_glasses": 0.75
  },
  "studio": {
   "floor_veil": 0.05
