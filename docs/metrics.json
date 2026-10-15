@@ -1,56 +1,56 @@
 {
  "front": {
   "reference": "02_Morfi_frente.png",
-  "silhouette_iou": 0.9438,
-  "color_delta_e_median": 10.84,
-  "color_delta_e_mean": 14.44,
+  "silhouette_iou": 0.9359,
+  "color_delta_e_median": 11.05,
+  "color_delta_e_mean": 14.72,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "profile_left": {
   "reference": "03_Morfi_perfil_izquierdo.png",
-  "silhouette_iou": 0.9225,
-  "color_delta_e_median": 17.78,
-  "color_delta_e_mean": 21.93,
+  "silhouette_iou": 0.9286,
+  "color_delta_e_median": 17.68,
+  "color_delta_e_mean": 22.01,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "back": {
   "reference": "04_Morfi_espalda.png",
-  "silhouette_iou": 0.9387,
-  "color_delta_e_median": 7.27,
-  "color_delta_e_mean": 12.4,
+  "silhouette_iou": 0.944,
+  "color_delta_e_median": 7.43,
+  "color_delta_e_mean": 12.99,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "profile_right": {
   "reference": "05_Morfi_perfil_derecho.png",
-  "silhouette_iou": 0.9072,
-  "color_delta_e_median": 11.93,
-  "color_delta_e_mean": 19.56,
+  "silhouette_iou": 0.9117,
+  "color_delta_e_median": 11.09,
+  "color_delta_e_mean": 17.71,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "three_quarter_front": {
   "reference": "06_Morfi_tres_cuartos_frontal.png",
-  "silhouette_iou": 0.9115,
-  "color_delta_e_median": 11.81,
-  "color_delta_e_mean": 16.54,
+  "silhouette_iou": 0.9055,
+  "color_delta_e_median": 12.08,
+  "color_delta_e_mean": 17.36,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "three_quarter_back": {
   "reference": "07_Morfi_tres_cuartos_posterior.png",
-  "silhouette_iou": 0.8921,
-  "color_delta_e_median": 7.9,
-  "color_delta_e_mean": 16.47,
+  "silhouette_iou": 0.895,
+  "color_delta_e_median": 7.77,
+  "color_delta_e_mean": 16.9,
   "note": "reference mask from scripts/ref_masks.py (BiRefNet); camera and pose per view from config camera_views / view_poses; Delta E inside the shared silhouette"
  },
  "parts": {
   "sudadera": {
    "reference": "08_Morfi_sudadera.png",
-   "silhouette_iou": 0.8573,
-   "color_delta_e_median": 6.44
+   "silhouette_iou": 0.8697,
+   "color_delta_e_median": 6.6
   },
   "playera": {
    "reference": "09_Morfi_playera.png",
-   "silhouette_iou": 0.9387,
-   "color_delta_e_median": 7.3
+   "silhouette_iou": 0.9381,
+   "color_delta_e_median": 7.29
   },
   "tenis": {
    "reference": "10_Morfi_tenis.png",
@@ -59,8 +59,8 @@
   },
   "lentes": {
    "reference": "11_Morfi_lentes.png",
-   "silhouette_iou": 0.7566,
-   "color_delta_e_median": 3.2
+   "silhouette_iou": 0.7474,
+   "color_delta_e_median": 3.25
   },
   "cubos": {
    "reference": "12_Morfi_tres_cubos.png",
@@ -74,8 +74,8 @@
   },
   "cuerpo_base": {
    "reference": "14_Morfi_cuerpo_base.png",
-   "silhouette_iou": 0.9397,
-   "color_delta_e_median": 15.51
+   "silhouette_iou": 0.94,
+   "color_delta_e_median": 15.84
   }
  }
 }

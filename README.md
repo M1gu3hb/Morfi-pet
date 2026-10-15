@@ -125,7 +125,9 @@ Funciones:
 - **Ropa y accesorios** (mostrar/ocultar, preset "cuerpo base"), fondo claro/oscuro/transparente, modos arcilla y alambre, animaciones (Neutral, Hero, Idle, Caminar, Correr, Saludar), captura PNG al tamaño de las referencias (1145×1374, mismo encuadre) y descarga del GLB.
 - **Parámetros de URL**: `?model=…` para otro GLB, `?shading=pbr`, `?lowpower=1` para equipos sin GPU, `?clean=1` para ocultar el panel.
 
-Medir el shader contra las fotos: `npm run look-eval` (renderiza las 6 tomas en `work/look/eval/`) y `python3 scripts/eval_look.py` (ΔE por vista).
+La piel se deforma con cuaterniones duales (`web/src/dqskin.ts`), como el "Preserve Volume" de Blender con el que se pesó el rig; `?dq=0` usa la mezcla lineal de three.js.
+
+Medir el shader contra las fotos: `npm run look-eval` (renderiza las 6 tomas en `work/look/eval/`) y `python3 scripts/eval_look.py` (ΔE por vista). Revisar poses y animaciones como las deforma el visor: `node scripts/pose-shots.mjs <carpeta> '[["Wave", 1.0, 0, 5, 1.6, "saludo"]]'` (animación, segundo, acimut, elevación, distancia, nombre).
 
 ## Uso en otras herramientas
 

@@ -24,7 +24,11 @@ COLS = 6
 # its iris always faces the camera: its measured ratio is blotchy and coloured
 # (rainbow fringes on the sclera). It keeps only the smooth part, in grey.
 SMOOTH_GREY = {'M_Eye'}
-CHROMA = 0.3  # largest colour shift (log2) from a material's measured colour correction
+# Materials whose colour correction is held toward the rim and within CHROMA of
+# it (none now: the colour variation measured on the photos is real, holding it
+# cost 1.5-2.5 dE; the pink edge of the face is handled in the shader, look.ts)
+RIM_GREY = set()
+CHROMA = 0.3  # largest colour shift (log2) from the head's measured colour correction
 
 
 def fill(G, w):
@@ -115,7 +119,8 @@ def main():
             F = np.clip(np.repeat(F.mean(-1, keepdims=True), 3, -1), LO, HI)
         else:
             F = np.clip(smooth_fit(G, n, N), LO, HI)
-            F = rim_grey(F, n, N)
+            if name.split('#')[0] in RIM_GREY:
+                F = rim_grey(F, n, N)
         enc = np.clip((F - LO) / (HI - LO), 0, 1)
         tiles.append((name, (enc[::-1] * 255 + 0.5).astype(np.uint8)))  # image rows top-down
         info[name] = {'tile': len(tiles) - 1, 'samples': int(n.sum())}

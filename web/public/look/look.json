@@ -8,59 +8,59 @@
  "materials": {
   "M_Brow": {
    "tile": 0,
-   "samples": 3221
+   "samples": 3085
   },
   "M_Eye": {
    "tile": 1,
-   "samples": 60095
+   "samples": 59500
   },
   "M_GlassesFrame": {
    "tile": 2,
-   "samples": 61731
+   "samples": 67977
   },
   "M_Head": {
    "tile": 3,
-   "samples": 1115263
+   "samples": 1110661
   },
   "M_Head#2": {
    "tile": 4,
-   "samples": 109120
+   "samples": 111153
   },
   "M_Hoodie": {
    "tile": 5,
-   "samples": 528416
+   "samples": 516565
   },
   "M_HoodieHem": {
    "tile": 6,
-   "samples": 22430
+   "samples": 22484
   },
   "M_HoodieRib": {
    "tile": 7,
-   "samples": 37882
+   "samples": 43483
   },
   "M_ShoeBlue": {
    "tile": 8,
-   "samples": 14527
+   "samples": 14705
   },
   "M_ShoeLeather": {
    "tile": 9,
-   "samples": 74548
+   "samples": 74417
   },
   "M_ShoeSole": {
    "tile": 10,
-   "samples": 66009
+   "samples": 66404
   },
   "M_ShoeStrap": {
    "tile": 11,
-   "samples": 15735
+   "samples": 15725
   },
   "M_Skin": {
    "tile": 12,
-   "samples": 209364
+   "samples": 212360
   },
   "M_Tshirt": {
    "tile": 13,
-   "samples": 39198
+   "samples": 39312
   }
  },
  "shadow": 0.55,

@@ -86,7 +86,10 @@ uniform float refExposure;`)
   muv = clamp( muv, 0.5 / 64.0, 1.0 - 0.5 / 64.0 );
   vec3 enc = texture2D( refAtlas, refTile.xy + muv * refTile.zw ).rgb;
   vec3 enc2 = texture2D( refAtlas, refTile2.xy + muv * refTile2.zw ).rgb;
-  float tone = smoothstep( 0.08, 0.16, diffuseColor.r / max( diffuseColor.b, 1e-4 ) );
+  // the blue tile only on pure blue texels: its highlights are much redder
+  // than blue (they lighten a dark blue) and turned the lighter texels at the
+  // edge of the celeste face pink
+  float tone = smoothstep( 0.05, 0.10, diffuseColor.r / max( diffuseColor.b, 1e-4 ) );
   vec3 ratio = exp2( mix( enc, enc2, tone ) * refLog.y + refLog.x );
   float sh = 1.0;
   #if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0

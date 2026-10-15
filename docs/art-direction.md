@@ -227,3 +227,31 @@ Medido sobre los renders finales de la ronda 3 con las cámaras y poses calibrad
 - Láminas: playera 0.928 → 0.939 (ΔE 8.3 → 7.3), sudadera 0.864 → 0.857.
 - Visor web con el shader de las fotos: ΔE mediano 4.6–9.2, frente a 7.3–17.8 de los renders Cycles.
 - Pendiente: en 02 el brazo se abre un poco y deja un hueco blanco bajo la axila. En el modelo, con el brazo más pegado, solo queda el pliegue (`validation.md` §7.4).
+
+## 13. Calce con las referencias (ronda 11: cara de los perfiles, patillas, manos, saludo y visor)
+
+1. **Cara de los perfiles: el hocico sale hacia adelante.** En 03 y 05 la parte celeste de abajo forma un abultado redondo bajo los lentes: la boca abierta queda en el borde del perfil y la barbilla se curva hacia el cuello. En el modelo ese frente era plano. Medido fila por fila contra las máscaras de 03/05, el frente de la cara quedaba 16–37 px detrás desde los lentes hacia abajo, y la barbilla 73–89 px. Hay tres causas y tres arreglos:
+   - **Relieve de la trampa de cámara.** La trampa (§11.2) dejaba solo el 35 % del relieve de toda la cara, para que el ojo quedara bajo su lente. Ahora ese 35 % se aplica solo a los ojos y a la piel que los rodea. El resto de la cara conserva el 90 % y los lentes el 75 % (`face_cheat.depth_face`, `depth_glasses`, `facecheat.point_depth`, usado también por el trazado de la máscara celeste y por los morphs del visor).
+   - **Hocico.** El relieve del hocico es más fuerte y está más abajo (3.2 cm, centro a z −0.165, `face.muzzle_*`). Como los lentes se apoyan en la cara (se buscan por rayos detrás del aro), también avanzan y quedan por delante de la mejilla, como en 03.
+   - **Boca.** En el dibujo el ojo y el lente miran a la cámara, pero la boca está en el borde del perfil, abierta. Con el giro común de la cara se veía de canto, como una línea. Alrededor de la boca la cara gira 1.5 veces el ángulo de la toma (`face_cheat.mouth_theta`, `facecheat.point_theta`), y se probaron 0, 0.35, 1.6 y 2.2: con 1.5 la boca se ve abierta en el borde, y con más se deforma.
+   - Resultado: el frente de la cara queda a 0–12 px de 03/05 y la barbilla a 30–44 px. IoU de los perfiles 0.923 → 0.929 y 0.907 → 0.912.
+2. **Patillas de los lentes.** En 03, a lo largo de la patilla, la banda oscura mide 41–51 px de alto y la del modelo medía 21–27. Además la patilla del modelo terminaba 60 px más atrás y bajaba más. Ahora la patilla es una banda plana de acetato (`temple_sdf`):
+   - mide 5.2 cm de alto adelante y 4.2 cm atrás, con 1.6 cm de grosor y bordes suaves;
+   - termina en una punta redonda, a la altura y el largo de 03 (en 03 termina a 725 px; en el render, 732);
+   - la montura de frente no cambió: ya medía lo mismo que en 02 (aberturas de 230×205 px contra 235×207, puente de 107 contra 109).
+3. **Manos.** En 02 y 06 bajo el puño asoma todo el mitón, unos 155 px. En el modelo el puño tapaba casi la mitad (asomaban unos 95 px) y lo que quedaba se veía como una paleta. Ahora:
+   - el puño termina 2 cm más arriba en el antebrazo (`clothes.cuff_end`);
+   - la palma, los dedos y el pulgar son algo más llenos (`body.hand`).
+4. **Brazo del frente.** En 02 se ve un hueco blanco entre la manga y el costado. A pedido, el brazo de la toma de frente se abre 4–5° (`fit_view_poses.POSE_FIX`). El hueco se ve como en 02, pero la mano queda un poco más alta: el brazo dibujado en 02 es algo más largo (IoU del frente 0.944 → 0.936).
+5. **Saludo.** La cabeza mide 0.65 m de ancho y el brazo es corto, y la mano entraba hasta 3 cm en el costado de la cabeza. Las direcciones del brazo se buscaron sobre el rig midiendo la distancia entre las mallas evaluadas (`scripts/check_hand_head.py`). Durante todo el ciclo la mano queda ahora entre 0.9 y 3.7 cm por fuera de la cabeza.
+6. **Visor web.**
+   - **Ojos.** El giro "ojos a cámara" se acumulaba cuadro a cuadro: three.js solo reescribe un hueso cuando su valor animado cambia. Los ojos terminaban en blanco o con un anillo gris. Ahora vuelven a su pose después de cada cuadro y giran 28° como máximo.
+   - **Piel con cuaternión dual.** El rig se hizo para "Preserve Volume" de Blender. Con la mezcla lineal de three.js, la manga levantada perdía volumen y se estiraba como un tubo. `web/src/dqskin.ts` deforma con cuaterniones duales: personaje, sombras y sombra de contacto.
+   - **Borde rosa de la cara.** El sombreado medido del azul tiene brillos mucho más rojos que azules, porque aclaran un azul oscuro, y teñía de rosa los texeles del borde de la cara celeste. Ese sombreado solo se aplica ahora al azul puro. Limitar el color del sombreado en todos los materiales también lo quitaba, pero costaba 1.5–2.5 ΔE contra las fotos, porque esa variación de color es real.
+
+**Números de la ronda 11** (render final contra la ronda 10; detalle en `validation.md` §1):
+- Perfiles: IoU 0.923 → 0.929 y 0.907 → 0.912. ΔE del perfil derecho 11.9 → 11.1.
+- Frente: 0.944 → 0.936, por el brazo más abierto.
+- Espalda: 0.939 → 0.944. 3/4: 0.912 → 0.906 y 0.892 → 0.895.
+- Láminas: sudadera 0.857 → 0.870, playera 0.938, lentes 0.747.
+- Visor "fiel a la foto": ΔE 4.5–9.2 por vista. Cycles da 7.4–17.7.

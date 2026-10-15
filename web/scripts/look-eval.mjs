@@ -16,14 +16,16 @@ const server = await preview({ root: web, logLevel: 'error', preview: { port: 43
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const views = ['front', 'three_quarter_front', 'profile_left', 'profile_right', 'back', 'three_quarter_back'];
 const shaders = (process.argv[2] ?? 'ref').split(',');
+const extra = process.argv[3] ?? '';
+const outName = process.argv[4] ?? '';
 try {
   for (const sh of shaders) {
-    const out = join(repo, 'work', 'look', 'eval', sh);
+    const out = join(repo, 'work', 'look', 'eval', outName || sh);
     mkdirSync(out, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1145, height: 1374 }, deviceScaleFactor: 1 });
     page.on('pageerror', (e) => console.log('[pageerror]', e.message));
     page.on('console', (m) => { if (m.type() === 'error') console.log('[console]', m.text()); });
-    await page.goto(`http://localhost:4321/?clean=1&exact=1&lowpower=1&shading=${sh}`);
+    await page.goto(`http://localhost:4321/?clean=1&exact=1&lowpower=1&shading=${sh}${extra}`);
     await page.waitForFunction(() => window.__morfiReady === true, null, { timeout: 600000 });
     for (const v of views) {
       await page.evaluate((vv) => window.__morfiSetView(vv), v);
