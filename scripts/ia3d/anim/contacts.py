@@ -340,6 +340,15 @@ def _solve_press_frame(rig, fcs, bone, spec, hand, tip_mask, f):
     return n
 
 
+def _dedup(pts):
+    out = []
+    for f, v in pts:
+        if out and f <= out[-1][0]:
+            continue
+        out.append((f, v))
+    return out
+
+
 def _press_track(rig, action, clip, side, specs):
     """Rebuild hand_ik.<side> location: action path -> hover/press path -> action path.
 
@@ -367,8 +376,23 @@ def _press_track(rig, action, clip, side, specs):
             keys += [(f0 - r, L0 + hover), (f0, L0), (f1, L1), (f1 + r, L1 + hover)]
         keys.sort(key=lambda k: k[0])
         tap = np.stack([C.keys(n_frames, [(f, v[i]) for f, v in keys]) for i in range(3)], 1)
-        a, b = keys[0][0], keys[-1][0]
-        w = C.keys(n_frames, [(0, 0.0), (a - LEAD, 0.0), (a, 1.0), (b, 1.0), (b + LEAD, 0.0), (n_frames - 1, 0.0)])
+        # the tap path owns the frames around each contact only (merged when contacts are close):
+        # in a long performance the same hand also gestures between them on its own targets
+        w = np.zeros(n_frames)
+        for spec in specs:
+            f0, f1 = spec["frames"]
+            r = spec.get("ramp", 6)
+            pts = [(f0 - r - LEAD, 0.0), (f0 - r, 1.0), (f1 + r, 1.0), (f1 + r + LEAD, 0.0)]
+            pts = [(min(max(f, 0), n_frames - 1), v) for f, v in pts]
+            if pts[0][0] > 0:
+                pts = [(0, 0.0)] + pts
+            if pts[-1][0] < n_frames - 1:
+                pts = pts + [(n_frames - 1, 0.0)]
+            w = np.maximum(w, C.keys(n_frames, _dedup(pts)))
+        for i, spec in enumerate(specs[:-1]):         # bridge contacts that are close together
+            gap = specs[i + 1]["frames"][0] - spec["frames"][1]
+            if gap <= 2 * (spec.get("ramp", 6) + LEAD):
+                w[spec["frames"][1]:specs[i + 1]["frames"][0] + 1] = 1.0
         track = orig * (1 - w[:, None]) + tap * w[:, None]
         for f in range(n_frames):
             _set_loc(fcs, f, track[f])
@@ -380,6 +404,41 @@ def _press_track(rig, action, clip, side, specs):
             for f in range(f0, f1 + 1):
                 _solve_press_frame(rig, fcs, bone, spec, hand, tip_mask, f)
             contact.append((_get_loc(fcs, f0), _get_loc(fcs, f1)))
+
+
+def smooth_touches(rig, action, clip, win=5, max_step=0.015, iters=6):
+    """A hand resting on Morfi is solved frame by frame; on his curved, breathing body the solver
+    can land on a different spot from one frame to the next (a jittering hand). Median + mean
+    filter the target over each touch, then let the hand rest on the skin again without sliding
+    (each correction capped, so a nearest point on the wrong side never throws the hand)."""
+    from . import rigmap
+    rigmap.assign(rig, action)
+    h = win // 2
+    for spec in getattr(clip, "contacts", []):
+        if "touch" not in spec:
+            continue
+        bone = f"hand_ik.{spec['side']}"
+        fcs = _loc_curves(action, bone)
+        hand = bpy.data.objects[f"Hand_{spec['side']}"]
+        f0, f1 = spec["frames"]
+        L = np.array([_get_loc(fcs, f) for f in range(f0, f1 + 1)])
+        med = np.array([np.median(L[max(0, i - h):i + h + 1], 0) for i in range(len(L))])
+        sm = np.array([med[max(0, i - h):i + h + 1].mean(0) for i in range(len(L))])
+        for k, f in enumerate(range(f0, f1 + 1)):
+            _set_loc(fcs, f, sm[k])
+        _refresh(fcs)
+        for f in range(f0, f1 + 1):
+            _frame(f)
+            for _ in range(iters):
+                err, _n, sd = _touch_error(spec, hand, slide_gain=0.0)
+                if abs(sd) < 3e-4:
+                    break
+                norm = np.linalg.norm(err)
+                if norm > max_step:
+                    err = err * (max_step / norm)
+                _set_loc(fcs, f, _get_loc(fcs, f) + np.linalg.solve(_jacobian(rig, bone), err))
+                _refresh(fcs)
+                _frame(f)
 
 
 # ---------------------------------------------------------------- supports

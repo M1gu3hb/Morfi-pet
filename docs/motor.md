@@ -125,6 +125,19 @@ Cada acción guarda **todos** los huesos y gestos (en reposo si no los usa): las
 - `resolve_body()`: en todas las acciones con IK, una mano que entra en la cabeza o el torso se empuja hacia afuera
   por la normal de la superficie hasta apenas tocar.
 - `clamp_reach()`: el tope de alcance.
+- `smooth_touches()`: en tomas largas, una mano apoyada en Morfi se resuelve cuadro por cuadro y puede caer en un
+  punto distinto de un cuadro al siguiente (tiembla). La pasada la filtra (mediana + media) y la vuelve a apoyar en
+  la piel sin deslizarla.
+
+### Actuaciones largas (`performance.py`)
+
+Para videos: una sola toma continua (no acciones de 2-7 s). `Performance(n)` junta la vida de fondo, la boca
+sincronizada con la voz real (`speak(lines)`, letras de la alineación de ElevenLabs + envolvente de audio, más
+asentimientos y cejas en las palabras con acento) y los gestos en el cuadro de la palabra que les toca. Cada lista
+por mano y por cara se aplica una sola vez al construir (`build()`), porque los canales del clip se suman.
+Ejemplo completo: `videos/morfi-pos/tools/choreo.py` (fuera del repo), que después se hornea con `scene.py bake`:
+bake → `clamp_reach` → `resolve_body` → `contacts.solve` → `smooth_touches` → `resolve_body` otra vez fuera de
+los contactos → `verify`.
 
 Ver `anim/actions_props.py` (`Tablet`, `Calculator`): son la plantilla para acciones con objetos.
 
