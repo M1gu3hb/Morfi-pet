@@ -21,15 +21,17 @@ PALM_D = 0.045          # wrist -> palm centre (m)
 # right index poke: a steep finger (forward-down-left) with the palm down towards him, so the
 # curled fingers stay above the surface and only the index pad meets it. (Thumb on top would
 # put the curled fingers under the index.)
-TAP_FINGERS = (0.55, -0.45, -0.70)
+TAP_FINGERS = (0.60, -0.55, -0.58)
 TAP_PALM = (0.25, 0.45, -0.85)
 # left palm up under the prop's left edge, fingers to his right (a waiter's carry): the
 # wrist and the thick sleeve cuff stay outside the prop, beside it
 HOLD_FINGERS = (-0.85, -0.5, 0.0)
 SHOULDER_FWD = 24
 ELBOW_DROP = -0.30      # pole target lowered while tapping (m)       # shoulders forward (deg) while holding: ~5 cm more reach
-# nodding swings the big head's chin down onto the hands: look down mostly with the eyes
-NOD = 0
+# nodding swings the big head's chin down onto the tapping hand: a small nod, a tilt and a turn
+# towards the prop, and the eyes do the rest
+NOD_WORK = 3.5
+TILT_WORK = 5.0
 
 
 def _unit(v):
@@ -96,6 +98,13 @@ def _taps(c, side, target, presses, loc, rot, fingers, palm, start, ik_in, ik_ou
     return [(0, "relaxed"), (ik_in - 8, shape), (ik_out - 8, shape)]
 
 
+def bpy_free_key(name, loc, rot):
+    """World position of a calculator key (Prop_Calc_Key_<row><col>) without Blender."""
+    r, col = int(name[-2]), int(name[-1])
+    w, h = 0.085, 0.125                                              # build_controls.CALC
+    return prop_world(((col - 1) * w * 0.28, -0.02, h * 0.12 - r * h * 0.155), loc, rot)
+
+
 def tablet():
     """Tutorial on a tablet resting on his left palm: looks at it, taps three spots explaining,
     then looks up at the viewer: '¿ves? así de fácil' (7 s)."""
@@ -114,7 +123,7 @@ def tablet():
     _hold(c, "L", "Prop_Tablet", loc, rot, palm_at=(-0.086, -0.015), fingers=HOLD_FINGERS,
           frames=(0, n - 1), half_t=0.004)
     # right index: three presses on the screen (prop-local x, z; +x is his right, +z away)
-    hand_r = _taps(c, "R", "Prop_Tablet_Screen", [(46, (0.040, -0.020)), (82, (0.012, 0.004)), (116, (0.052, 0.014))],
+    hand_r = _taps(c, "R", "Prop_Tablet_Screen", [(46, (0.045, 0.000)), (82, (0.012, 0.010)), (116, (0.052, 0.018))],
                    loc, rot, fingers=TAP_FINGERS, palm=TAP_PALM, start=14, ik_in=34, ik_out=140)
     # FK right arm after the taps: open hand towards the tablet, "¿ves?"
     c.arm_fwd("R", [(0, 0), (140, 0), (158, 18), (n - 1, 15)])
@@ -122,10 +131,12 @@ def tablet():
     c.palm("R", [(0, 0), (140, 0), (158, 55), (n - 1, 50)])
     c.hand("R", hand_r + [(144, "relaxed"), (158, "open"), (n - 1, "open")])
     # head and eyes on the screen while working, then to the viewer
-    c.add("head.rx", [(0, NOD - 2), (24, NOD), (124, NOD), (144, 0), (n - 1, -2)])
-    c.add("head.rz", [(0, 4), (24, 6), (124, 6), (144, 0), (n - 1, 0)])
-    c.prop("gaze_y", [(0, -0.6), (24, -0.9), (124, -0.9), (142, 0.0), (n - 1, 0.0)])
-    c.prop("gaze_x", [(0, 0.1), (40, 0.05), (78, 0.15), (112, 0.0), (130, 0.0)])
+    # he looks at what he is doing: the screen, each spot as he taps it, then at the viewer
+    spot = lambda x, z: prop_world((x, 0.0, z), loc, rot)  # noqa: E731
+    c.look_at([(0, None), (16, centre), (40, spot(0.045, 0.000)), (76, spot(0.012, 0.010)),
+               (110, spot(0.052, 0.018)), (126, centre), (144, None), (n - 1, None)], max_nod=NOD_WORK)
+    c.add("head.ry", [(0, 0), (20, TILT_WORK), (124, TILT_WORK), (144, 0)])   # a curious tilt towards it
+    c.add("chest.rx", [(0, 0), (20, 2), (124, 2), (144, 0)])            # leans into the work
     for t in (46, 82, 116):
         c.add("head.ry", np.exp(-((np.arange(n) - t - 2) / 4.0) ** 2) * 2.5)
     c.prop("mouth_open", [(0, -0.3), (52, -0.3), (56, 0.4), (62, -0.1), (68, 0.35), (74, -0.3), (90, 0.4),
@@ -163,10 +174,12 @@ def calculator():
     c.forearm_in("R", [(0, 0), (124, 0), (140, 18), (n - 1, 18)])
     c.palm("R", [(0, 0), (124, 0), (140, 60), (n - 1, 60)])
     c.hand("R", hand_r + [(126, "relaxed"), (138, "thumbs_up"), (n - 1, "thumbs_up")])
-    c.add("head.rx", [(0, NOD - 2), (18, NOD - 6), (112, NOD - 6), (132, 0), (n - 1, -2)])   # chin up off the sleeve
-    c.add("head.rz", [(0, 6), (18, 9), (112, 9), (132, 0), (n - 1, 0)])
-    c.prop("gaze_y", [(0, -0.6), (18, -0.9), (112, -0.9), (130, 0.0), (n - 1, 0.0)])
-    c.prop("gaze_x", [(0, 0.2), (18, 0.25), (112, 0.25), (130, 0.0)])
+    # eyes on the keys he presses (head down as far as his chin allows), then at the viewer
+    key_at = lambda k: np.array(bpy_free_key(k, loc, rot))  # noqa: E731
+    c.look_at([(0, None), (14, centre)] + [(t - 2, key_at(k)) for t, k in keys] + [(112, centre), (130, None),
+                                                                                   (n - 1, None)], max_nod=NOD_WORK)
+    c.add("head.ry", [(0, 0), (18, TILT_WORK), (112, TILT_WORK), (132, 0)])   # a curious tilt towards it
+    c.add("chest.rx", [(0, 0), (18, 2), (112, 2), (132, 0)])            # leans into the work
     for t, _ in keys:
         c.add("head.ry", np.exp(-((np.arange(n) - t - 2) / 3.0) ** 2) * 1.5)
     c.expr([(0, "neutral"), (16, "thinking", 0.6), (110, "thinking", 0.6), (128, "joy"), (n - 1, "happy")])

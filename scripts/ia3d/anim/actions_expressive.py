@@ -125,37 +125,45 @@ def idea():
 
 
 def think():
-    """Fist under the chin, the other arm holding the elbow, eyes searching (5 s)."""
+    """Index finger on the chin (really resting on it, like in the reference shots), the other
+    arm holding the elbow, eyes searching, the head weighing the idea (5 s)."""
     n = 150
     c = Clip(n)
-    c.life(seed=141, blinks=[70, 122], hands=False, sway=0.4)
-    c.add("chest.rx", [(0, 0), (16, 6), (130, 6), (146, 0)])
-    c.add("neck.rx", [(0, 0), (16, 4), (130, 4), (146, 0)])
-    c.add("head.rx", [(0, 0), (16, 5), (60, 4), (90, 6), (130, 5), (146, 0)])
-    c.add("head.ry", [(0, 0), (16, -5), (60, -3), (90, -6), (130, -4), (146, 0)])
-    chin = (-0.07, -0.20, 0.40)          # fist under the chin: resolve_body() sets the exact touch
-    c.add("shoulder.R.rz", [(0, 0), (16, 18), (132, 18), (146, 0)])   # shoulder forward to reach the chin
-    c.reach("R", [(0, None), (6, None), (18, chin), (132, chin), (144, None)])
-    rx, ry, rz = orient_keys("R", [(0, (0.15, -0.25, 1.0), (0.3, 1.0, 0.0))])
+    c.contacts = []
+    c.life(seed=141, blinks=[70, 122], hands=False, sway=0.8)
+    c.add("chest.rx", [(0, 0), (16, 5), (130, 5), (146, 0)])
+    # the chin rests on the fist: the head weighs the idea with small tilts, not big moves
+    c.add("neck.rx", [(0, 0), (16, 2), (130, 2), (146, 0)])
+    c.add("head.rx", [(0, 0), (16, 2), (60, 1), (90, 2), (130, 2), (146, 0)])
+    c.add("head.ry", [(0, 0), (16, -4), (60, -2), (90, -4), (130, -3), (146, 0)])
+    c.add("head.rz", [(0, 0), (20, 5), (58, 6), (66, -4), (100, -5), (108, 3), (130, 3), (146, 0)])
+    c.add("shoulder.R.rz", [(0, 0), (16, 26), (132, 26), (146, 0)])   # shoulder forward and up to reach the chin
+    c.shrug("R", [(0, 0), (16, 8), (132, 8), (146, 0)])
+    near = (-0.06, -0.16, 0.44)                                        # the hand comes up in front
+    c.reach("R", [(0, None), (6, None), (18, near), (132, near), (144, None)])
+    rx, ry, rz = orient_keys("R", [(0, (0.12, -0.15, 1.0), (0.35, 0.9, 0.1))])   # index up, palm to him
     c.reach_rot("R", rx, ry, rz)
-    c.hand("R", [(0, "relaxed"), (12, "fist"), (132, "fist"), (144, "relaxed")])
+    c.hand("R", [(0, "relaxed"), (12, "point"), (132, "point"), (144, "relaxed")])
+    c.contacts.append({"side": "R", "touch": "head", "point": (-0.03, -0.15, 0.53), "frames": (24, 126),
+                       "ramp": 8, "region": ["index.02.R", "index.03.R"]})
     c.elbow("L", [(0, 0), (14, 0), (26, 72), (130, 72), (144, 0)])
     c.forearm_in("L", [(0, 0), (14, 0), (26, 30), (130, 30), (144, 0)])
     c.hand("L", [(0, "relaxed"), (24, "grip"), (130, "grip"), (144, "relaxed")])
     c.expr([(0, "neutral"), (16, "thinking"), (134, "thinking"), (148, "happy")])
     c.prop("gaze_x", [(0, 0), (20, 0.45), (58, 0.45), (64, -0.4), (100, -0.4), (106, 0.3), (130, 0.3), (140, 0)],
            scale=0.6)
-    c.prop("mouth_side", [(0, 0), (20, 0.6), (60, 0.6), (66, -0.4), (100, -0.4), (108, 0.5), (130, 0.5), (140, 0)],
-           scale=0.4)
+    c.prop("mouth_side", [(0, 0), (20, 0.8), (60, 0.8), (66, -0.6), (100, -0.6), (108, 0.7), (130, 0.7), (140, 0)],
+           scale=0.6)
     c.add("hips.lz", -0.004)
     c.secondary()
     return c
 
 
 def laugh():
-    """Laughs: eyes shut, head back, bouncing 'ja ja ja', a hand on the belly (4 s)."""
+    """Laughs: eyes shut, head back, bouncing 'ja ja ja', a hand resting on the belly (4 s)."""
     n = 120
     c = Clip(n)
+    c.contacts = []
     c.life(seed=151, hands=False, breath=0.3)
     f = np.arange(n)
     env = C.keys(n, [(0, 0), (10, 0), (18, 1), (92, 1), (108, 0), (n - 1, 0)])
@@ -163,14 +171,18 @@ def laugh():
     c.add("hips.lz", -0.006 * ha - 0.004)
     c.add("chest.rx", -4 * ha * 0.6)
     c.add("head.rx", C.delay(-5 * ha, 1) + C.keys(n, [(0, 0), (14, -8), (96, -6), (112, 0)]))
+    c.add("head.rz", C.delay(3 * ha, 2) * np.sin(2 * np.pi * f / 40))   # the laugh rolls the head a little
     for s in ("L", "R"):
         c.shrug(s, 4 * ha)
     c.prop("mouth_open", 0.35 * ha)
     c.expr([(0, "happy"), (12, "laugh"), (96, "laugh"), (112, "joy"), (n - 1, "happy")])
-    belly = (0.08, -0.16, 0.31)          # palm on the belly: resolve_body() keeps it on the surface
-    c.reach("L", [(0, None), (10, None), (20, belly), (96, belly), (110, None)])
-    rx, ry, rz = orient_keys("L", [(0, (-0.5, -0.2, 0.25), (0.0, 1.0, 0.0))])
+    near = (0.15, -0.12, 0.31)
+    c.reach("L", [(0, None), (10, None), (20, near), (96, near), (110, None)])
+    rx, ry, rz = orient_keys("L", [(0, (-0.5, -0.2, 0.25), (-0.3, 0.9, 0.0))])
     c.reach_rot("L", rx, ry, rz)
+    c.add("shoulder.L.rz", [(0, 0), (16, -15), (96, -15), (112, 0)])
+    c.contacts.append({"side": "L", "touch": "torso", "point": (0.12, -0.085, 0.30), "frames": (24, 94), "ramp": 8,
+                       "region": ["hand.L", "index.01.L", "middle.01.L", "ring.01.L"]})
     c.hand("L", [(0, "relaxed"), (18, "hold_flat"), (98, "hold_flat"), (110, "relaxed")])
     c.hand("R", [(0, "relaxed"), (18, "open"), (98, "open"), (110, "relaxed")])
     c.arm_raise("R", C.keys(n, [(0, 0), (16, 22), (96, 22), (112, 0)]) + 6 * ha)
@@ -180,22 +192,30 @@ def laugh():
 
 
 def surprised():
-    """Startled: a little jump back, hands to the cheeks, mouth 'o', then a smile (3 s)."""
-    n = 90
+    """Startled: a little jump back, both palms to the cheeks (they really rest on the face),
+    mouth 'o', then a relieved smile (3.5 s)."""
+    n = 105
     c = Clip(n)
+    c.contacts = []
     c.life(seed=161, hands=False)
-    c.add("hips.ly", [(0, 0), (6, 0), (11, 0.025), (70, 0.02), (86, 0)])
-    c.add("hips.lz", [(0, -0.004), (5, -0.012), (10, 0.010), (16, -0.002), (70, -0.004)])
-    c.add("spine.rx", [(0, 0), (8, -8), (16, -5), (70, -4), (86, 0)])
-    c.add("head.rx", [(0, 0), (8, -6), (18, -3), (70, -2), (86, 0)])
-    for s, x in (("L", 0.33), ("R", -0.33)):
-        tgt = (x, -0.12, 0.505)
-        c.reach(s, [(0, None), (6, None), (14, tgt), (68, tgt), (82, None)])
-        rx, ry, rz = orient_keys(s, [(0, UP, (-np.sign(x), 0.0, 0.0))])
+    c.add("hips.ly", [(0, 0), (6, 0), (11, 0.025), (78, 0.02), (96, 0)])
+    c.add("hips.lz", [(0, -0.004), (5, -0.012), (10, 0.010), (16, -0.002), (78, -0.004)])
+    c.add("spine.rx", [(0, 0), (8, -6), (16, -3), (78, -2), (96, 0)])
+    c.add("head.rx", [(0, 0), (8, -5), (18, -2), (78, -1), (96, 0)])
+    c.add("head.ry", [(0, 0), (20, 0), (40, 4), (60, -4), (78, 0)])          # 'no puede ser' shake, slow
+    for s, sx in (("L", 1.0), ("R", -1.0)):
+        c.add(f"shoulder.{s}.rz", [(0, 0), (10, -24 * sx), (80, -24 * sx), (96, 0)])
+        c.shrug(s, [(0, 0), (8, 10), (80, 8), (96, 0)])                  # shoulders up: a startle
+        near = (0.24 * sx, -0.14, 0.52)                                # beside the jaw
+        c.reach(s, [(0, None), (5, None), (14, near), (76, near), (90, None)])
+        fingers, palm = (0.32 * sx, -0.43, 0.84), (-0.5 * sx, 0.67, 0.55)   # up the cheek, palm on it
+        rx, ry, rz = orient_keys(s, [(0, fingers, palm)])
         c.reach_rot(s, rx, ry, rz)
-        # (no extra stretch: the IK reach is capped at contacts.MAX_REACH)
-        c.hand(s, [(0, "relaxed"), (12, "stop"), (70, "stop"), (82, "relaxed")])
-    c.expr([(0, "neutral"), (6, "surprised"), (50, "surprised"), (66, "joy"), (n - 1, "happy")])
+        c.contacts.append({"side": s, "touch": "head", "point": (0.212 * sx, -0.138, 0.582), "frames": (18, 72),
+                           "ramp": 6, "region": [f"hand.{s}", f"index.01.{s}", f"middle.01.{s}", f"ring.01.{s}",
+                                                 f"index.02.{s}", f"middle.02.{s}", f"ring.02.{s}"]})
+        c.hand(s, [(0, "relaxed"), (12, "open"), (76, "open"), (90, "relaxed")])
+    c.expr([(0, "neutral"), (6, "surprised"), (58, "surprised"), (76, "joy"), (n - 1, "happy")])
     c.prop("blink_L", [(0, 0), (3, 0), (5, 1), (7, 0)])
     c.prop("blink_R", [(0, 0), (3, 0), (5, 1), (7, 0)])
     c.secondary()
@@ -327,7 +347,7 @@ def shrug():
     """'No sé': shoulders up, palms up and out, head tilt, mouth to the side (2.5 s)."""
     n = 75
     c = Clip(n)
-    c.life(seed=221, hands=False)
+    c.life(seed=221, hands=False, sway=0.5)             # the hands are up beside the head
     for s in ("L", "R"):
         c.shrug(s, [(0, 0), (12, 0), (20, 9), (50, 8), (64, 0)])
         c.arm_raise(s, [(0, 0), (12, 0), (20, 27), (52, 25), (66, 0)])
@@ -335,7 +355,7 @@ def shrug():
         c.forearm_lift(s, [(0, 0), (14, 0), (22, 22), (52, 20), (66, 0)])
         c.palm(s, [(0, 0), (14, 0), (22, -70), (52, -70), (66, 0)])
         c.hand(s, [(0, "relaxed"), (18, "open"), (54, "open"), (66, "relaxed")])
-    c.add("head.ry", [(0, 0), (14, 0), (24, -6), (52, -5), (66, 0)])     # tilts away from the higher hand
+    c.add("head.ry", [(0, 0), (14, 0), (24, -3), (52, -3), (66, 0)])     # a small tilt
     c.add("head.rx", [(0, 0), (20, -3), (52, -2), (66, 0)])
     c.expr([(0, "neutral"), (16, "confused"), (54, "confused"), (70, "happy")])
     c.add("hips.lz", -0.004)

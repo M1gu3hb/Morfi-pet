@@ -7,6 +7,11 @@ Runs inside Blender after rigmap.bake(). A clip may declare
       a fingertip press: from f0 to f1 the pad of `tip` rests exactly on the target's front
       face (local -Y) at local (x, z) (None = the face centre, e.g. a calculator key).
       Between presses the finger hovers HOVER above the surface and comes straight down.
+  clip.contacts = [{"side": "R", "touch": "head", "point": (x, y, z), "region": [groups],
+                    "frames": (f0, f1), "ramp": 10}, ...]
+      the hand touches Morfi himself (a palm on the cheek, a fist under the chin): `point` is a
+      spot near the head / torso surface at rest; it rides with that bone, is projected on the
+      deformed skin every frame, and the hand `region` (vertex groups of Hand_<side>) rests on it.
   clip.supports = [{"side": "L", "prop": "Prop_Calc", "frames": (a, b)}, ...]
       a prop resting on a palm: the hand is moved along the prop's normal until its upper
       surface touches the prop's back face (local +Y) with no overlap. The hand target is a
@@ -20,10 +25,11 @@ from mathutils import Vector
 
 from . import curves as C
 
-HOVER = 0.020          # finger height above the surface between presses (m)
+HOVER = 0.015          # finger height above the surface between presses (m)
 LEAD = 8               # frames to blend from the action's own path into the tapping path
 ITER = 6               # Newton steps per frame (the hand moves rigidly with its IK target)
-TOUCH_TOL = 0.0015     # |gap| accepted as touching (m)
+TOUCH_TOL = 0.0015     # |gap| accepted as touching a prop (m)
+BODY_TOL = 0.003       # ... and Morfi's own soft skin (a fist under the chin, a palm on a cheek)
 PEN_TOL = 0.0010       # overlap accepted (m): skin compresses a little
 MAX_REACH = 1.08       # shoulder->wrist distance on IK, as a fraction of the rest arm length:
                        # Blender's IK stretch has no upper bound, so targets are pulled back to
@@ -73,7 +79,33 @@ def _front_face(ob):
     return M, min(ys), (M.to_3x3() @ Vector((0, -1, 0))).normalized()
 
 
+def _tip_groups(spec):
+    return tuple(spec["region"]) if "region" in spec else (spec["tip"],)
+
+
+def _tip_mask(hand, spec):
+    return _group_mask(hand, list(_tip_groups(spec)), 0.3 if "region" in spec else 0.5)
+
+
+def _body_target(spec, body_name="Morfi_Body"):
+    """Surface point and outward normal of Morfi's own head / torso nearest to the spec point
+    (the point is given at rest and carried by the head or chest bone)."""
+    from mathutils.bvhtree import BVHTree
+    rig = bpy.data.objects["Morfi_Rig"]
+    pb = rig.pose.bones["head" if spec["touch"] == "head" else "chest"]
+    M = rig.matrix_world @ pb.matrix @ pb.bone.matrix_local.inverted()
+    q = M @ Vector(spec["point"])
+    body = bpy.data.objects[body_name]
+    P = _eval_coords(body)
+    tree = BVHTree.FromPolygons([tuple(v) for v in P], _body_parts(body)[spec["touch"]])
+    loc, nrm, _, _ = tree.find_nearest(q)
+    n = np.array(nrm)
+    return np.array(loc), n / np.linalg.norm(n)
+
+
 def _target_point(spec):
+    if "touch" in spec:
+        return _body_target(spec)
     ob = bpy.data.objects[spec["target"]]
     M, y0, n = _front_face(ob)
     x, z = spec.get("local") or (0.0, 0.0)
@@ -172,7 +204,16 @@ def _body_parts(body):
         parts = {}
         for key, names, thr in (("head", {"head"}, 0.95), ("torso", {"hips", "spine", "chest"}, 0.8)):
             m = mask(names, thr)
-            parts[key] = [tuple(p.vertices) for p in body.data.polygons if all(m[i] for i in p.vertices)]
+            polys = [p for p in body.data.polygons if all(m[i] for i in p.vertices)]
+            if key == "torso":
+                # the open hoodie has inward-facing lining panels a few cm under its outside: keep
+                # the faces that look away from the spine, so inside / outside is decided right
+                def outward(p):
+                    c, nrm = p.center, p.normal
+                    radial = Vector((c.x, c.y - 0.03, 0.0))
+                    return radial.length < 1e-6 or nrm.dot(radial.normalized()) > 0.1
+                polys = [p for p in polys if outward(p)]
+            parts[key] = [tuple(p.vertices) for p in polys]
         _BODY_PARTS[body.name] = parts
     return _BODY_PARTS[body.name]
 
@@ -191,7 +232,7 @@ def _penetration(trees, H):
     return worst, normal
 
 
-def resolve_body(rig, action, n, body_name="Morfi_Body", margin=0.002):
+def resolve_body(rig, action, n, body_name="Morfi_Body", margin=0.002, sides=("L", "R"), skip=()):
     """Hands never inside Morfi's own head or torso: on every IK frame where a hand goes in,
     its target is pushed out along the surface normal until it only touches (+ margin).
     A fist under the chin or a palm on the belly then rests on the surface."""
@@ -201,9 +242,11 @@ def resolve_body(rig, action, n, body_name="Morfi_Body", margin=0.002):
     body = bpy.data.objects[body_name]
     parts = _body_parts(body)
     hands = {s: bpy.data.objects[f"Hand_{s}"] for s in ("L", "R")}
-    curves = {s: (_ik_curve(action, s), _loc_curves(action, f"hand_ik.{s}")) for s in ("L", "R")}
+    curves = {s: (_ik_curve(action, s), _loc_curves(action, f"hand_ik.{s}")) for s in sides}
     fixed = 0
     for f in range(n):
+        if any(a <= f <= b for a, b in skip):          # a press or a touch owns these frames
+            continue
         active = [s for s, (ik, _) in curves.items() if ik is not None and ik.evaluate(f) > 0.01]
         if not active:
             continue
@@ -250,10 +293,41 @@ def _press_error(spec, hand, tip_mask):
     return tangential - dmin * n, n, dmin
 
 
+def _touch_error(spec, hand, step=3, slide_gain=0.3):
+    """Touching Morfi himself: the hand's closest point (true distance to the curved skin, not to
+    a plane) goes onto the skin and nothing of the hand goes in; the contact slides towards the
+    chosen spot. Returns (correction, normal at the contact, signed gap)."""
+    from mathutils.bvhtree import BVHTree
+    S, _ = _body_target(spec)
+    body = bpy.data.objects["Morfi_Body"]
+    tree = BVHTree.FromPolygons([tuple(v) for v in _eval_coords(body)], _body_parts(body)[spec["touch"]])
+    best = (np.inf, None, None)
+    for q in _eval_coords(hand)[::step]:
+        loc, nrm, _, d = tree.find_nearest(Vector(q), 0.10)
+        if loc is None:
+            continue
+        sd = d if (Vector(q) - loc).dot(nrm) >= 0 else -d
+        if sd < best[0]:
+            best = (sd, np.array(q), np.array(nrm))
+    sd, q, n = best
+    if q is None:
+        raise RuntimeError(f"touch {spec}: the hand is more than 10 cm from the {spec['touch']}")
+    n = n / np.linalg.norm(n)
+    slide = S - q
+    slide -= (slide @ n) * n
+    return -sd * n + slide_gain * slide, n, sd
+
+
 def _solve_press_frame(rig, fcs, bone, spec, hand, tip_mask, f):
     _frame(f)
-    for _ in range(ITER):
-        err, n, dmin = _press_error(spec, hand, tip_mask)
+    for it in range(ITER + 2):
+        if it >= ITER and "touch" not in spec:
+            break
+        if "touch" in spec:
+            # slide towards the spot first, then two pure "rest on the skin" steps
+            err, n, dmin = _touch_error(spec, hand, slide_gain=0.3 if it < ITER else 0.0)
+        else:
+            err, n, dmin = _press_error(spec, hand, tip_mask)
         if np.linalg.norm(err) < 2e-4:
             break
         J = _jacobian(rig, bone)
@@ -277,7 +351,7 @@ def _press_track(rig, action, clip, side, specs):
     hand = bpy.data.objects[f"Hand_{side}"]
     n_frames = clip.n
     orig = np.array([_get_loc(fcs, f) for f in range(n_frames)])
-    masks = [_group_mask(hand, [spec["tip"]]) for spec in specs]
+    masks = [_tip_mask(hand, spec) for spec in specs]
     contact, normals = [], []
     for spec, tip_mask in zip(specs, masks):
         f0, f1 = spec["frames"]
@@ -412,24 +486,33 @@ def verify(rig, action, clip, body_name="Morfi_Body"):
     rigmap.assign(rig, action)
     hands = {s: bpy.data.objects[f"Hand_{s}"] for s in ("L", "R")}
     body = bpy.data.objects[body_name]
-    rows, worst = [], {"pen": -1.0, "press": 0.0, "support": 0.0}
+    rows, worst = [], {"pen": -1.0, "press": 0.0, "support": 0.0, "touch": 0.0}
     tips = {}
     for spec in getattr(clip, "contacts", []):
-        tips.setdefault(spec["tip"], _group_mask(hands[spec["side"]], [spec["tip"]]))
+        tips.setdefault((spec["side"],) + _tip_groups(spec), _tip_mask(hands[spec["side"]], spec))
     for f in range(clip.n):
+        boxes = None
         _frame(f)
         boxes = _prop_boxes(rig, f)
-        if not boxes:
+        active = [sp for sp in getattr(clip, "contacts", []) if sp["frames"][0] <= f <= sp["frames"][1]]
+        if not boxes and not active:
             continue
         P = {s: _eval_coords(h) for s, h in hands.items()}
-        B = _eval_coords(body)[_faced(body)]
-        pen = max(max(_depth(ob, half, X) for X in (P["L"], P["R"], B)) for ob, half in boxes)
+        pen = -1.0
+        if boxes:
+            B = _eval_coords(body)[_faced(body)]
+            pen = max(max(_depth(ob, half, X) for X in (P["L"], P["R"], B)) for ob, half in boxes)
         row = {"frame": f, "pen": pen}
         for spec in getattr(clip, "contacts", []):
             f0, f1 = spec["frames"]
             if f0 <= f <= f1:
-                S, n = _target_point(spec)
-                row["press"] = float(((P[spec["side"]][tips[spec["tip"]]] - S) @ n).min())
+                if "touch" in spec:
+                    row["touch"] = float(_touch_error(spec, hands[spec["side"]], step=2)[2])
+                    worst["touch"] = max(worst["touch"], abs(row["touch"]))
+                    continue
+                else:
+                    S, n = _target_point(spec)
+                    row["press"] = float(((P[spec["side"]][tips[(spec["side"],) + _tip_groups(spec)]] - S) @ n).min())
                 worst["press"] = max(worst["press"], abs(row["press"]))
         for spec in getattr(clip, "supports", []):
             a, b = spec["frames"]
@@ -440,5 +523,6 @@ def verify(rig, action, clip, body_name="Morfi_Body"):
                 worst["support"] = max(worst["support"], abs(gap) if gap is not None else float("inf"))
         worst["pen"] = max(worst["pen"], pen)
         rows.append(row)
-    ok = worst["pen"] <= PEN_TOL and worst["press"] <= TOUCH_TOL and worst["support"] <= 0.004
+    ok = (worst["pen"] <= PEN_TOL and worst["press"] <= TOUCH_TOL and worst["support"] <= 0.004
+          and worst["touch"] <= BODY_TOL)
     return ok, worst, rows

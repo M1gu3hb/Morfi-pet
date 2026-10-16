@@ -28,7 +28,8 @@ HAND_SHAPES = {
              "fan": 3},
     "point": {"index": (-22, -22, -16), "middle": (66, 78, 62), "ring": (66, 78, 62), "thumb": (20, 40, 34)},
     # poke: index nearly straight, the others tucked tight so they stay clear of the surface
-    "tap": {"index": (-4, 4, 6), "middle": (78, 94, 72), "ring": (80, 96, 74), "thumb": (24, 46, 40)},
+    "tap": {"index": (-4, 4, 6), "middle": (78, 94, 72), "ring": (80, 96, 74), "thumb": (12, 30, 28),
+            "thumb_out": -8},                                  # thumb laid along the fist, not pointing back
     "count1": {"index": (-24, -24, -18), "middle": (66, 78, 62), "ring": (66, 78, 62), "thumb": (22, 42, 36)},
     "count2": {"index": (-24, -24, -18), "middle": (-24, -24, -18), "ring": (66, 78, 62), "thumb": (22, 42, 36),
                "fan": 7},
@@ -252,6 +253,40 @@ def prop_space(point, prop_loc=(0, 0, 0), prop_rot=(0, 0, 0)):
 def prop_world(local, prop_loc=(0, 0, 0), prop_rot=(0, 0, 0)):
     """Point in a prop object's own frame -> world (props are built at the prop bone head)."""
     return PROP_REST + np.asarray(prop_loc, float) + rot_matrix(*prop_rot) @ np.asarray(local, float)
+
+
+EYES = np.array([0.0, -0.215, 0.705])     # between the eyes, at rest
+GAZE_RANGE = (26.0, 20.0)                 # degrees of look the iris gives at gaze_x/y = +-1
+
+
+def look_at(clip, keys, head=0.55, neck=0.15, max_nod=7.0):
+    """Turn the head (and neck) towards world points and let the eyes do the rest.
+    keys: [(frame, point or None), ...]; None = look ahead. The head takes `head` of the turn
+    and the neck `neck` (a nod is capped at `max_nod` degrees: with Morfi's big head a deeper
+    nod brings the chin onto his own hands); the eyes cover what is left, so he really looks at
+    what he is touching even when the head cannot."""
+    rows = []
+    for f, p in keys:
+        if p is None:
+            rows.append((f, 0.0, 0.0))
+            continue
+        d = np.asarray(p, float) - EYES
+        # something under his nose (a tablet at the belly) is a little "behind" the eyes: the turn
+        # comes from the sideways offset only, never a half turn of the head
+        fwd = max(-d[1], 0.3 * abs(d[2]), 0.05)
+        yaw = float(np.clip(np.degrees(np.arctan2(d[0], fwd)), -60, 60))  # + = towards his left (+X)
+        pitch = np.degrees(np.arctan2(d[2], np.hypot(d[0], d[1])))  # + = up
+        rows.append((f, yaw, pitch))
+    yaw_k = [(f, y) for f, y, _ in rows]
+    nod_k = [(f, float(np.clip(-p * (head + neck), -max_nod, max_nod))) for f, _, p in rows]
+    clip.add("head.rz", [(f, y * head) for f, y in yaw_k])
+    clip.add("neck.rz", [(f, y * neck) for f, y in yaw_k])
+    clip.add("head.rx", [(f, v * head / (head + neck)) for f, v in nod_k])
+    clip.add("neck.rx", [(f, v * neck / (head + neck)) for f, v in nod_k])
+    gx = [(f, float(np.clip(y * (1 - head - neck) / GAZE_RANGE[0], -1, 1))) for f, y in yaw_k]
+    gy = [(f, float(np.clip((p + nod) / GAZE_RANGE[1], -1, 1))) for (f, _, p), (_, nod) in zip(rows, nod_k)]
+    clip.prop("gaze_x", gx)
+    clip.prop("gaze_y", gy)
 
 
 def bounce_blink(n, times):

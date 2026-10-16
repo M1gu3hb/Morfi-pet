@@ -195,8 +195,12 @@ def eye_material(name, rig, eye, side):
 
 
 # ---------------------------------------------------------------- mouth shader
-MOUTH = {"center": (-0.007, 0.6135), "half_width": 0.041, "corner_up": 0.006, "depth": 0.023,
+MOUTH = {"center": (-0.007, 0.6135), "half_width": 0.041, "corner_up": 0.006, "depth": 0.026,
          "skin": (105, 193, 253)}
+
+
+MOUTH_SHIFT = 0.012          # sideways mouth: drawn shift (m) for mouth_side = 1
+FACE_KEYS_SHIFT = 0.012      # ... plus the skin and decal slide (Mouth_Shift)
 
 
 def mouth_group():
@@ -208,12 +212,13 @@ def mouth_group():
     teeth, side = E.input("Teeth"), E.input("Side")
     aa = E.input("AA", default=0.0008)
     x0, y, _ = E.sep(uv)
-    x = x0 - side * 0.010                                      # a sideways mouth (smirk, doubt)
+    x = x0 - side * MOUTH_SHIFT                                # a sideways mouth (smirk, doubt); the
+    # skin and the decal also slide (Mouth_Shift key), so the mouth travels ~2.4 cm in all
     w = MOUTH["half_width"] * (1.0 + smile * 0.08 - rnd * 0.32)
     xn = x / w
     xx = (xn * xn).clamp()
     up = MOUTH["corner_up"] * (smile * 1.25 - rnd * 0.6)
-    top = up * xx + rnd * 0.004 + side * 0.005 * xn
+    top = up * xx + rnd * 0.004 + side * 0.007 * xn
     depth = (opn * (2.0 * MOUTH["depth"]) + rnd * 0.006) * (1.0 - xx).clamp() ** E.mix(0.43, 0.75, rnd)
     bot = top - depth - 0.0024              # closed: a 2.4 mm dark line
     inside_x = E.smoothstep(1.0 + aa / w, 1.0 - aa / w, xn.abs())
@@ -370,7 +375,7 @@ def drive_key(key, rig, prop):
     fc.driver.type = "AVERAGE"
 
 
-def brow_keys(body, rig, feats, lift=0.016):
+def brow_keys(body, rig, feats, lift=0.026):
     """Shape keys that slide each painted brow (and the skin around it) up or down."""
     if body.data.shape_keys is None:
         body.shape_key_add(name="Basis", from_mix=False)
@@ -428,6 +433,82 @@ def mouth_fill_fit(body, cx=-0.007, cz=0.603):
     return surf, near & ~ring
 
 
+def flatten_mouth(body):
+    """The AI sculpted a 2 cm mouth cavity; the mouth is a decal that opens, closes and slides,
+    so the cavity is filled for good with the smooth face surface around it."""
+    surf, inner = mouth_fill_fit(body)
+    co = np.array([v.co[:] for v in body.data.vertices])
+    target = surf(co[:, 0], co[:, 2]) - 0.0002
+    sel = inner & (co[:, 1] > target)
+    co[sel, 1] = target[sel]
+    body.data.vertices.foreach_set("co", co.ravel())
+    body.data.update()
+    print(f"mouth cavity filled: {int(sel.sum())} verts")
+
+
+def drive_expr(key, rig, variables, expr):
+    fc = key.driver_add("value")
+    for name, prop in variables.items():
+        var = fc.driver.variables.new()
+        var.name, var.type = name, "SINGLE_PROP"
+        var.targets[0].id = rig
+        var.targets[0].data_path = f'["{prop}"]'
+    fc.driver.type = "SCRIPTED"
+    fc.driver.expression = expr
+
+
+def _gauss(P, c, sx, sz):
+    return np.exp(-0.5 * (((P[:, 0] - c[0]) / sx) ** 2 + ((P[:, 2] - c[1]) / sz) ** 2))
+
+
+# shape keys of the lower face, applied alike to the skin and to the mouth decal so the decal
+# stays on the skin: name -> (field(P) -> displacement, driver variables, driver expression,
+# slider minimum). The same formulas drive them in the web viewer (web/src/live/face.ts).
+def _cheek(sx):
+    out = np.array([0.35 * sx, -1.0, 0.0])
+    out /= np.linalg.norm(out)
+    return lambda P: _gauss(P, (0.115 * sx, 0.598), 0.036, 0.032)[:, None] * (out * 0.015 + np.array([0, 0, 0.008]))
+
+
+FACE_KEYS = {
+    "Cheek_L": (_cheek(1.0), {"s": "smile", "m": "mouth_side", "q": "squint"},
+                "min(1.0, 0.75 * max(s, 0.0) + 0.8 * max(-m, 0.0) + 0.35 * q)", 0.0),
+    "Cheek_R": (_cheek(-1.0), {"s": "smile", "m": "mouth_side", "q": "squint"},
+                "min(1.0, 0.75 * max(s, 0.0) + 0.8 * max(m, 0.0) + 0.35 * q)", 0.0),
+    "Mouth_Shift": (lambda P: _gauss(P, (-0.007, 0.605), 0.050, 0.032)[:, None] * np.array([-FACE_KEYS_SHIFT, 0, 0]),
+                    {"m": "mouth_side"}, "m", -1.0),
+    "Jaw_Open": (lambda P: _gauss(P, (-0.007, 0.574), 0.050, 0.025)[:, None] * np.array([0, -0.002, -0.006]),
+                 {"o": "mouth_open"}, "max(0.0, o)", 0.0),
+}
+
+
+def face_keys(body, decal_ob, rig):
+    """Cheeks that puff with a smile or a sideways mouth, the skin around the mouth sliding
+    with it and the chin dropping a little when the mouth opens."""
+    gi = body.vertex_groups["head"].index
+    headw = np.zeros(len(body.data.vertices))
+    for v in body.data.vertices:
+        for g in v.groups:
+            if g.group == gi:
+                headw[v.index] = g.weight
+    for ob in (body, decal_ob):
+        if ob.data.shape_keys is None:
+            ob.shape_key_add(name="Basis", from_mix=False)
+        M = np.array(ob.matrix_world)
+        co = np.array([v.co[:] for v in ob.data.vertices])
+        P = co @ M[:3, :3].T + M[:3, 3]                      # world (rest) positions
+        front = (P[:, 1] < -0.10) & (P[:, 2] > 0.50) & (P[:, 2] < 0.72)
+        mask = front * (headw if ob is body else 1.0)
+        Minv = np.linalg.inv(M[:3, :3])
+        for name, (field, variables, expr, smin) in FACE_KEYS.items():
+            disp = field(P) * mask[:, None]
+            key = ob.shape_key_add(name=name, from_mix=False)
+            key.slider_min = smin
+            key.data.foreach_set("co", (co + disp @ Minv.T).ravel())
+            drive_expr(key, rig, variables, expr)
+        print(f"face keys {ob.name}: {list(FACE_KEYS)}")
+
+
 def drive_fill(key, rig):
     fc = key.driver_add("value")
     var = fc.driver.variables.new()
@@ -476,6 +557,7 @@ def main():
     for k, v in FACE_PROPS.items():
         if k not in rig:
             rig[k] = v
+    flatten_mouth(body)                          # before anything is projected on the face
     tree = body_bvh(body)
     clean = os.path.join(os.path.dirname(os.path.abspath(args.features)), "..", "tex", "base_color_clean.jpg")
     img = bpy.data.images.load(os.path.abspath(clean))
@@ -513,12 +595,13 @@ def main():
         if k not in rig:
             rig[k] = 0.0
     mc = MOUTH["center"]
-    mo = decal("Mouth_Decal", tree, mc[0], mc[1] - 0.006, 0.056, 0.034, margin=0.0, res=48)
+    # room for the mouth to slide sideways and open wide on the now flat face
+    mo = decal("Mouth_Decal", tree, mc[0], mc[1] - 0.010, 0.078, 0.046, margin=0.0, res=64)
     for d in mo.data.uv_layers["eye"].data:      # shader space: origin on the painted top lip
-        d.uv = (d.uv[0], d.uv[1] - 0.006)
+        d.uv = (d.uv[0], d.uv[1] - 0.010)
     mo.data.materials.append(mouth_material(rig))
     drive_props(mo, rig, MOUTH_PROPS)
-    mouth_fill_keys(body, mo, rig)
+    face_keys(body, mo, rig)
     parent_to_bone(mo, rig, "head")
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(args.out))
     print("DONE", args.out)

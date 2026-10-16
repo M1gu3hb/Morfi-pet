@@ -33,7 +33,11 @@ cd web && npm run sync-live && npm run build && npm run test:live
   piernas con IK (`foot_ik.<L|R>`, `knee_pole.<L|R>`). Morfi mira hacia −Y; su izquierda es +X; mide 1.14 m
   con los cubos.
 - **Manos** (`build_hands.py`): pulgar y tres dedos (índice, medio, anular), tres falanges cada uno
-  (`index.01-.03.<s>`, …, `thumb.<s>`, `thumb.02/.03.<s>`). Malla propia, pesos suaves por falange.
+  (`index.01-.03.<s>`, …, `thumb.<s>`, `thumb.02/.03.<s>`). Malla propia de caricatura: palma redondeada
+  (tres elipsoides fundidos, ~1.3 veces el grosor de un dedo), dedos que nacen al ras de su borde, pulgar con
+  base carnosa y una muñeca que llena el puño de la manga. Cada dedo se funde solo con la palma (entre dedos
+  queda un pliegue limpio) y cada vértice sigue a su dedo y a la palma, nunca al dedo vecino: doblar un dedo
+  no estira la piel del de al lado.
 - **Controles** (`build_controls.py`):
   - IK de brazo (`hand_ik.<s>`, `elbow_pole.<s>`), apagado salvo cuando una acción lo pide (canal `ik.<s>`).
     El IK de Blender estira sin límite; el motor **topa el alcance a 1.08× el largo del brazo**
@@ -44,6 +48,10 @@ cd web && npm run sync-live && npm run build && npm run test:live
   `smile` (−1 = boca triste), `mouth_round`, `mouth_side`, `teeth`, `brow_L/R` (sube/baja, recorrido 1.6 cm),
   `brow_in_L/R` (extremo interior: +1 preocupado, −1 enojado), `squint`, `lid_drop`, `lid_angle`
   (+1 enojado, −1 triste), `pupil` (−1 miedo, +1 ternura), `eye_calm` (ojos cerrados tranquilos).
+  La cavidad esculpida de la boca se rellenó: la boca es una calcomanía libre sobre la cara plana y se desliza
+  ~2.4 cm de lado a lado (`mouth_side`) arrastrando la piel (`Mouth_Shift`). Las mejillas se inflan y suben al
+  sonreír o hacia el lado de la boca (`Cheek_L/R`) y la barbilla baja al abrirla (`Jaw_Open`); esas formas se
+  calculan solas a partir de `smile`, `mouth_side`, `squint` y `mouth_open`, igual en Blender y en la web.
 
 **Alcance real.** El brazo mide 20 cm del hombro a la muñeca y la panza sobresale 10 cm: una muñeca llega a
 3-6 cm frente a la panza. Un objeto se sostiene pegado a la panza, un poco a la izquierda, sobre la palma
@@ -92,6 +100,12 @@ Cada acción guarda **todos** los huesos y gestos (en reposo si no los usa): las
 - Cara (`c.expr([(cuadro, expresión[, peso])])`): `neutral`, `happy`, `joy`, `laugh`, `sad`, `angry`, `scared`,
   `surprised`, `calm`, `thinking`, `skeptical`, `smug`, `love`, `wink`, `determined`, `confused`, `shy`, `sleepy`.
   Los canales `c.prop(...)` se suman encima (habla, miradas).
+- Mirar: `c.look_at([(cuadro, punto | None), ...])` gira la cabeza y el cuello hacia el punto (el
+  cabeceo se topa en 7°: con su cabezota, más abajo la cara deja de verse de frente y la barbilla choca con sus manos) y los ojos completan el
+  resto. Úsalo siempre que toque algo: así se siente que lo está viendo.
+- Vida: `c.life()` ya trae respiración, el peso que pasa de un pie a otro (las rodillas lo absorben), torso y
+  cabeza que nunca están quietos, brazos y dedos que derivan; `c.secondary()` añade la inercia de cubos, capucha,
+  brazos, manos y cabeza. Toda acción empieza con `life` y termina con `secondary`.
 - Alcanzar: `c.reach(lado, [(cuadro, punto_muñeca | None[, peso])])` con orientación
   `orient_keys(lado, [(cuadro, dirección_dedos, dirección_palma)], prop_rot=...)` → `c.reach_rot(...)`.
   Con un objeto girado, los puntos se convierten con `prop_space()` / `prop_world()`.
@@ -104,8 +118,12 @@ Cada acción guarda **todos** los huesos y gestos (en reposo si no los usa): las
 - `clip.contacts = [{"side": "R", "tip": "index.03.R", "target": "Prop_Calc_Key_21" | "Prop_Tablet_Screen",
   "local": (x, z) | None, "frames": (f0, f1), "ramp": 6}]`: el índice toca exactamente ese punto de f0 a f1,
   baja en línea recta desde 2 cm y vuelve a subir; entre toques flota sobre la superficie.
+- `clip.contacts = [{"side": "L", "touch": "head" | "torso", "point": (x, y, z), "region": [grupos],
+  "frames": (f0, f1), "ramp": 8}]`: la mano se apoya en el propio Morfi (palmas en las mejillas, puño bajo la
+  barbilla, palma en la panza). El punto, dado en reposo, viaja con la cabeza o el pecho y se proyecta en la piel
+  deformada cada cuadro; la mano llega por la normal, se apoya exactamente y se queda.
 - `resolve_body()`: en todas las acciones con IK, una mano que entra en la cabeza o el torso se empuja hacia afuera
-  por la normal de la superficie hasta apenas tocar (un puño en la barbilla, una palma en la panza).
+  por la normal de la superficie hasta apenas tocar.
 - `clamp_reach()`: el tope de alcance.
 
 Ver `anim/actions_props.py` (`Tablet`, `Calculator`): son la plantilla para acciones con objetos.
@@ -121,9 +139,12 @@ Ver `anim/actions_props.py` (`Tablet`, `Calculator`): son la plantilla para acci
 | `pose_probe.py --poses …` | poses estáticas del motor con su reporte de contactos |
 | `preview_anim.py --action A,B,…` | vista previa en Eevee (cuadros + mp4) de varias acciones en una sola sesión |
 
-Estado al 16-oct-2026: las 26 acciones respetan el tope de alcance. Tablet y calculadora: índice a ≤ 0.3 mm de
-cada tecla o punto de la pantalla, palma a ≤ 0.3 mm del objeto, sin traslapes. La manga roza la chamarra
-(tela contra tela) al llevar el brazo al frente; no se ve de frente ni de tres cuartos.
+Estado al 16-oct-2026: las 26 acciones respetan el tope de alcance (≤ 1.10). Tablet y calculadora: índice a
+≤ 0.1 mm de cada tecla o punto de la pantalla, palma a ≤ 0.3 mm del objeto, sin traslapes, y la mano que teclea
+no toca la barbilla ni el pecho. Toques al propio cuerpo (`BODY_TOL` 3 mm, piel blanda): palmas en las mejillas
+(Sorpresa) ≤ 0.8 mm, palma en la panza (Risa) ≤ 0.1 mm, índice en la barbilla (Pensar) ≤ 4.5 mm en 5 cuadros
+al límite del alcance. La manga roza la chamarra (tela contra tela) al llevar el brazo al frente; no se ve de frente
+ni de tres cuartos.
 
 ## 5. Acciones disponibles
 

@@ -33,16 +33,18 @@ def main():
             if pulled:
                 print(f"REACH {name}: {pulled} IK frames pulled back within {contacts.MAX_REACH:.2f}x arm length")
         has_props = getattr(clip, "contacts", None) or getattr(clip, "supports", None)
-        if any(k.startswith("ik.") for k in clip.ch) and not has_props:
+        if any(k.startswith("ik.") for k in clip.ch) and not getattr(clip, "supports", None):
             pushed = contacts.resolve_body(rig, act, clip.n)  # the body is solid
             if pushed:
                 print(f"BODY {name}: hands pushed out of the head / torso on {pushed} frame passes")
                 contacts.clamp_reach(rig, act, clip.n)       # and still no rubber arm
         if has_props:
-            contacts.solve(rig, act, clip)          # fingertips and palms onto the props
+            contacts.solve(rig, act, clip)          # fingertips and palms onto the props / his own body
+            contacts.clamp_reach(rig, act, clip.n)   # the hover / release path too: no rubber arm
             ok, worst, _ = contacts.verify(rig, act, clip)
-            print(f"CONTACTS {name}: ok={ok} overlap {worst['pen'] * 1000:.1f} mm, "
-                  f"press gap {worst['press'] * 1000:.1f} mm, support gap {worst['support'] * 1000:.1f} mm")
+            print(f"CONTACTS {name}: ok={ok} overlap {max(worst['pen'], 0) * 1000:.1f} mm, "
+                  f"press gap {worst['press'] * 1000:.1f} mm, support gap {worst['support'] * 1000:.1f} mm, "
+                  f"body touch gap {worst['touch'] * 1000:.1f} mm")
         print(f"ACTION {name}: {clip.n} frames, loop={clip.loop}, channels={len(clip.ch)}")
     rigmap.assign(rig, bpy.data.actions[names[0]])
     bpy.context.scene.render.fps = 30

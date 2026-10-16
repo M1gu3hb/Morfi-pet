@@ -5,9 +5,11 @@ blender -b work/ia3d/morfi_ia_rig.blend --python scripts/ia3d/build_hands.py -- 
 
 The AI mesh has mitten hands (the three fingers are one fused block), which cannot point,
 count or hold things. This replaces them, keeping the existing skeleton intact:
-  * new hand meshes (Hand_L / Hand_R) are built as a smooth implicit surface (palm, thumb,
-    index, middle, ring) sized and placed like the AI hands (measured: ~9.5 x 13.8 x 12.4 cm,
-    sRGB 6/48/247), their wrists hidden inside the hoodie cuffs;
+  * new hand meshes (Hand_L / Hand_R) are built as a smooth implicit surface sized and placed
+    like the AI hands (sRGB 6/48/247): a soft rounded palm (three blended ellipsoids, about 1.3
+    fingers thick), fingers growing flush out of its edge, a fleshy thumb base and a wrist that
+    fills the hoodie cuff. Each finger blends into the palm only (a clean crease between two
+    fingers) and every vertex follows its own digit and the palm, never the next finger;
   * bones are ADDED under hand.<s>: index/middle/ring .01-.03 and thumb.02/.03; the existing
     `fingers.<s>` becomes the (non-deforming) parent of the three fingers at the knuckle line,
     and `thumb.<s>` is the thumb's first segment, so older actions keep working;
@@ -97,7 +99,10 @@ def layout(o, D, F, N, side):
     taxis /= np.linalg.norm(taxis)
     digits["thumb"] = {"pts": chain_points(tb, tdir, 0.050, taxis, (0.12, 0.22, 0.22)), "r": (0.0180, 0.0158),
                        "axis": taxis, "bend": tbend / np.linalg.norm(tbend)}
-    palm = {"c": o + D * 0.040 + N * 0.002, "half": np.array([0.036, 0.046, 0.0290]), "round": 0.020}
+    # (along the hand, towards the thumb, out of the palm): centre and radii in the hand frame
+    palm = {"o": o, "lobes": [((0.020, 0.000, 0.003), (0.026, 0.031, 0.0225)),
+                              ((0.043, 0.000, 0.003), (0.028, 0.039, 0.0210)),
+                              ((0.061, 0.000, 0.004), (0.016, 0.0435, 0.0185))]}
     return digits, palm
 
 
@@ -113,6 +118,13 @@ def sd_round_box(Q, half, r):
     return np.linalg.norm(np.maximum(q, 0), axis=1) + np.minimum(q.max(1), 0) - r
 
 
+def sd_ellipsoid(Q, r):
+    """Approximate signed distance to an axis-aligned ellipsoid (exact on the surface)."""
+    k0 = np.linalg.norm(Q / r, axis=1)
+    k1 = np.linalg.norm(Q / (r * r), axis=1)
+    return k0 * (k0 - 1.0) / np.maximum(k1, 1e-9)
+
+
 def smin(a, b, k):
     h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1)
     return b * (1 - h) + a * h - k * h * (1 - h)
@@ -121,10 +133,14 @@ def smin(a, b, k):
 def parts_sdf(P, o, D, F, N, digits, palm):
     """Signed distance of each part (list) at points P (world)."""
     R = np.stack([D, F, N], 1)                       # world -> hand frame
-    Q = (P - palm["c"]) @ R
-    parts = {"palm": sd_round_box(Q, palm["half"], palm["round"])}
-    # wrist: hidden inside the cuff
-    parts["wrist"] = sd_capsule(P, o - D * 0.035, o + D * 0.02, 0.029, 0.031)
+    Q = (P - o) @ R
+    pd = None
+    for c, r in palm["lobes"]:
+        d = sd_ellipsoid(Q - np.array(c), np.array(r))
+        pd = d if pd is None else smin(pd, d, 0.012)
+    parts = {"palm": pd}
+    # wrist: fills the hoodie cuff (its opening is ~4 cm in radius), narrowing into the palm
+    parts["wrist"] = sd_capsule(P, o - D * 0.050, o + D * 0.012, 0.036, 0.030)
     for name, dg in digits.items():
         pts, (r0, r1) = dg["pts"], dg["r"]
         for i in range(3):
@@ -135,23 +151,51 @@ def parts_sdf(P, o, D, F, N, digits, palm):
 
 
 def mesh_hand(o, D, F, N, digits, palm, voxel):
-    corners = [palm["c"]] + [p for dg in digits.values() for p in dg["pts"]] + [o - D * 0.04]
+    corners = [o + D * 0.04] + [p for dg in digits.values() for p in dg["pts"]] + [o - D * 0.055]
     lo = np.min(corners, 0) - 0.03
     hi = np.max(corners, 0) + 0.03
     xs, ys, zs = (np.arange(lo[i], hi[i], voxel) for i in range(3))
     G = np.stack(np.meshgrid(xs, ys, zs, indexing="ij"), -1).reshape(-1, 3)
     parts = parts_sdf(G, o, D, F, N, digits, palm)
-    d = smin(parts["palm"], parts["wrist"], 0.012)
-    for name in digits:
-        # each digit is one smooth tube; fingers meet the palm with a soft web
+    base = smin(parts["palm"], parts["wrist"], 0.016)
+
+    def tube(name):
         dig = parts[f"{name}.01"]
         for i in (2, 3):
             dig = smin(dig, parts[f"{name}.{i:02d}"], 0.004)
-        d = smin(d, dig, 0.010 if name == "thumb" else 0.007)
+        return dig
+    base = smin(base, tube("thumb"), 0.015)          # the thumb grows out of a fleshy base
+    # each finger blends into the palm only; between two fingers a clean crease (like a glove),
+    # so curling one finger never drags skin from its neighbour
+    d = None
+    for name in FINGERS:
+        di = smin(base, tube(name), 0.010)
+        d = di if d is None else np.minimum(d, di)
     vol = d.reshape(len(xs), len(ys), len(zs))
     verts, faces, _n, _v = measure.marching_cubes(vol, 0.0, spacing=(voxel, voxel, voxel))
     verts = verts + lo
     return verts, faces[:, ::-1]
+
+
+def _neighbours(names):
+    """Parts a vertex of each part may blend with: its digit's adjacent segments, and the
+    palm for a first segment. Never another digit (that tears the skin between fingers)."""
+    idx = {n: i for i, n in enumerate(names)}
+    out = {}
+    for n in names:
+        allow = {n}
+        if n in ("palm", "wrist"):
+            allow |= {"palm", "wrist"} | {m for m in names if m.endswith(".01")}
+        else:
+            dig, seg = n.split(".")
+            k = int(seg)
+            for j in (k - 1, k + 1):
+                if 1 <= j <= 3:
+                    allow.add(f"{dig}.{j:02d}")
+            if k == 1:
+                allow.add("palm")
+        out[idx[n]] = [idx[m] for m in allow if m in idx]
+    return out
 
 
 def skin_weights(V, o, D, F, N, digits, palm, bone_of):
@@ -159,16 +203,31 @@ def skin_weights(V, o, D, F, N, digits, palm, bone_of):
     names = list(parts)
     Dm = np.stack([parts[n] for n in names], 1)
     W = np.exp(-(Dm - Dm.min(1, keepdims=True)) / 0.0022)
-    keep = np.argsort(Dm, 1)[:, :2]                    # a joint blends its two segments only
+    nb = _neighbours(names)
+    near = np.argmin(Dm, 1)
     mask = np.zeros_like(W, bool)
-    np.put_along_axis(mask, keep, True, 1)
+    for j, allowed in nb.items():                      # nearest part + its allowed neighbours,
+        rows = near == j                               # then the two strongest of those
+        sub = np.full((rows.sum(), len(names)), np.inf)
+        sub[:, allowed] = Dm[rows][:, allowed]
+        keep = np.argsort(sub, 1)[:, :2]
+        m = np.zeros((rows.sum(), len(names)), bool)
+        np.put_along_axis(m, keep, True, 1)
+        m &= np.isfinite(sub)
+        mask[rows] = m
     W = np.where(mask, W, 0.0)
     W /= W.sum(1, keepdims=True)
     out = {}
     for j, n in enumerate(names):
         b = bone_of(n)
         out[b] = out.get(b, 0) + W[:, j]
-    return out
+    # the (at most two) bones each vertex may follow
+    kept = np.argsort(np.where(mask, Dm, np.inf), 1)[:, :2]
+    ok = {}
+    for j, n in enumerate(names):
+        b = bone_of(n)
+        ok[b] = ok.get(b, np.zeros(len(V), bool)) | ((kept == j) & np.take_along_axis(mask, kept, 1)).any(1)
+    return out, ok
 
 
 # ---------------------------------------------------------------- bones
@@ -278,8 +337,13 @@ def build_hand(rig, side, voxel):
         p.use_smooth = True
     ob.data.materials.append(skin_material())
     P = np.array([v.co[:] for v in ob.data.vertices])
-    W = skin_weights(P, o, D, F, N, digits, palm, bone_name(side))
+    W, ok = skin_weights(P, o, D, F, N, digits, palm, bone_name(side))
     W = smooth_on_mesh(ob.data, W, iters=10)
+    # smoothing spreads weights across the creases again: each vertex keeps only its own two
+    # bones (a digit's segments, or a first segment and the palm), renormalised
+    W = {b: np.where(ok[b], w, 0.0) for b, w in W.items()}
+    tot = sum(W.values())
+    W = {b: w / np.maximum(tot, 1e-9) for b, w in W.items()}
     for bname, w in W.items():
         g = ob.vertex_groups.new(name=bname)
         for i in np.nonzero(w > 0.01)[0]:

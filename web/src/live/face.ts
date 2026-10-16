@@ -85,11 +85,11 @@ uniform float mOpen, mSmile, mRound, mTeeth, mSide, mAA, mHalfW, mCornerUp, mDep
 uniform vec3 c_mouth_in, c_mouth_lip, c_tongue, c_teeth;
 ${GLSL_COMMON}
 vec4 morfiMouth(vec2 p) {
-  float x = p.x - mSide * 0.010, y = p.y;                 // a sideways mouth (smirk, doubt)
+  float x = p.x - mSide * 0.012, y = p.y;                 // a sideways mouth (+ the Mouth_Shift morph)
   float w = mHalfW * (1.0 + mSmile * 0.08 - mRound * 0.32);
   float xn = x / w;
   float xx = clamp(xn * xn, 0.0, 1.0);
-  float top = mCornerUp * (mSmile * 1.25 - mRound * 0.6) * xx + mRound * 0.004 + mSide * 0.005 * xn;
+  float top = mCornerUp * (mSmile * 1.25 - mRound * 0.6) * xx + mRound * 0.004 + mSide * 0.007 * xn;
   float depth = (mOpen * 2.0 * mDepth + mRound * 0.006) * pow(clamp(1.0 - xx, 0.0, 1.0), mix(0.43, 0.75, mRound));
   float bot = top - depth - 0.0024;
   float insideX = ss(1.0 + mAA / w, 1.0 - mAA / w, abs(xn));
@@ -196,18 +196,28 @@ export class MorfiFace {
     this.mouth.mRound.value = clamp(f.mouth_round, 0, 1);
     this.mouth.mTeeth.value = clamp(f.teeth, 0, 1);
     this.mouth.mSide.value = clamp(f.mouth_side, -1, 1);
-    const fill = clamp(-f.mouth_open, 0, 1);
+    // lower-face morphs, on the skin and on the mouth decal alike (build_face.py FACE_KEYS)
+    const side = clamp(f.mouth_side, -1, 1), smile = Math.max(clamp(f.smile, -1, 1), 0), sq = clamp(f.squint, 0, 1);
+    const lower: Record<string, number> = {
+      Cheek_L: Math.min(1, 0.75 * smile + 0.8 * Math.max(-side, 0) + 0.35 * sq),
+      Cheek_R: Math.min(1, 0.75 * smile + 0.8 * Math.max(side, 0) + 0.35 * sq),
+      Mouth_Shift: side,
+      Jaw_Open: Math.max(0, clamp(f.mouth_open, -1, 1)),
+    };
     for (const b of this.bodies) {
       const d = b.morphTargetDictionary!, w = b.morphTargetInfluences!;
       w[d.Brow_L] = clamp(f.brow_L, -1, 1);
       w[d.Brow_R] = clamp(f.brow_R, -1, 1);
       if (d.Brow_In_L !== undefined) w[d.Brow_In_L] = clamp(f.brow_in_L, -1, 1);
       if (d.Brow_In_R !== undefined) w[d.Brow_In_R] = clamp(f.brow_in_R, -1, 1);
-      if (d.Mouth_Fill !== undefined) w[d.Mouth_Fill] = fill;
+      for (const [k, v] of Object.entries(lower)) if (d[k] !== undefined) w[d[k]] = v;
     }
     const md = this.mouthDecal;
-    if (md?.morphTargetDictionary && md.morphTargetInfluences && md.morphTargetDictionary.Mouth_Fill !== undefined) {
-      md.morphTargetInfluences[md.morphTargetDictionary.Mouth_Fill] = fill;
+    if (md?.morphTargetDictionary && md.morphTargetInfluences) {
+      for (const [k, v] of Object.entries(lower)) {
+        const i = md.morphTargetDictionary[k];
+        if (i !== undefined) md.morphTargetInfluences[i] = v;
+      }
     }
   }
 }
