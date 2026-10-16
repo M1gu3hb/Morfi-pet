@@ -12,8 +12,9 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'dist', assetsInlineLimit: 0, chunkSizeWarningLimit: 1200,
-    // two pages: the technical viewer of the procedural model and Morfi en vivo
-    rollupOptions: { input: { main: resolve(__dirname, 'index.html'), live: resolve(__dirname, 'live.html') } },
+    // two pages: Morfi en vivo (the animated Morfi, landing page) and the technical
+    // viewer of the earlier procedural model
+    rollupOptions: { input: { main: resolve(__dirname, 'index.html'), tecnico: resolve(__dirname, 'tecnico.html') } },
   },
   server: { host: true },
   define: {

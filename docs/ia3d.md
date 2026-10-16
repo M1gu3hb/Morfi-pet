@@ -100,9 +100,10 @@ $B -b work/ia3d/morfi_ia_anim.blend --python scripts/ia3d/build_look.py -- --reg
 $B -b work/ia3d/morfi_ia_look.blend --python scripts/ia3d/render_showcase.py -- --out work/ia3d/showcase
 ```
 
-## 8. Morfi en vivo (visor web, `web/live.html`)
+## 8. Morfi en vivo (visor web, portada: `web/index.html`)
 
-Página nueva, aparte del visor técnico del modelo procedural (`index.html`, que no cambia).
+Es la portada del sitio (https://morfi-pet.vercel.app). El visor técnico del modelo procedural anterior
+sigue igual en `web/tecnico.html`, enlazado desde ambas páginas.
 - `scripts/ia3d/export_web.py` exporta `work/ia3d/web/morfi_live.glb`. Lleva el cuerpo con 32 huesos, las 10 acciones
   horneadas cuadro por cuadro (el IK de las piernas y el pivote de los pies ya aplicados), los shape keys de cejas
   y del relleno de la boca, y materiales glTF (textura 4K, normal 2K, sheen y clearcoat). Escribe también
@@ -110,7 +111,7 @@ Página nueva, aparte del visor técnico del modelo procedural (`index.html`, qu
 - `scripts/ia3d/export_face_anims.py` escribe `morfi_live_anims.json`: las curvas de la cara de cada acción
   (parpadeo, mirada, boca, cejas…), porque glTF no transporta las propiedades del rig.
 - `npm run sync-live` copia todo a `web/public/models/` y comprime la geometría con meshopt (8.8 → 4.8 MB).
-  **El GLB está en `.gitignore`**: es el modelo del usuario y no se publica sin su permiso.
+  El usuario autorizó publicarlo (16-oct-2026): el GLB se versiona y Vercel lo sirve.
 - `web/src/live/face.ts` porta a GLSL los shaders de ojos y boca de Blender. `director.ts` mezcla las acciones
   con transiciones de 0.35 s y vuelve al reposo al acabar cada una. Encima añade parpadeos al azar, ojos y
   cabeza que siguen al cursor o a la cámara, habla a partir de un texto y, en "modo pantalla", pequeñas
@@ -129,7 +130,6 @@ Página nueva, aparte del visor técnico del modelo procedural (`index.html`, qu
 
 ## 9. Pendiente
 
-- Publicar en Vercel requiere subir el GLB (el modelo del usuario): pedir permiso antes.
 - Labios sincronizados con audio real (hoy la boca sigue el texto); con una voz TTS se puede mover con la amplitud.
 - La sudadera suelta (`SUDADERA.glb`) no se usó: la sudadera de la malla principal se deforma bien con el rig
   y separarla dejaría un hueco sin cuerpo debajo. Sirve para un primer plano o para simular tela más adelante.

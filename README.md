@@ -14,7 +14,8 @@ Modelo 3D completo de **Morfi**, la mascota de Astral Morphiq Systems, reconstru
 
 > **Nueva línea de trabajo (oct-2026):** el personaje animado sale ahora de la malla de la IA 3D (Meshy), con
 > rig nuevo, ojos y boca animables, materiales realistas y 10 animaciones. Ver `docs/ia3d.md`. Lo de abajo
-> describe el modelo procedural anterior (rondas 1–11), que sigue siendo la base del visor publicado.
+> describe el modelo procedural anterior (rondas 1–11). En Vercel, la portada es **Morfi en vivo** (`web/index.html`) y el
+> visor técnico del modelo procedural está en `web/tecnico.html`.
 
 Los binarios (`*.blend`, `*.glb`, `*.mp4`) se versionan con **Git LFS** (`.gitattributes`). Tras clonar: `git lfs install && git lfs pull`.
 

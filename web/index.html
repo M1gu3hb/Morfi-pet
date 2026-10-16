@@ -3,123 +3,51 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Morfi · Visor 3D</title>
-  <meta name="description" content="Visor del modelo 3D de Morfi, mascota de Astral Morphiq Systems." />
-  <link rel="stylesheet" href="./src/style.css" />
+  <title>Morfi en vivo</title>
+  <meta name="description" content="Morfi, la mascota de Morphiq, animado en 3D: saluda, habla, te mira y reacciona." />
+  <link rel="stylesheet" href="./src/live/live.css" />
 </head>
 <body>
   <div id="app" class="bg-light">
-    <div id="stage">
-      <canvas id="view" aria-label="Modelo 3D de Morfi"></canvas>
-      <img id="ref-img" alt="Foto de referencia de esta vista" />
-    </div>
-    <div id="status" role="status">Cargando modelo… <span id="progress">0%</span></div>
+    <canvas id="view" aria-label="Morfi en 3D"></canvas>
+    <div id="status" role="status">Cargando a Morfi… <span id="progress">0%</span></div>
 
     <button id="panel-toggle" class="panel-toggle" aria-expanded="true" aria-controls="panel">Controles</button>
     <aside id="panel" class="panel">
       <header>
-        <h1>Morfi</h1>
-        <p class="sub">Modelo 3D · se actualiza con cada ronda de correcciones</p>
+        <h1>Morfi <span>en vivo</span></h1>
         <p class="ver" id="build-info"></p>
-        <p class="sub"><a href="./live.html">Ver a Morfi en vivo (modelo animado nuevo) →</a></p>
       </header>
 
       <section>
-        <h2>Vista</h2>
-        <div class="grid3" id="views">
-          <button data-view="front">Frente</button>
-          <button data-view="three_quarter_front">3/4 frente</button>
-          <button data-view="profile_left">Perfil izq.</button>
-          <button data-view="profile_right">Perfil der.</button>
-          <button data-view="back">Espalda</button>
-          <button data-view="three_quarter_back">3/4 espalda</button>
-        </div>
-        <div class="row">
-          <button id="reset">Restablecer</button>
-          <label class="check"><input type="checkbox" id="autorotate" /> Giro automático</label>
-          <label class="check"><input type="checkbox" id="eyes" checked /> Ojos a cámara</label>
-          <label class="check"><input type="checkbox" id="lightsFollow" checked /> Luz sigue a la cámara</label>
-        </div>
+        <h2>Animaciones</h2>
+        <div class="grid" id="actions"></div>
       </section>
 
       <section>
-        <h2>Shader</h2>
-        <div class="grid2" id="shading">
-          <button data-shading="ref" class="on">Fiel a la foto</button>
-          <button data-shading="pbr">Físico (PBR)</button>
-        </div>
-        <p class="note">"Fiel a la foto": cada material se ilumina con el sombreado medido en las fotos de referencia (MatCap capturado), más la sombra de la luz principal.</p>
+        <h2>Que diga algo</h2>
+        <form id="say-form" class="say">
+          <input id="say-text" type="text" maxlength="240" value="¡Hola! Soy Morfi, ¿en qué te ayudo hoy?" aria-label="Texto que dirá Morfi" />
+          <button type="submit">Decir</button>
+        </form>
       </section>
 
       <section>
-        <h2>Comparar con la foto</h2>
-        <div class="grid3" id="compare-modes">
-          <button data-cmp="off" class="on">No</button>
-          <button data-cmp="overlay">Superponer</button>
-          <button data-cmp="wipe">Cortina</button>
-          <button data-cmp="diff">Diferencia</button>
-          <button data-cmp="side">Lado a lado</button>
-        </div>
-        <label class="check slider"><span>Foto</span><input type="range" id="cmp-amount" min="0" max="1" step="0.01" value="0.5" aria-label="Cantidad de foto" /></label>
-        <p class="note" id="cmp-hint"></p>
-      </section>
-
-      <section>
-        <h2>Pose / animación</h2>
-        <select id="anim" aria-label="Animación"></select>
-        <div class="row">
-          <button id="play">Pausa</button>
-          <label class="check"><input type="range" id="speed" min="0.25" max="2" step="0.25" value="1" aria-label="Velocidad" /> <span id="speed-val">1×</span></label>
+        <h2>Comportamiento</h2>
+        <label class="check"><input type="checkbox" id="follow" checked /> Me sigue con la mirada</label>
+        <label class="check"><input type="checkbox" id="kiosk" /> Modo pantalla (se mueve solo)</label>
+        <div class="row" id="bgs">
+          <button data-bg="light" class="on">Fondo claro</button>
+          <button data-bg="dark">Fondo oscuro</button>
         </div>
       </section>
 
-      <section>
-        <h2>Ropa y accesorios</h2>
-        <div class="toggles" id="toggles"></div>
-        <div class="row">
-          <button id="preset-full">Completo</button>
-          <button id="preset-base">Cuerpo base</button>
-        </div>
-      </section>
-
-      <section>
-        <h2>Sonido</h2>
-        <div class="row">
-          <label class="check"><input type="checkbox" id="sound" checked /> Efectos</label>
-          <label class="check"><input type="checkbox" id="music" /> Música</label>
-          <label class="check slider"><span>Vol.</span><input type="range" id="volume" min="0" max="1" step="0.05" value="0.55" aria-label="Volumen" /></label>
-        </div>
-        <p class="note">Toca a Morfi para que rebote.</p>
-      </section>
-
-      <section>
-        <h2>Fondo</h2>
-        <div class="grid3" id="bgs">
-          <button data-bg="light" class="on">Claro</button>
-          <button data-bg="dark">Oscuro</button>
-          <button data-bg="transparent">Transparente</button>
-        </div>
-      </section>
-
-      <section>
-        <h2>Inspección</h2>
-        <div class="grid3" id="modes">
-          <button data-mode="material" class="on">Material</button>
-          <button data-mode="clay">Gris</button>
-          <button data-mode="wire">Alambre</button>
-        </div>
-      </section>
-
-      <section>
-        <h2>Exportar</h2>
-        <div class="row">
-          <button id="shot">Captura PNG</button>
-          <a id="download" class="btn" href="./models/morfi.glb" download>Descargar GLB</a>
-        </div>
-        <p class="stats" id="stats"></p>
-      </section>
+      <footer>
+        <a href="./tecnico.html">Visor técnico del modelo anterior</a>
+        <span id="stats"></span>
+      </footer>
     </aside>
   </div>
-  <script type="module" src="./src/main.ts"></script>
+  <script type="module" src="./src/live/main.ts"></script>
 </body>
 </html>

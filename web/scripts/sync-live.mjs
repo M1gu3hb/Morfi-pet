@@ -1,7 +1,6 @@
 // Copies Morfi en vivo's exported files (scripts/ia3d/export_web.py and
 // export_face_anims.py write them to ../work/ia3d/web) into public/models and
-// compresses the GLB geometry with meshopt. The GLB stays out of git until the
-// owner approves publishing the model (web/.gitignore).
+// compresses the GLB geometry with meshopt (the compressed GLB is what Vercel serves).
 import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';

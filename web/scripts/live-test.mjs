@@ -1,4 +1,4 @@
-// Headless test of "Morfi en vivo" (live.html): loads the real GLB, plays every
+// Headless test of "Morfi en vivo" (index.html, the landing page): loads the real GLB, plays every
 // animation, makes him speak, checks the face reacts, screenshots desktop and
 // mobile, and fails on any console error.
 //   npm run build && npm run test:live          (screenshots -> ../work/ia3d/viewer_test)
@@ -31,7 +31,7 @@ try {
     page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${label}] ${m.text()}`); });
     page.on('pageerror', (e) => errors.push(`[${label}] ${e.message}`));
     page.setDefaultTimeout(180000);
-    await page.goto('http://localhost:4318/live.html', { waitUntil: 'load' });
+    await page.goto('http://localhost:4318/index.html', { waitUntil: 'load' });
     await page.waitForFunction(() => window.__morfiReady === true, null, { timeout: 180000 });
     await page.waitForTimeout(1500);
     await page.screenshot({ path: join(outDir, `${label}_idle.png`) });

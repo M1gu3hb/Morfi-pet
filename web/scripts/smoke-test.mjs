@@ -8,8 +8,10 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, '..', '..', 'renders', 'viewer');
 mkdirSync(outDir, { recursive: true });
-const exe = ['/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell', '/opt/pw-browsers/chromium_headless_shell-1194/chrome-headless-shell-linux64/chrome-headless-shell', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].find(existsSync);
-const server = spawn('npx', ['vite', 'preview', '--port', '4317', '--strictPort'], { cwd: join(here, '..'), stdio: 'pipe' });
+const pw = process.env.PLAYWRIGHT_BROWSERS_PATH ?? '';
+const exe = [join(pw, 'chromium_headless_shell-1243', 'chrome-headless-shell-win64', 'chrome-headless-shell.exe'), '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell', '/opt/pw-browsers/chromium_headless_shell-1194/chrome-headless-shell-linux64/chrome-headless-shell', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].find(existsSync);
+// vite through node itself (no npx / shell: works the same on Windows)
+const server = spawn(process.execPath, [join(here, '..', 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', '4317', '--strictPort'], { cwd: join(here, '..'), stdio: 'pipe' });
 await new Promise((r) => setTimeout(r, 2500));
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const errors = [];
@@ -20,7 +22,7 @@ try {
     page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${label}] ${m.text()}`); });
     page.on('pageerror', (e) => errors.push(`[${label}] ${e.message}`));
     page.setDefaultTimeout(180000);
-    await page.goto('http://localhost:4317/?lowpower=1', { waitUntil: 'load' });
+    await page.goto('http://localhost:4317/tecnico.html?lowpower=1', { waitUntil: 'load' });
     await page.waitForFunction(() => window.__morfiReady === true, null, { timeout: 180000 });
     await page.waitForTimeout(1500);
     await page.screenshot({ path: join(outDir, `${label}_front.png`) });
