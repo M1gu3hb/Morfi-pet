@@ -15,8 +15,7 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
-FACE_PROPS = {"blink_L": 0.0, "blink_R": 0.0, "gaze_x": 0.0, "gaze_y": 0.0, "mouth_open": 0.0,
-              "smile": 0.0, "brow_L": 0.0, "brow_R": 0.0, "squint": 0.0, "mouth_round": 0.0}
+from .clip import FACE_PROPS  # noqa: E402  (shared with the web exporter)
 
 
 def ensure_props(rig):

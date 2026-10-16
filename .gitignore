@@ -9,3 +9,4 @@ __pycache__/
 .DS_Store
 web/public/models/morfi_web.glb
 web/public/models/morfi_master.glb
+web/public/models/morfi_live.glb

@@ -100,9 +100,36 @@ $B -b work/ia3d/morfi_ia_anim.blend --python scripts/ia3d/build_look.py -- --reg
 $B -b work/ia3d/morfi_ia_look.blend --python scripts/ia3d/render_showcase.py -- --out work/ia3d/showcase
 ```
 
-## 8. Pendiente
+## 8. Morfi en vivo (visor web, `web/live.html`)
 
-- Visor web: los ojos y la boca son shaders de Blender; en three.js hay que portarlos (el mismo SDF 2D en GLSL)
-  y exportar el GLB con los shape keys. La animación se exporta horneada a huesos.
+Página nueva, aparte del visor técnico del modelo procedural (`index.html`, que no cambia).
+- `scripts/ia3d/export_web.py` exporta `work/ia3d/web/morfi_live.glb`. Lleva el cuerpo con 32 huesos, las 10 acciones
+  horneadas cuadro por cuadro (el IK de las piernas y el pivote de los pies ya aplicados), los shape keys de cejas
+  y del relleno de la boca, y materiales glTF (textura 4K, normal 2K, sheen y clearcoat). Escribe también
+  `morfi_live_face.json` con las medidas de los ojos y la boca.
+- `scripts/ia3d/export_face_anims.py` escribe `morfi_live_anims.json`: las curvas de la cara de cada acción
+  (parpadeo, mirada, boca, cejas…), porque glTF no transporta las propiedades del rig.
+- `npm run sync-live` copia todo a `web/public/models/` y comprime la geometría con meshopt (8.8 → 4.8 MB).
+  **El GLB está en `.gitignore`**: es el modelo del usuario y no se publica sin su permiso.
+- `web/src/live/face.ts` porta a GLSL los shaders de ojos y boca de Blender. `director.ts` mezcla las acciones
+  con transiciones de 0.35 s y vuelve al reposo al acabar cada una. Encima añade parpadeos al azar, ojos y
+  cabeza que siguen al cursor o a la cámara, habla a partir de un texto y, en "modo pantalla", pequeñas
+  acciones solas.
+- Clic sobre Morfi: reacciona (salto, sí, saludo). Parámetros de URL: `?kiosk=1` (pantalla de punto de venta,
+  sin panel), `?clean=1`, `?bg=dark`, `?anim=Wave`, `?lowpower=1`.
+- **API para el chatbot** (también funciona dentro de un iframe):
+  ```js
+  morfi.play('Wave')                      // Idle, Wave, Talk, Nod_Yes, Shake_No, Look_Around, Present, Jump_Happy, Walk, Dance
+  morfi.speak('¡Hola! ¿En qué te ayudo?') // mueve la boca con el texto; devuelve la duración en s
+  iframe.contentWindow.postMessage({ type: 'speak', text: 'Claro, te explico…' }, '*')
+  iframe.contentWindow.postMessage({ type: 'play', name: 'Nod_Yes' }, '*')
+  ```
+- Prueba: `npm run build && npm run test:live`. Recorre las 10 animaciones, el habla, `postMessage`, el fondo
+  oscuro y el celular, y falla ante cualquier error de consola (capturas en `work/ia3d/viewer_test/`).
+
+## 9. Pendiente
+
+- Publicar en Vercel requiere subir el GLB (el modelo del usuario): pedir permiso antes.
+- Labios sincronizados con audio real (hoy la boca sigue el texto); con una voz TTS se puede mover con la amplitud.
 - La sudadera suelta (`SUDADERA.glb`) no se usó: la sudadera de la malla principal se deforma bien con el rig
   y separarla dejaría un hueco sin cuerpo debajo. Sirve para un primer plano o para simular tela más adelante.

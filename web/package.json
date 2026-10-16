@@ -11,7 +11,9 @@
     "capture-look": "node scripts/capture-look.mjs",
     "look-eval": "node scripts/look-eval.mjs",
     "test:e2e": "node scripts/smoke-test.mjs",
-    "validate": "node scripts/validate-gltf.mjs"
+    "validate": "node scripts/validate-gltf.mjs",
+    "sync-live": "node scripts/sync-live.mjs",
+    "test:live": "node scripts/live-test.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"
