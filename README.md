@@ -12,6 +12,10 @@ Modelo 3D completo de **Morfi**, la mascota de Astral Morphiq Systems, reconstru
 | Visor | `web/` (Three.js + TypeScript + Vite) |
 | Documentación | `docs/art-direction.md` (decisiones y medidas), `docs/validation.md` (resultados de validación) |
 
+> **Nueva línea de trabajo (oct-2026):** el personaje animado sale ahora de la malla de la IA 3D (Meshy), con
+> rig nuevo, ojos y boca animables, materiales realistas y 10 animaciones. Ver `docs/ia3d.md`. Lo de abajo
+> describe el modelo procedural anterior (rondas 1–11), que sigue siendo la base del visor publicado.
+
 Los binarios (`*.blend`, `*.glb`, `*.mp4`) se versionan con **Git LFS** (`.gitattributes`). Tras clonar: `git lfs install && git lfs pull`.
 
 ## Qué incluye el personaje

@@ -20,20 +20,21 @@ sys.path.insert(0, HERE)
 import studio  # noqa: E402
 
 BLEND = 10                       # crossfade frames between actions
-# action, repeats, caption, camera (azimuth deg, distance m, camera height, target height, lens)
+# action, repeats, caption, camera (azimuth deg, distance m, camera height, target height, lens, cut)
+# cut=True starts the segment with an editorial cut; otherwise the camera glides there.
 SEGMENTS = [
-    ("Idle", 1, "Reposo: respira, cambia el peso y mira", (-18, 3.1, 0.80, 0.55, 50)),
-    ("Wave", 1, "Saludo", (-12, 2.8, 0.75, 0.56, 50)),
-    ("Talk", 1, "Hablando (modo chatbot)", (-6, 1.9, 0.72, 0.62, 55)),
-    ("Nod_Yes", 1, "Sí", (-6, 1.9, 0.72, 0.64, 55)),
-    ("Look_Around", 1, "Curioso", (8, 2.3, 0.74, 0.62, 50)),
-    ("Present", 1, "Presentando un producto", (30, 2.6, 0.72, 0.55, 50)),
-    ("Jump_Happy", 1, "¡Feliz!", (-20, 3.3, 0.70, 0.62, 45)),
-    ("Walk", 4, "Caminando", (-35, 3.4, 0.70, 0.52, 45)),
-    ("Dance", 2, "Bailando", (-10, 3.0, 0.72, 0.56, 45)),
-    ("Shake_No", 1, "No", (-6, 2.0, 0.72, 0.64, 55)),
-    ("Wave", 1, "¡Adiós!", (-14, 2.9, 0.74, 0.56, 50)),
-    ("Idle", 1, "", (-14, 3.2, 0.78, 0.55, 50)),
+    ("Idle", 1, "Reposo: respira, cambia el peso y mira", (-18, 3.5, 0.80, 0.62, 50, False)),
+    ("Wave", 1, "Saludo", (-12, 3.2, 0.78, 0.62, 50, False)),
+    ("Talk", 1, "Hablando (modo chatbot)", (-6, 2.45, 0.76, 0.70, 50, True)),
+    ("Nod_Yes", 1, "Sí", (-4, 2.4, 0.76, 0.70, 50, False)),
+    ("Look_Around", 1, "Curioso", (8, 2.8, 0.76, 0.66, 50, False)),
+    ("Present", 1, "Presentando un producto", (28, 3.1, 0.74, 0.62, 50, True)),
+    ("Jump_Happy", 1, "¡Feliz!", (-20, 3.9, 0.72, 0.70, 45, True)),
+    ("Walk", 4, "Caminando", (-35, 3.9, 0.74, 0.60, 45, True)),
+    ("Dance", 2, "Bailando", (-10, 3.5, 0.74, 0.64, 45, True)),
+    ("Shake_No", 1, "No", (-6, 2.45, 0.76, 0.70, 50, True)),
+    ("Wave", 1, "¡Adiós!", (-14, 3.3, 0.78, 0.62, 50, True)),
+    ("Idle", 1, "", (-14, 3.8, 0.80, 0.62, 50, False)),
 ]
 
 
@@ -119,24 +120,45 @@ def mover_y(mover, frame):
     return fc.evaluate(frame) if fc else 0.0
 
 
+def _framing(mover, f, cam_spec, push):
+    az, dist, h, tz, lens = cam_spec[:5]
+    my = mover_y(mover, f)
+    a = math.radians(az)
+    d = dist * push
+    return (d * math.sin(a), my - d * math.cos(a), h), (0, my, tz), lens
+
+
 def build_camera(cam, mover, segs):
+    """Gentle glides inside segments (a slow push-in) and clean cuts between distant shots."""
     tgt = bpy.data.objects.new("CamTarget", None)
     bpy.context.scene.collection.objects.link(tgt)
     con = cam.constraints.new("TRACK_TO")
     con.target = tgt
     con.track_axis, con.up_axis = "TRACK_NEGATIVE_Z", "UP_Y"
     cam.data.dof.focus_object = tgt
+    keys = []                                   # (frame, framing, interpolation after the key)
+    prev = None
     for s in segs:
-        az, dist, h, tz, lens = s["camera"]
-        for f in (s["start"] + BLEND, s["end"] - BLEND):
-            my = mover_y(mover, f)
-            a = math.radians(az)
-            cam.location = (dist * math.sin(a), my - dist * math.cos(a), h)
-            tgt.location = (0, my, tz)
-            cam.data.lens = lens
-            cam.keyframe_insert("location", frame=f)
-            tgt.keyframe_insert("location", frame=f)
-            cam.data.keyframe_insert("lens", frame=f)
+        spec = s["camera"]
+        cut = len(spec) > 5 and spec[5]
+        a = s["start"] if cut else s["start"] + BLEND
+        b = s["end"] - BLEND
+        if cut and prev is not None:
+            keys.append((a - 1, _framing(mover, a - 1, prev, 0.985), "CONSTANT"))
+        keys.append((a, _framing(mover, a, spec, 1.03), "BEZIER"))
+        keys.append((b, _framing(mover, b, spec, 0.985), "BEZIER"))
+        prev = spec
+    keys.sort(key=lambda k: k[0])
+    for f, (loc, tloc, lens), _ in keys:
+        cam.location, tgt.location, cam.data.lens = loc, tloc, lens
+        cam.keyframe_insert("location", frame=f)
+        tgt.keyframe_insert("location", frame=f)
+        cam.data.keyframe_insert("lens", frame=f)
+    interp = {f: mode for f, _, mode in keys}
+    for owner in (cam, tgt, cam.data):
+        for fc in owner.animation_data.action.fcurves:
+            for kp in fc.keyframe_points:
+                kp.interpolation = interp.get(int(round(kp.co[0])), "BEZIER")
     # a breath of hand-held drift so the camera is never dead still
     for i, fc in enumerate(cam.animation_data.action.fcurves):
         if fc.data_path == "location":
@@ -155,12 +177,13 @@ def main():
     mover = build_mover(rig, segs)
     build_camera(cam, mover, segs)
     sc.frame_start, sc.frame_end = 0, total - 1
-    if args.engine == "cycles" and not args.draft:
-        sc.render.use_motion_blur = True
-        sc.render.motion_blur_shutter = 0.45
-        sc.render.use_persistent_data = True
+    if args.engine == "cycles":
+        sc.render.use_persistent_data = True          # keep the 8K textures and BVH between frames
         sc.cycles.use_adaptive_sampling = True
         sc.cycles.adaptive_threshold = 0.02
+        if not args.draft:
+            sc.render.use_motion_blur = True
+            sc.render.motion_blur_shutter = 0.45
     out = os.path.abspath(args.out)
     os.makedirs(out, exist_ok=True)
     with open(os.path.join(out, "showcase.json"), "w", encoding="utf-8") as fh:

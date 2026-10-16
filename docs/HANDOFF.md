@@ -108,6 +108,25 @@ visor, renders).
 
 Reporta al usuario en cada paso importante con imágenes (hoja de contacto, comparativas) antes de seguir.
 
+## 5b. Hecho en la sesión local (15-oct-2026)
+
+Detalle completo en `docs/ia3d.md`. En resumen:
+- Los modelos son de **Meshy**. `MORFI ESQ.glb`, `MORFI ESQUELETO.glb`, `MORFI GBL 1.glb` y el OBJ son la
+  **misma malla**. `SUDADERA.glb` es una sudadera suelta (no se usó). Copias en `work/ia3d/`.
+- El rig de Meshy se descartó (pesos inservibles). Hay un rig nuevo con IK de piernas
+  (`scripts/ia3d/build_rig.py`).
+- Ojos y boca animables con calcomanías procedurales sobre la textura limpia, más cejas y cierre de boca
+  con shape keys (`build_face.py`). Los controla el rig (`blink_L/R`, `gaze_x/y`, `squint`, `mouth_open`,
+  `mouth_round`, `smile`, `brow_L/R`).
+- 10 acciones en `scripts/ia3d/anim/` y materiales realistas más estudio (`build_look.py`, `studio.py`).
+  El video de muestra sale de `render_showcase.py` + `encode_showcase.py`.
+- **Reglas nuevas del usuario**:
+  1. Todo se instala en **D:** (Blender 4.5.14 portátil en `D:\tools\blender-4.5`; usar `D:\tools\bl.sh`,
+     que manda los temporales a `D:\tmp\morfi`).
+  2. Los commits van **a su nombre, sin `Co-Authored-By` de Claude** (esto reemplaza lo dicho en §2).
+  3. No se suben sus modelos ni imágenes sin preguntar.
+- Pendiente: llevar la cara procedural al visor web (GLSL) y exportar el GLB nuevo.
+
 ## 6. Entorno local
 
 Requisitos (ver README): Blender 4.5 LTS (con numpy/scipy/scikit-image/pillow en su Python), Python 3

@@ -165,19 +165,10 @@ def eye_material(name, rig, eye, side):
     }
     for k, v in vals.items():
         grp.inputs[k].default_value = v
-    # drivers from the rig's custom properties
-    for sock, prop in (("GazeX", "gaze_x"), ("GazeY", "gaze_y"), ("Blink", f"blink_{side}"), ("Squint", "squint")):
-        val = nt.nodes.new("ShaderNodeValue")
-        val.name = val.label = prop
-        nt.links.new(val.outputs[0], grp.inputs[sock])
-        fc = val.outputs[0].driver_add("default_value")
-        drv = fc.driver
-        drv.type = "AVERAGE"
-        var = drv.variables.new()
-        var.name = "v"
-        var.type = "SINGLE_PROP"
-        var.targets[0].id = rig
-        var.targets[0].data_path = f'["{prop}"]'
+    # animated inputs are object attributes of the decal (driven from the rig, see
+    # drive_props): changing them never recompiles the shader, unlike drivers on nodes
+    for sock, prop in (("GazeX", "m_gaze_x"), ("GazeY", "m_gaze_y"), ("Blink", "m_blink"), ("Squint", "m_squint")):
+        nt.links.new(attr_node(nt, prop), grp.inputs[sock])
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
     nt.links.new(grp.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.35
@@ -229,22 +220,35 @@ def mouth_group():
     return ng
 
 
-def add_driver(nt, rig, prop, expr=None):
-    val = nt.nodes.new("ShaderNodeValue")
-    val.name = val.label = prop
-    fc = val.outputs[0].driver_add("default_value")
-    drv = fc.driver
-    var = drv.variables.new()
-    var.name = "v"
-    var.type = "SINGLE_PROP"
-    var.targets[0].id = rig
-    var.targets[0].data_path = f'["{prop}"]'
-    if expr:
-        drv.type = "SCRIPTED"
-        drv.expression = expr
-    else:
-        drv.type = "AVERAGE"
-    return val
+def attr_node(nt, name):
+    """Float custom property of the rendered object, read in the shader."""
+    a = nt.nodes.new("ShaderNodeAttribute")
+    a.attribute_type = "OBJECT"
+    a.attribute_name = name
+    return a.outputs["Fac"]
+
+
+def drive_props(ob, rig, mapping):
+    """ob[name] = expr(rig[prop]) through drivers, for {name: (prop, expr or None)}."""
+    for name, (prop, expr) in mapping.items():
+        ob[name] = 0.0
+        fc = ob.driver_add(f'["{name}"]')
+        drv = fc.driver
+        var = drv.variables.new()
+        var.name = "v"
+        var.type = "SINGLE_PROP"
+        var.targets[0].id = rig
+        var.targets[0].data_path = f'["{prop}"]'
+        if expr:
+            drv.type = "SCRIPTED"
+            drv.expression = expr
+        else:
+            drv.type = "AVERAGE"
+
+
+MOUTH_PROPS = {"m_open": ("mouth_open", "max(0.0, 0.5 + 0.5 * v)"),
+               "m_smile": ("smile", "min(1.0, 0.55 + 0.45 * v)"),
+               "m_round": ("mouth_round", None)}
 
 
 def mouth_material(rig):
@@ -259,9 +263,9 @@ def mouth_material(rig):
     uvn.uv_map = "eye"
     nt.links.new(uvn.outputs["UV"], grp.inputs["UV"])
     # rig props: mouth_open -1 closed .. 0 as painted .. 1 wide; smile 0..1; mouth_round 0..1
-    nt.links.new(add_driver(nt, rig, "mouth_open", "max(0.0, 0.5 + 0.5 * v)").outputs[0], grp.inputs["Open"])
-    nt.links.new(add_driver(nt, rig, "smile", "min(1.0, 0.55 + 0.45 * v)").outputs[0], grp.inputs["Smile"])
-    nt.links.new(add_driver(nt, rig, "mouth_round").outputs[0], grp.inputs["Round"])
+    nt.links.new(attr_node(nt, "m_open"), grp.inputs["Open"])
+    nt.links.new(attr_node(nt, "m_smile"), grp.inputs["Smile"])
+    nt.links.new(attr_node(nt, "m_round"), grp.inputs["Round"])
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
     nt.links.new(grp.outputs["Color"], bsdf.inputs["Base Color"])
     rough = nt.nodes.new("ShaderNodeMapRange")
@@ -461,6 +465,8 @@ def main():
         for d in ob.data.uv_layers["eye"].data:
             d.uv = (d.uv[0] + dx, d.uv[1] + dz)
         ob.data.materials.append(eye_material(f"Eye_{side}", rig, eye, side))
+        drive_props(ob, rig, {"m_gaze_x": ("gaze_x", None), "m_gaze_y": ("gaze_y", None),
+                              "m_blink": (f"blink_{side}", None), "m_squint": ("squint", None)})
         parent_to_bone(ob, rig, "head")
         print(f"eye {side}: {len(ob.data.vertices)} verts")
     for k in ("brow_L", "brow_R"):
@@ -476,6 +482,7 @@ def main():
     for d in mo.data.uv_layers["eye"].data:      # shader space: origin on the painted top lip
         d.uv = (d.uv[0], d.uv[1] - 0.006)
     mo.data.materials.append(mouth_material(rig))
+    drive_props(mo, rig, MOUTH_PROPS)
     mouth_fill_keys(body, mo, rig)
     parent_to_bone(mo, rig, "head")
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(args.out))

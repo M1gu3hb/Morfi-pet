@@ -19,7 +19,7 @@ def _look_at(ob, target):
     ob.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
 
 
-def cyclorama(name="Cyclorama", depth_front=6.0, back=2.6, radius=1.4, height=4.0, width=12.0):
+def cyclorama(name="Cyclorama", depth_front=14.0, back=2.6, radius=1.6, height=9.0, width=34.0):
     """Floor that bends up into a back wall (no visible horizon)."""
     prof = [(-depth_front, 0.0)]
     for a in np.linspace(0, math.pi / 2, 16):
