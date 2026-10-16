@@ -90,8 +90,30 @@ class Clip:
         """Approximate world angle of the last bone of a chain (small-angle sum)."""
         return sum(self.get(f"{b}.{axis}") for b in bones)
 
+    def plant_feet(self, toe=(-0.132, -0.100), heel=(0.030, -0.100), reach=0.05):
+        """Roll the foot over its toe or heel instead of its ankle while it touches the floor.
+
+        foot_ik pitches about the ankle; a real foot on the ground pivots on the toe (heel
+        rising, + pitch) or on the heel (toes up, - pitch). The ankle is moved so the
+        pivot stays put: offsets are the pivot relative to the ankle (y, z), in metres.
+        """
+        for s in ("L", "R"):
+            th = np.radians(self.get(f"foot_ik.{s}.rx"))
+            if not np.any(th):
+                continue
+            z = self.get(f"foot_ik.{s}.lz")
+            contact = np.clip(1.0 - z / reach, 0.0, 1.0)
+            py = np.where(th > 0, toe[0], heel[0])
+            pz = np.where(th > 0, toe[1], heel[1])
+            ay, az = -py, -pz                                  # ankle relative to the pivot
+            dy = (ay * np.cos(th) - az * np.sin(th)) - ay
+            dz = (ay * np.sin(th) + az * np.cos(th)) - az
+            self.add(f"foot_ik.{s}.ly", dy * contact)
+            self.add(f"foot_ik.{s}.lz", dz * contact)
+
     def secondary(self):
         """Cubes, hood and head follow-through, derived from the primary motion."""
+        self.plant_feet()
         loop = self.loop
         spine_chain = ["hips", "spine", "chest", "neck", "head"]
         head_z = self.get("root.lz") + self.get("hips.lz")

@@ -92,13 +92,14 @@ def walk(speed_steps=32):
     for s, off in (("L", 0.0), ("R", half)):
         ph = ((f - off) % n) / n                    # 0 = heel strike, 0..0.5 stance, 0.5..1 swing
         stance = ph < 0.5
-        y = np.where(stance, -stride + 2 * stride * (ph / 0.5), stride - 2 * stride * ((ph - 0.5) / 0.5))
         sw = np.clip((ph - 0.5) / 0.5, 0, 1)
+        # planted: constant speed backwards (= the root travel); swing: eased forward
+        y = np.where(stance, -stride + 2 * stride * (ph / 0.5), stride - 2 * stride * (0.5 - 0.5 * np.cos(np.pi * sw)))
         z = np.where(stance, 0.0, lift * np.sin(np.pi * sw) ** 1.4)
         # heel strike: toes up; push off: heel rises (toes down relative to the floor)
         pitch = np.where(stance, -14 * np.exp(-((ph - 0.0) / 0.06) ** 2) + 16 * np.exp(-((ph - 0.5) / 0.08) ** 2),
                          18 * np.exp(-((ph - 0.55) / 0.10) ** 2) - 12 * np.exp(-((ph - 0.98) / 0.06) ** 2))
-        c.foot(s, y=C.spring(y, freq=6, damping=0.9, loop=True), z=z, pitch=pitch)
+        c.foot(s, y=y, z=z, pitch=pitch)
         # arms counter-swing (opposite arm goes forward with the leg)
         swing = -18 * np.cos(2 * np.pi * ph)
         c.arm_fwd("R" if s == "L" else "L", C.delay(swing, 2, loop=True))
