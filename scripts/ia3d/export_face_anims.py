@@ -15,13 +15,15 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from anim.actions import ACTIONS  # noqa: E402
 from anim.clip import FACE_PROPS  # noqa: E402
+from anim.motor import EXPRESSIONS  # noqa: E402
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
-    out = {"fps": 30, "props": list(FACE_PROPS), "actions": {}}
+    out = {"fps": 30, "props": list(FACE_PROPS), "actions": {},
+           "expressions": EXPRESSIONS}               # face-only presets the viewer can layer on any clip
     for name, make in ACTIONS.items():
         clip = make()
         props = {}

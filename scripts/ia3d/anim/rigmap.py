@@ -6,8 +6,15 @@ Channel names:
                       Morfi faces -Y, his left is +X:  +rx leans/nods forward,
                       +ry tilts to his left, +rz turns to his left.
   "<bone>.tw"         twist in degrees about the bone's own axis (applied first).
+  "<bone>.cx|cz"      rotation in degrees about the bone's own X / Z axes (fingers: +cx curls into
+                      the palm, cz spreads), applied in the bone's local frame.
+  "<bone>.s"          uniform scale (props: 0 hidden, 1 shown).
+  "<bone>.sy"         stretch along the bone, volume kept (1.0 rest; arms may go to ~1.12).
+  "ik.<side>"         arm IK on/off (0..1): blends FK with the hand_ik target (see build_controls.py).
   "<bone>.lx|ly|lz"   translation in metres along the world rest axes (root, hips, IK bones).
-  "prop.<name>"       custom property on the rig object (blink, gaze, mouth...).
+  "prop.<name>"       custom property on the rig object (blink, gaze, mouth...). The prop bone
+                      is called "prop" too: "prop.rx", "prop.lx"... (a bone channel suffix) are
+                      that bone's channels, anything else after "prop." is a face property.
 """
 import math
 
@@ -16,6 +23,14 @@ import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 from .clip import FACE_PROPS  # noqa: E402  (shared with the web exporter)
+
+
+BONE_CH = {"rx", "ry", "rz", "tw", "cx", "cz", "s", "sy", "lx", "ly", "lz"}
+
+
+def is_face(k):
+    """Channel of a rig custom property (face), not of a bone."""
+    return k.startswith("prop.") and k[5:] not in BONE_CH
 
 
 def ensure_props(rig):
@@ -61,13 +76,21 @@ def bake(rig, name, channels, n, loop=False):
     # actions crossfade cleanly in the NLA without channels snapping back to rest
     channels = dict(channels)
     for pb in rig.pose.bones:
-        if not any(k.startswith(pb.name + ".") for k in channels):
+        if not any(k.startswith(pb.name + ".") and not is_face(k) for k in channels):
             channels[f"{pb.name}.rx"] = np.zeros(n)
         if pb.name in ("root", "hips") or pb.name.startswith("foot_ik"):
             channels.setdefault(f"{pb.name}.lx", np.zeros(n))
     for k in FACE_PROPS:
         channels.setdefault(f"prop.{k}", np.full(n, FACE_PROPS[k]))
-    bones = sorted({k.rsplit(".", 1)[0] for k in channels if not k.startswith("prop.")})
+    for pb in rig.pose.bones:
+        if pb.name.startswith("prop_"):
+            channels.setdefault(f"{pb.name}.s", np.zeros(n))      # props hidden unless shown
+        if pb.name in ("prop",) or pb.name.startswith("hand_ik"):
+            channels.setdefault(f"{pb.name}.lx", np.zeros(n))
+    if "forearm.L" in rig.pose.bones and rig.pose.bones["forearm.L"].constraints.get("ArmIK"):
+        for side in ("L", "R"):
+            channels.setdefault(f"ik.{side}", np.zeros(n))
+    bones = sorted({k.rsplit(".", 1)[0] for k in channels if not is_face(k) and not k.startswith("ik.")})
     for bname in bones:
         if bname not in rig.pose.bones:
             raise KeyError(f"unknown bone {bname!r} in action {name}")
@@ -77,23 +100,36 @@ def bake(rig, name, channels, n, loop=False):
         Rq, Rqi = R.to_quaternion(), R.inverted().to_quaternion()
         get = lambda c: channels.get(f"{bname}.{c}", np.zeros(n))  # noqa: E731
         rx, ry, rz, tw = get("rx"), get("ry"), get("rz"), get("tw")
-        if any(f"{bname}.{a}" in channels for a in ("rx", "ry", "rz", "tw")):
+        cx, cz = get("cx"), get("cz")
+        if any(f"{bname}.{a}" in channels for a in ("rx", "ry", "rz", "tw", "cx", "cz")):
             qs = np.empty((n, 4))
             prev = None
             for f in range(n):
-                ql = Rqi @ _quat_world(rx[f], ry[f], rz[f]) @ Rq @ Quaternion((0, 1, 0), math.radians(tw[f]))
+                ql = (Rqi @ _quat_world(rx[f], ry[f], rz[f]) @ Rq @ Quaternion((0, 0, 1), math.radians(cz[f]))
+                      @ Quaternion((1, 0, 0), math.radians(cx[f])) @ Quaternion((0, 1, 0), math.radians(tw[f])))
                 if prev is not None and ql.dot(prev) < 0:
                     ql.negate()
                 qs[f] = ql[:]
                 prev = ql
             _fcurves(action, f'pose.bones["{bname}"].rotation_quaternion', 4, n, qs, bname)
+        if f"{bname}.s" in channels or f"{bname}.sy" in channels:
+            us = np.asarray(channels.get(f"{bname}.s", np.ones(n)), float)
+            sy = np.asarray(channels.get(f"{bname}.sy", np.ones(n)), float)
+            side = 1.0 / np.sqrt(np.maximum(sy, 1e-3))
+            sc = np.stack([us * side, us * sy, us * side], 1)
+            _fcurves(action, f'pose.bones["{bname}"].scale', 3, n, sc, bname)
         if any(f"{bname}.l{a}" in channels for a in "xyz"):
             lx, ly, lz = get("lx"), get("ly"), get("lz")
             locs = np.array([(Rinv @ Vector((lx[f], ly[f], lz[f])))[:] for f in range(n)])
             _fcurves(action, f'pose.bones["{bname}"].location', 3, n, locs, bname)
     for k, v in channels.items():
-        if k.startswith("prop."):
+        if is_face(k):
             _fcurves(action, f'["{k[5:]}"]', 1, n, np.asarray(v, float), "Face")
+        elif k.startswith("ik."):
+            s = k[3:]
+            w = np.clip(np.asarray(v, float), 0, 1)
+            _fcurves(action, f'pose.bones["forearm.{s}"].constraints["ArmIK"].influence', 1, n, w, "IK")
+            _fcurves(action, f'pose.bones["hand.{s}"].constraints["HandIK"].influence', 1, n, w, "IK")
     return action
 
 

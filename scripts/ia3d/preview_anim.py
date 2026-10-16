@@ -54,11 +54,29 @@ def set_engine(name, samples=16):
         sc.cycles.samples = samples
 
 
+def render_action(name, args, cam, rig, sc):
+    action = bpy.data.actions[name]
+    rigmap.assign(rig, action)
+    out = os.path.abspath(os.path.join(args.out, name))
+    os.makedirs(out, exist_ok=True)
+    for old in os.listdir(out):
+        if old.endswith(".png"):
+            os.remove(os.path.join(out, old))
+    frames = list(range(int(action.frame_start), int(action.frame_end) + 1, args.step))
+    for i, f in enumerate(frames):
+        sc.frame_set(f)
+        sc.render.filepath = os.path.join(out, f"f_{i:04d}.png")
+        bpy.ops.render.render(write_still=True)
+    mp4 = os.path.join(os.path.abspath(args.out), f"{name}.mp4")
+    subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-framerate", str(30 // args.step), "-i",
+                    os.path.join(out, "f_%04d.png"), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20",
+                    "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", mp4], check=True)
+    print("DONE", mp4, len(frames))
+
+
 def main():
     args = parse_args()
     rig = bpy.data.objects["Morfi_Rig"]
-    action = bpy.data.actions[args.action]
-    rigmap.assign(rig, action)
     cam, light_rig = rc.setup_scene(16)
     set_engine(args.engine)
     sc = bpy.context.scene
@@ -71,35 +89,20 @@ def main():
     c["target"] = [c["target"][0], c["target"][1], c["target"][2] + 0.03]
     place_camera(cam, c)
     light_rig.rotation_euler = (0, 0, math.radians(c["az"]))
-    # floor so contact and jumps read
     bpy.ops.mesh.primitive_plane_add(size=6, location=(0, 0, 0))
     floor = bpy.context.active_object
     mat = bpy.data.materials.new("Floor")
     mat.use_nodes = True
-    mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.93, 0.93, 0.92, 1)
+    mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.80, 0.82, 0.86, 1)
     mat.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.9
     floor.data.materials.append(mat)
-    if args.follow:
+    if args.follow:                                   # walks: the camera rides on the root
         cam.parent = rig
         cam.parent_type = "BONE"
         cam.parent_bone = "root"
         cam.matrix_parent_inverse = (rig.matrix_world @ rig.pose.bones["root"].matrix).inverted()
-
-    out = os.path.abspath(os.path.join(args.out, args.action))
-    os.makedirs(out, exist_ok=True)
-    for old in os.listdir(out):
-        if old.endswith(".png"):
-            os.remove(os.path.join(out, old))
-    frames = list(range(int(action.frame_start), int(action.frame_end) + 1, args.step))
-    for i, f in enumerate(frames):
-        sc.frame_set(f)
-        sc.render.filepath = os.path.join(out, f"f_{i:04d}.png")
-        bpy.ops.render.render(write_still=True)
-    mp4 = os.path.join(os.path.abspath(args.out), f"{args.action}.mp4")
-    subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-framerate", str(30 // args.step), "-i",
-                    os.path.join(out, "f_%04d.png"), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20",
-                    "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", mp4], check=True)
-    print("DONE", mp4, len(frames))
+    for name in args.action.split(","):
+        render_action(name, args, cam, rig, sc)
 
 
 main()

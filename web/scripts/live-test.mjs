@@ -1,6 +1,6 @@
 // Headless test of "Morfi en vivo" (index.html, the landing page): loads the real GLB, plays every
-// animation, makes him speak, checks the face reacts, screenshots desktop and
-// mobile, and fails on any console error.
+// animation (props must show up in Tablet / Calculator), layers every facial expression, makes him
+// speak, checks the face reacts, screenshots desktop and mobile, and fails on any console error.
 //   npm run build && npm run test:live          (screenshots -> ../work/ia3d/viewer_test)
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
@@ -37,12 +37,46 @@ try {
     await page.screenshot({ path: join(outDir, `${label}_idle.png`) });
     if (label === 'mobile') continue;
     const actions = await page.evaluate(() => window.morfi.actions);
-    if (actions.length !== 10) throw new Error(`expected 10 animations, got ${actions.length}: ${actions}`);
+    if (actions.length !== 26) throw new Error(`expected 26 animations, got ${actions.length}: ${actions}`);
+    const LONG = { Wave: 1300, Tablet: 2700, Calculator: 2300, Count_123: 2200, Think: 1800, Scared: 1500, Sad: 2000 };
     for (const name of actions) {
       await page.evaluate((n) => window.morfi.play(n), name);
-      await page.waitForTimeout(name === 'Wave' ? 1300 : 900);
+      await page.waitForTimeout(LONG[name] ?? 1100);
       await page.screenshot({ path: join(outDir, `${label}_${name}.png`) });
     }
+    // the props are only visible while their clip plays (bone scale 0 otherwise)
+    const propScale = (n) => page.evaluate((nm) => {
+      let s = -1;
+      document.querySelector('canvas');
+      window.__morfiScene?.traverse((o) => { if (o.name === nm) s = o.getWorldScale(new o.position.constructor()).x; });
+      return s;
+    }, n);
+    await page.evaluate(() => window.morfi.play('Idle'));
+    await page.waitForTimeout(900);
+    const hidden = await propScale('Prop_Tablet');
+    await page.evaluate(() => window.morfi.play('Tablet'));
+    await page.waitForTimeout(1500);
+    const shown = await propScale('Prop_Tablet');
+    if (!(hidden >= 0 && hidden < 0.01 && shown > 0.9)) throw new Error(`tablet scale idle ${hidden}, in clip ${shown}`);
+    // facial expressions layered on Idle: each must change the face
+    await page.evaluate(() => window.morfi.play('Idle'));
+    await page.waitForTimeout(800);
+    const exprs = await page.evaluate(() => window.morfi.expressions);
+    if (exprs.length < 18) throw new Error(`expected 18 expressions, got ${exprs.length}`);
+    await page.evaluate(() => window.morfi.follow(false));
+    for (const e of exprs) {
+      await page.evaluate((n) => window.morfi.expression(n), e);
+      await page.waitForTimeout(650);
+      await page.screenshot({ path: join(outDir, `${label}_expr_${e}.png`), clip: { x: 340, y: 60, width: 520, height: 420 } });
+    }
+    await page.evaluate(() => window.morfi.expression('neutral'));
+    await page.waitForTimeout(700);
+    const n0 = await page.screenshot({ clip: { x: 340, y: 60, width: 520, height: 420 } });
+    await page.evaluate(() => window.postMessage({ type: 'expression', name: 'surprised' }, '*'));
+    await page.waitForTimeout(700);
+    const n1 = await page.screenshot({ clip: { x: 340, y: 60, width: 520, height: 420 } });
+    if (n0.equals(n1)) throw new Error('the expression did not change the face');
+    await page.evaluate(() => { window.morfi.expression('neutral'); window.morfi.follow(true); });
     // speech must move the mouth (decal pixels change between two instants)
     const dur = await page.evaluate(() => window.morfi.speak('¡Hola! Soy Morfi. ¿En qué te ayudo hoy?'));
     if (!(dur > 1)) throw new Error(`speak returned ${dur}`);

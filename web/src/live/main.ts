@@ -1,7 +1,8 @@
 // "Morfi en vivo": the animated Morfi built on the AI (Meshy) mesh. Loads
-// models/morfi_live.glb (rig, 10 baked clips, face decals), the face curves and the
-// eye/mouth shader constants, and lets people play with him. Also an embeddable
-// character: window.morfi API and postMessage({type: 'play'|'speak', ...}).
+// models/morfi_live.glb (rig with articulated hands, the baked clips, props, face decals),
+// the face curves and expressions, and the eye/mouth shader constants, and lets people
+// play with him. Also an embeddable character: window.morfi API and
+// postMessage({type: 'play'|'speak'|'expression', ...}).
 import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -18,11 +19,26 @@ const MODEL_URL = params.get('model') ?? BASE + 'morfi_live.glb';
 const LOWPOWER = params.has('lowpower');
 if (params.has('clean') || params.has('kiosk')) document.documentElement.classList.add('clean');
 
-const LABELS: Record<string, string> = {
-  Idle: 'Reposo', Wave: 'Saludar', Talk: 'Hablar', Nod_Yes: 'Sí', Shake_No: 'No', Look_Around: 'Curioso',
-  Present: 'Presentar', Jump_Happy: '¡Feliz!', Walk: 'Caminar', Dance: 'Bailar',
+// clips by group (names of scripts/ia3d/anim/actions*.py) and their labels
+const GROUPS: Record<string, Record<string, string>> = {
+  actions: {
+    Idle: 'Reposo', Wave: 'Saludar', Talk: 'Hablar', Nod_Yes: 'Sí', Shake_No: 'No', Look_Around: 'Curioso',
+    Present: 'Presentar', Jump_Happy: '¡Feliz!', Walk: 'Caminar', Run: 'Correr', Dance: 'Bailar',
+  },
+  emotions: {
+    Laugh: 'Reír', Surprised: 'Sorpresa', Sad: 'Triste', Angry: 'Enojado', Scared: 'Miedo', Calm: 'Tranquilo',
+    Celebrate: 'Festejar', Shrug: 'No sé',
+  },
+  work: {
+    Tablet: 'Tablet (tutorial)', Calculator: 'Calculadora', Count_123: 'Contar 1-2-3', Point_Side: 'Señalar',
+    Thumbs_Up: 'Pulgar arriba', Idea: '¡Idea!', Think: 'Pensar',
+  },
 };
-const ORDER = Object.keys(LABELS);
+const EXPR_LABELS: Record<string, string> = {
+  neutral: 'Neutral', happy: 'Contento', joy: 'Alegre', laugh: 'Risa', sad: 'Triste', angry: 'Enojado', scared: 'Asustado',
+  surprised: 'Sorprendido', calm: 'Tranquilo', thinking: 'Pensando', skeptical: 'Escéptico', smug: 'Pícaro', love: 'Enamorado',
+  wink: 'Guiño', determined: 'Decidido', confused: 'Confundido', shy: 'Tímido', sleepy: 'Con sueño',
+};
 
 // ------------------------------------------------------------------ renderer, scene, studio
 const canvas = document.getElementById('view') as HTMLCanvasElement;
@@ -105,15 +121,19 @@ Promise.all([
   scene.add(model);
   director = new Director(model, gltf.animations, anims, face);
   director.onAction = (name) => {
-    document.querySelectorAll<HTMLButtonElement>('#actions button').forEach((b) => b.classList.toggle('on', b.dataset.anim === name));
+    document.querySelectorAll<HTMLButtonElement>('button[data-anim]').forEach((b) => b.classList.toggle('on', b.dataset.anim === name));
   };
   buildButtons(director.names);
+  buildExpressions(director.expressions);
   director.kiosk = params.has('kiosk');
   (document.getElementById('kiosk') as HTMLInputElement).checked = director.kiosk;
   const start = params.get('anim');
   director.play(start && director.names.includes(start) ? start : 'Idle', 0);
+  const startExpr = params.get('expr');
+  if (startExpr) setExpression(startExpr);
   statusEl.classList.add('hidden');
   document.getElementById('stats')!.textContent = stats(model, gltf.animations.length);
+  (window as unknown as { __morfiReady: boolean; __morfiScene: THREE.Scene }).__morfiScene = scene;
   (window as unknown as { __morfiReady: boolean }).__morfiReady = true;
 }).catch((err: unknown) => {
   statusEl.classList.add('error');
@@ -131,13 +151,40 @@ function stats(root: THREE.Object3D, clips: number): string {
 }
 
 function buildButtons(names: string[]): void {
-  const box = document.getElementById('actions')!;
+  const known = new Set(Object.values(GROUPS).flatMap((g) => Object.keys(g)));
+  for (const [group, labels] of Object.entries(GROUPS)) {
+    const box = document.getElementById(group)!;
+    box.innerHTML = '';
+    const list = Object.keys(labels).filter((k) => names.includes(k));
+    if (group === 'actions') list.push(...names.filter((k) => !known.has(k)));   // anything new still shows up
+    for (const n of list) {
+      const b = document.createElement('button');
+      b.dataset.anim = n;
+      b.textContent = labels[n] ?? n;
+      b.addEventListener('click', () => director?.play(n));
+      box.append(b);
+    }
+  }
+}
+
+/** Set (or clear with '' / 'neutral') the face expression; `toggle` is for the panel buttons. */
+function setExpression(name: string, toggle = false): void {
+  if (!director) return;
+  const off = !name || name === 'neutral' || (toggle && director.expression === name);
+  director.setExpression(off ? null : name);
+  document.querySelectorAll<HTMLButtonElement>('#expressions button').forEach((b) =>
+    b.classList.toggle('on', off ? b.dataset.expr === 'neutral' : b.dataset.expr === name));
+}
+
+function buildExpressions(names: string[]): void {
+  const box = document.getElementById('expressions')!;
   box.innerHTML = '';
-  for (const n of [...ORDER.filter((k) => names.includes(k)), ...names.filter((k) => !ORDER.includes(k))]) {
+  for (const n of names) {
     const b = document.createElement('button');
-    b.dataset.anim = n;
-    b.textContent = LABELS[n] ?? n;
-    b.addEventListener('click', () => director?.play(n));
+    b.dataset.expr = n;
+    b.textContent = EXPR_LABELS[n] ?? n;
+    b.classList.toggle('on', n === 'neutral');
+    b.addEventListener('click', () => setExpression(n, true));
     box.append(b);
   }
 }
@@ -184,7 +231,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (!downAt || !model || !director || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) return;
   const r = canvas.getBoundingClientRect();
   raycaster.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
-  if (raycaster.intersectObject(model, true).length) director.play(['Jump_Happy', 'Nod_Yes', 'Wave'][pokes++ % 3]);
+  if (raycaster.intersectObject(model, true).length) director.play(['Jump_Happy', 'Nod_Yes', 'Wave', 'Laugh'][pokes++ % 4]);
 });
 
 // ------------------------------------------------------------------ UI
@@ -221,6 +268,9 @@ if (window.matchMedia('(max-width: 720px)').matches) setPanel(false);
 const api = {
   play: (name: string) => { if (director?.names.includes(name)) director.play(name); },
   speak: (text: string) => (director && typeof text === 'string' ? director.speak(text.slice(0, 500)) : 0),
+  /** facial expression layered on the current clip ('neutral' or '' to clear) */
+  expression: (name: string) => { if (typeof name === 'string') setExpression(name); },
+  get expressions() { return director?.expressions ?? []; },
   follow: (on: boolean) => { if (director) director.followViewer = !!on; },
   kiosk: (on: boolean) => { if (director) director.kiosk = !!on; },
   get actions() { return director?.names ?? []; },
@@ -231,6 +281,7 @@ window.addEventListener('message', (e: MessageEvent) => {
   if (!d || typeof d !== 'object') return;
   if (d.type === 'play' && typeof d.name === 'string') api.play(d.name);
   if (d.type === 'speak' && typeof d.text === 'string') api.speak(d.text);
+  if (d.type === 'expression' && typeof d.name === 'string') api.expression(d.name);
 });
 
 // ------------------------------------------------------------------ layout and loop

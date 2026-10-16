@@ -11,8 +11,22 @@ from . import curves as C
 
 SGN = {"L": 1.0, "R": -1.0}
 # rig custom properties that drive the face (defaults when an action does not key them)
-FACE_PROPS = {"blink_L": 0.0, "blink_R": 0.0, "gaze_x": 0.0, "gaze_y": 0.0, "mouth_open": 0.0,
-              "smile": 0.0, "brow_L": 0.0, "brow_R": 0.0, "squint": 0.0, "mouth_round": 0.0}
+FACE_PROPS = {
+    "blink_L": 0.0, "blink_R": 0.0,          # 0 open .. 1 closed (wink = one of them)
+    "gaze_x": 0.0, "gaze_y": 0.0,            # -1..1, iris inside the eye
+    "mouth_open": 0.0,                       # -1 closed .. 0 as painted .. 1 wide open
+    "smile": 0.0,                            # -1 frown .. 1 big smile
+    "mouth_round": 0.0,                      # 0..1 "o"
+    "mouth_side": 0.0,                       # -1..1 sideways mouth (smirk, doubt)
+    "teeth": 0.0,                            # 0..1 upper teeth in a wide smile
+    "brow_L": 0.0, "brow_R": 0.0,            # -1 down .. 1 up
+    "brow_in_L": 0.0, "brow_in_R": 0.0,      # inner end: 1 up (worried, sad) .. -1 down (angry)
+    "squint": 0.0,                           # 0..1 lower lid up (happy, suspicious)
+    "lid_drop": 0.0,                         # 0..1 upper lid down (tired, bored, angry)
+    "lid_angle": 0.0,                        # -1 sad (outer side down) .. 1 angry (nose side down)
+    "pupil": 0.0,                            # -1 small (scared) .. 1 big (love, cute)
+    "eye_calm": 0.0,                         # 0 closed eyes arch up (happy) .. 1 sag (calm, asleep)
+}
 FPS = 30
 
 
@@ -68,9 +82,42 @@ class Clip:
         if turn is not None:
             self.add(f"hand.{s}.rz", turn, -SGN[s])
 
-    def curl(self, s, v):               # fingers and thumb close a little (+)
-        self.add(f"fingers.{s}.rx", v, -1.0)
-        self.add(f"thumb.{s}.rx", v, -0.5)
+    def curl(self, s, v):               # fingers and thumb close a little (+), open (-)
+        v = self.arr(v)
+        for fname in ("index", "middle", "ring"):
+            for seg, k in enumerate((1.0, 1.2, 0.9)):
+                self.add(f"{fname}.{seg + 1:02d}.{s}.cx", v * k)
+        for bname in (f"thumb.{s}", f"thumb.02.{s}", f"thumb.03.{s}"):
+            self.add(f"{bname}.cx", v * 0.5)
+
+    # ------------------------------------------------------------ motor (anim/motor.py)
+    def hand(self, s, keys):
+        from . import motor
+        motor.hand_channels(self, s, keys)
+
+    def expr(self, keys, scale=1.0):
+        from . import motor
+        motor.expr_channels(self, keys, scale)
+
+    def reach(self, s, keys):
+        from . import motor
+        motor.reach_channels(self, s, keys)
+
+    def reach_rot(self, s, rx=None, ry=None, rz=None):
+        from . import motor
+        motor.reach_rot(self, s, rx, ry, rz)
+
+    def stretch(self, s, keys):
+        from . import motor
+        motor.stretch_channels(self, s, keys)
+
+    def show(self, bone, keys):
+        from . import motor
+        motor.show_prop(self, bone, keys)
+
+    def place_prop(self, loc=None, rot=None):
+        from . import motor
+        motor.place_prop(self, loc, rot)
 
     def shrug(self, s, v):              # + = shoulder up
         self.add(f"shoulder.{s}.ry", v, -SGN[s])
@@ -137,7 +184,7 @@ class Clip:
         self.add("hood.rx", np.clip(C.jiggle(vz, freq=1.8, damping=0.30, gain=-4.0, fps=self.fps, loop=loop),
                                     -12, 12))
 
-    def life(self, seed=0, breath=1.0, sway=1.0, blinks=None, arms=True):
+    def life(self, seed=0, breath=1.0, sway=1.0, blinks=None, arms=True, hands=True):
         """Breathing, micro head motion, relaxed arms and blinks: the always-on layer."""
         n, loop = self.n, self.loop
         period = 80.0                       # ~22 breaths a minute: calm
@@ -157,7 +204,8 @@ class Clip:
                 self.arm_raise(s, -4.0)
                 self.elbow(s, 12.0)
                 self.wrist(s, flex=6.0)
-                self.curl(s, 8.0)
+                if hands:                   # actions that pose the fingers use the motor instead
+                    self.curl(s, 8.0)
         if blinks:
             b = C.blink_track(n, blinks)
             self.prop("blink_L", b)

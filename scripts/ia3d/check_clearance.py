@@ -69,6 +69,7 @@ def main():
     rigmap.assign(rig, act)
     head = groups_mask(ob, {"head"}, 0.95)
     torso = groups_mask(ob, {"hips", "spine", "chest"}, 0.8)
+    hand_obs = {s: bpy.data.objects.get(f"Hand_{s}") for s in ("L", "R")}
     hands = {s: groups_mask(ob, {f"hand.{s}", f"fingers.{s}", f"thumb.{s}"}, 0.5) for s in ("L", "R")}
     worst = {}
     for f in range(int(act.frame_start), int(act.frame_end) + 1, args.step):
@@ -76,9 +77,21 @@ def main():
         P, N = evaluated_coords(ob)
         row = []
         for s, m in hands.items():
-            sub = m & (np.arange(len(m)) % 3 == 0)          # every 3rd hand vertex is plenty
-            dh = signed_gap(P, N, head, sub)
-            dt = signed_gap(P, N, torso, sub)
+            if hand_obs[s] is not None:                   # articulated hands (build_hands.py)
+                H, _ = evaluated_coords(hand_obs[s])
+                H = H[::3]
+                PP = np.concatenate([P, H])
+                NN = np.concatenate([N, np.zeros_like(H)])
+                sub = np.zeros(len(PP), bool)
+                sub[len(P):] = True
+                hm = np.concatenate([head, np.zeros(len(H), bool)])
+                tm = np.concatenate([torso, np.zeros(len(H), bool)])
+                dh = signed_gap(PP, NN, hm, sub)
+                dt = signed_gap(PP, NN, tm, sub)
+            else:
+                sub = m & (np.arange(len(m)) % 3 == 0)      # every 3rd hand vertex is plenty
+                dh = signed_gap(P, N, head, sub)
+                dt = signed_gap(P, N, torso, sub)
             row.append(f"{s}: head {dh * 100:5.1f} cm torso {dt * 100:5.1f} cm")
             worst[f"{s}_head"] = min(worst.get(f"{s}_head", 9), dh)
             worst[f"{s}_torso"] = min(worst.get(f"{s}_torso", 9), dt)

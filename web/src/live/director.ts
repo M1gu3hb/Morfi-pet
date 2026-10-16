@@ -9,10 +9,15 @@ import { FACE_PROPS, neutralFace, type FaceState, type MorfiFace } from './face'
 export interface FaceAnims {
   fps: number;
   actions: Record<string, { frames: number; loop: boolean; props: Record<string, number[]> }>;
+  /** face-only presets (scripts/ia3d/anim/motor.py EXPRESSIONS), layered on any clip */
+  expressions?: Record<string, Partial<Record<string, number>>>;
 }
 
-export const LOOPS = new Set(['Idle', 'Walk', 'Dance']);
 const FADE = 0.35;
+const EXPR_FADE = 4;                 // 1/s: an expression takes ~0.25 s to settle
+// clips that look at something on purpose (a prop, the chin...): the head follows the viewer less
+const BUSY = new Set(['Look_Around', 'Shake_No', 'Nod_Yes', 'Jump_Happy', 'Dance', 'Run', 'Tablet', 'Calculator',
+  'Think', 'Count_123', 'Point_Side', 'Scared', 'Sad', 'Laugh']);
 const HEAD_YAW = THREE.MathUtils.degToRad(14);
 const HEAD_PITCH = THREE.MathUtils.degToRad(7);
 
@@ -70,6 +75,9 @@ export class Director {
   private neckBase = new THREE.Quaternion();
   private look = new THREE.Vector2();            // smoothed follow target (-1..1)
   private lookTarget = new THREE.Vector2();
+  private loops: Set<string>;
+  private expr: { name: string; values: Partial<Record<string, number>> } | null = null;
+  private exprW = 0;
   followViewer = true;
   kiosk = false;
   onAction: (name: string) => void = () => {};
@@ -77,9 +85,10 @@ export class Director {
   constructor(private root: THREE.Object3D, clips: THREE.AnimationClip[], private anims: FaceAnims, private faceRig: MorfiFace) {
     this.mixer = new THREE.AnimationMixer(root);
     for (const c of clips) this.clips.set(c.name, c);
+    this.loops = new Set(Object.entries(anims.actions).filter(([, a]) => a.loop).map(([k]) => k));
     this.mixer.addEventListener('finished', (e) => {
       const name = (e.action as THREE.AnimationAction).getClip().name;
-      if (name === this.currentName && !LOOPS.has(name)) this.play('Idle');
+      if (name === this.currentName && !this.loops.has(name)) this.play('Idle');
     });
     this.head = root.getObjectByName('head') ?? null;
     this.neck = root.getObjectByName('neck') ?? null;
@@ -87,6 +96,17 @@ export class Director {
 
   get names(): string[] { return [...this.clips.keys()]; }
   get playing(): string { return this.currentName; }
+  get expressions(): string[] { return Object.keys(this.anims.expressions ?? {}); }
+  get expression(): string { return this.expr?.name ?? ''; }
+
+  /** Layer a facial expression on whatever the body does (null or 'neutral' = the clip's own face). */
+  setExpression(name: string | null): void {
+    const all = this.anims.expressions ?? {};
+    const values = name && Object.prototype.hasOwnProperty.call(all, name) ? all[name] : undefined;
+    if (!name || name === 'neutral' || !values) { this.expr = this.expr ? { ...this.expr, name: '' } : null; return; }
+    if (this.expr?.name !== name) this.exprW = Math.min(this.exprW, 0.35);
+    this.expr = { name, values };
+  }
 
   play(name: string, fade = FADE): void {
     const clip = this.clips.get(name);
@@ -94,7 +114,7 @@ export class Director {
     const next = this.mixer.clipAction(clip);
     this.actions.add(next);
     next.reset();
-    next.setLoop(LOOPS.has(name) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    next.setLoop(this.loops.has(name) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
     next.clampWhenFinished = true;
     next.enabled = true;
     next.setEffectiveWeight(1);
@@ -148,6 +168,16 @@ export class Director {
 
   private updateFace(dt: number): void {
     const f = this.clipFace();
+    // a chosen expression replaces the clip's values for the controls it defines
+    const on = this.expr && this.expr.name ? 1 : 0;
+    this.exprW += (on - this.exprW) * Math.min(1, dt * EXPR_FADE);
+    if (this.expr && this.exprW > 0.002) {
+      for (const k of FACE_PROPS) {
+        const v = this.expr.values[k];
+        if (v !== undefined) f[k] = f[k] + (v - f[k]) * this.exprW;
+      }
+      if (!on && this.exprW < 0.01) this.expr = null;
+    }
     // speech overrides the clip's mouth
     if (this.speech) {
       const s = this.speech;
@@ -185,7 +215,7 @@ export class Director {
     this.headBase.copy(this.head.quaternion);
     this.neckBase.copy(this.neck.quaternion);
     if (!this.followViewer) return;
-    const busy = ['Look_Around', 'Shake_No', 'Nod_Yes', 'Jump_Happy', 'Dance'].includes(this.currentName) ? 0.25 : 1;
+    const busy = BUSY.has(this.currentName) ? 0.25 : 1;
     const yaw = this.look.x * HEAD_YAW * busy, pitch = -this.look.y * HEAD_PITCH * busy;
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch * 0.6, yaw * 0.6, 0, 'YXZ'));
     const qn = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch * 0.4, yaw * 0.4, 0, 'YXZ'));
@@ -209,8 +239,9 @@ export class Director {
     if (!this.kiosk || this.currentName !== 'Idle') return;
     this.idleTimer -= dt;
     if (this.idleTimer > 0) return;
-    const r = Math.random();
-    this.play(r < 0.35 ? 'Look_Around' : r < 0.6 ? 'Wave' : r < 0.75 ? 'Nod_Yes' : r < 0.9 ? 'Present' : 'Jump_Happy');
+    const pool = ['Look_Around', 'Look_Around', 'Wave', 'Nod_Yes', 'Present', 'Jump_Happy', 'Idea', 'Thumbs_Up', 'Calculator',
+      'Tablet', 'Celebrate'].filter((n) => this.clips.has(n));
+    this.play(pool[Math.floor(Math.random() * pool.length)]);
   }
 
   get faceState(): FaceState { return this.face; }

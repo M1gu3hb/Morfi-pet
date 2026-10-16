@@ -27,7 +27,7 @@ from anim.actions import ACTIONS  # noqa: E402
 
 Image.MAX_IMAGE_PIXELS = None
 EYE_KEYS = ["A", "B", "InCos", "InSin", "OutCX", "OutCY", "OutA", "OutB", "OutCos", "OutSin", "IrisX", "IrisY",
-            "IrisR", "PupilR", "PupilDX", "PupilDY", "HlX", "HlY", "HlR", "GazeRangeX", "GazeRangeY", "AA"]
+            "IrisR", "PupilR", "PupilDX", "PupilDY", "HlX", "HlY", "HlR", "GazeRangeX", "GazeRangeY", "AA", "Nose"]
 BSDF_KEYS = ["Roughness", "Metallic", "Sheen Weight", "Sheen Roughness", "Sheen Tint", "Coat Weight",
              "Coat Roughness", "Specular IOR Level"]
 

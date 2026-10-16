@@ -190,3 +190,10 @@ ACTIONS = {
 from .actions_social import SOCIAL  # noqa: E402
 
 ACTIONS.update(SOCIAL)
+
+from .actions_expressive import EXPRESSIVE  # noqa: E402
+
+ACTIONS.update(EXPRESSIVE)
+from .actions_props import PROPS_ACTIONS  # noqa: E402
+
+ACTIONS.update(PROPS_ACTIONS)

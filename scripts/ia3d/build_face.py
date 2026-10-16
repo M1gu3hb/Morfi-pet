@@ -70,6 +70,10 @@ def eye_group():
     gx, gy = E.input("GazeX"), E.input("GazeY")
     grx, gry = E.input("GazeRangeX", default=0.032), E.input("GazeRangeY", default=0.020)
     blink, squint = E.input("Blink"), E.input("Squint")
+    # expression controls: upper lid drop and tilt (+ angry: the nose side drops, - sad),
+    # pupil size (scared small, love big), shape of the closed eye (+1 happy arch, - calm)
+    lidd, lida, nose = E.input("LidDrop"), E.input("LidAngle"), E.input("Nose", default=1.0)
+    pscale, ccurve = E.input("PupilScale", default=1.0), E.input("ClosedCurve", default=1.0)
     aa = E.input("AA", default=0.0009)                       # edge softness (m)
     x, y, _ = E.sep(uv)                                       # metres from the eye centre
 
@@ -87,10 +91,11 @@ def eye_group():
     icx = ix0 + gx * grx
     icy = iy0 + gy * gry
     di = E.length2(x - icx, y - icy)
-    iris = E.smoothstep(ir + aa, ir - aa, di)
+    irs, prs = ir * pscale, pr * (pscale * pscale)            # the pupil reacts more than the iris
+    iris = E.smoothstep(irs + aa, irs - aa, di)
     dp = E.length2(x - icx - pdx, y - icy - pdy)
-    pupil = E.smoothstep(pr + aa, pr - aa, dp)
-    t_iris = ((di - pr) / (ir - pr)).clamp()
+    pupil = E.smoothstep(prs + aa, prs - aa, dp)
+    t_iris = ((di - prs) / (irs - prs)).clamp()
     iris_col = E.mix_color(COL["iris_hi"], COL["iris_lo"], E.smoothstep(0.25, 0.85, t_iris))
     iris_col = E.mix_color(iris_col, COL["iris_rim"], E.smoothstep(0.80, 1.0, t_iris))
     # highlight rides on the cornea: moves with the iris, a bit less
@@ -110,8 +115,8 @@ def eye_group():
     xn = x / A
     arc = (1.0 - xn * xn).clamp().sqrt()                       # ellipse top/bottom profile
     top_edge = arc * B
-    closed_y = B * (-0.30 + 0.22 * (1.0 - xn * xn))            # closed: gentle downward-open arc
-    lid_y = E.mix(top_edge + thick, closed_y, blink)
+    closed_y = B * (-0.30 + 0.22 * ccurve * (1.0 - xn * xn))   # closed: arch (happy) or sag (calm)
+    lid_y = E.mix(top_edge + thick, closed_y, blink) - B * (lidd + lida * nose * xn) * (1.0 - blink)
     bot_edge = -arc * B
     squint_y = B * (-0.62 + 0.25 * (1.0 - xn * xn))            # happy: lower lid rises
     low_open = E.mix(bot_edge - thick, squint_y, squint)
@@ -167,8 +172,11 @@ def eye_material(name, rig, eye, side):
         grp.inputs[k].default_value = v
     # animated inputs are object attributes of the decal (driven from the rig, see
     # drive_props): changing them never recompiles the shader, unlike drivers on nodes
-    for sock, prop in (("GazeX", "m_gaze_x"), ("GazeY", "m_gaze_y"), ("Blink", "m_blink"), ("Squint", "m_squint")):
+    for sock, prop in (("GazeX", "m_gaze_x"), ("GazeY", "m_gaze_y"), ("Blink", "m_blink"), ("Squint", "m_squint"),
+                       ("LidDrop", "m_lid_drop"), ("LidAngle", "m_lid_angle"), ("PupilScale", "m_pupil"),
+                       ("ClosedCurve", "m_curve")):
         nt.links.new(attr_node(nt, prop), grp.inputs[sock])
+    grp.inputs["Nose"].default_value = 1.0 if side == "R" else -1.0
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
     nt.links.new(grp.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.35
@@ -197,13 +205,15 @@ def mouth_group():
     E = NodeExpr(ng)
     uv = E.input("UV", "NodeSocketVector", None)
     opn, smile, rnd = E.input("Open", default=0.5), E.input("Smile", default=0.8), E.input("Round")
+    teeth, side = E.input("Teeth"), E.input("Side")
     aa = E.input("AA", default=0.0008)
-    x, y, _ = E.sep(uv)
+    x0, y, _ = E.sep(uv)
+    x = x0 - side * 0.010                                      # a sideways mouth (smirk, doubt)
     w = MOUTH["half_width"] * (1.0 + smile * 0.08 - rnd * 0.32)
     xn = x / w
     xx = (xn * xn).clamp()
     up = MOUTH["corner_up"] * (smile * 1.25 - rnd * 0.6)
-    top = up * xx + rnd * 0.004
+    top = up * xx + rnd * 0.004 + side * 0.005 * xn
     depth = (opn * (2.0 * MOUTH["depth"]) + rnd * 0.006) * (1.0 - xx).clamp() ** E.mix(0.43, 0.75, rnd)
     bot = top - depth - 0.0024              # closed: a 2.4 mm dark line
     inside_x = E.smoothstep(1.0 + aa / w, 1.0 - aa / w, xn.abs())
@@ -213,6 +223,9 @@ def mouth_group():
     dt = E.length2(x / (w * 0.55), (y - (bot + depth * 0.28)) / E.max(depth * 0.45, 0.002))
     tongue = E.smoothstep(1.05, 0.9, dt) * E.smoothstep(0.008, 0.02, depth) * (1.0 - rnd * 0.6)
     inner = E.mix_color(inner, COL["tongue"], tongue * 0.85)
+    # upper teeth: a soft white band under the top lip of a wide open smile
+    tband = E.smoothstep(top - depth * 0.30 - aa, top - depth * 0.30 + aa, y) * teeth * E.smoothstep(0.006, 0.014, depth)
+    inner = E.mix_color(inner, COL["teeth"], tband)
     # the painted mouth was erased from the body texture: only the mouth itself is drawn
     E.output("Color", inner, "NodeSocketColor")
     E.output("Alpha", mouth)
@@ -247,8 +260,14 @@ def drive_props(ob, rig, mapping):
 
 
 MOUTH_PROPS = {"m_open": ("mouth_open", "max(0.0, 0.5 + 0.5 * v)"),
-               "m_smile": ("smile", "min(1.0, 0.55 + 0.45 * v)"),
-               "m_round": ("mouth_round", None)}
+               # smile -1 frown .. 0 as painted .. 1 big smile
+               "m_smile": ("smile", "0.55 + 0.45 * max(v, 0.0) + 1.55 * min(v, 0.0)"),
+               "m_round": ("mouth_round", None),
+               "m_teeth": ("teeth", None),
+               "m_side": ("mouth_side", None)}
+EYE_PROPS = {"m_gaze_x": ("gaze_x", None), "m_gaze_y": ("gaze_y", None), "m_squint": ("squint", None),
+             "m_lid_drop": ("lid_drop", None), "m_lid_angle": ("lid_angle", None),
+             "m_pupil": ("pupil", "1.0 + 0.3 * v"), "m_curve": ("eye_calm", "1.0 - 1.6 * v")}
 
 
 def mouth_material(rig):
@@ -266,6 +285,8 @@ def mouth_material(rig):
     nt.links.new(attr_node(nt, "m_open"), grp.inputs["Open"])
     nt.links.new(attr_node(nt, "m_smile"), grp.inputs["Smile"])
     nt.links.new(attr_node(nt, "m_round"), grp.inputs["Round"])
+    nt.links.new(attr_node(nt, "m_teeth"), grp.inputs["Teeth"])
+    nt.links.new(attr_node(nt, "m_side"), grp.inputs["Side"])
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
     nt.links.new(grp.outputs["Color"], bsdf.inputs["Base Color"])
     rough = nt.nodes.new("ShaderNodeMapRange")
@@ -340,7 +361,16 @@ def parent_to_bone(ob, rig, bone):
     ob.matrix_world = mw
 
 
-def brow_keys(body, rig, feats, lift=0.010):
+def drive_key(key, rig, prop):
+    fc = key.driver_add("value")
+    var = fc.driver.variables.new()
+    var.name, var.type = "v", "SINGLE_PROP"
+    var.targets[0].id = rig
+    var.targets[0].data_path = f'["{prop}"]'
+    fc.driver.type = "AVERAGE"
+
+
+def brow_keys(body, rig, feats, lift=0.016):
     """Shape keys that slide each painted brow (and the skin around it) up or down."""
     if body.data.shape_keys is None:
         body.shape_key_add(name="Basis", from_mix=False)
@@ -369,12 +399,17 @@ def brow_keys(body, rig, feats, lift=0.010):
         moved = co.copy()
         moved[:, 2] += lift * w
         key.data.foreach_set("co", moved.ravel())
-        fc = key.driver_add("value")
-        var = fc.driver.variables.new()
-        var.name, var.type = "v", "SINGLE_PROP"
-        var.targets[0].id = rig
-        var.targets[0].data_path = f'["brow_{side}"]'
-        fc.driver.type = "AVERAGE"
+        drive_key(key, rig, f"brow_{side}")
+        # inner end up (+, worried / sad) or down (-, angry): the brow turns about its middle
+        nose = 1.0 if side == "R" else -1.0
+        half = (x1 - x0) / 2
+        inner = np.clip(0.5 + 0.5 * nose * (co[:, 0] - cx) / half, 0, 1)
+        key2 = body.shape_key_add(name=f"Brow_In_{side}", from_mix=False)
+        key2.slider_min, key2.slider_max = -1.0, 1.0
+        moved = co.copy()
+        moved[:, 2] += lift * 0.9 * w * (2 * inner - 1)
+        key2.data.foreach_set("co", moved.ravel())
+        drive_key(key2, rig, f"brow_in_{side}")
         print(f"brow {side}: {int((w > 0.01).sum())} verts")
 
 
@@ -437,9 +472,10 @@ def main():
     for pb in rig.pose.bones:
         pb.matrix_basis.identity()
     bpy.context.view_layer.update()
-    for k in ("gaze_x", "gaze_y", "blink_L", "blink_R", "squint", "mouth_open", "smile"):
+    from anim.clip import FACE_PROPS
+    for k, v in FACE_PROPS.items():
         if k not in rig:
-            rig[k] = 0.0
+            rig[k] = v
     tree = body_bvh(body)
     clean = os.path.join(os.path.dirname(os.path.abspath(args.features)), "..", "tex", "base_color_clean.jpg")
     img = bpy.data.images.load(os.path.abspath(clean))
@@ -465,8 +501,7 @@ def main():
         for d in ob.data.uv_layers["eye"].data:
             d.uv = (d.uv[0] + dx, d.uv[1] + dz)
         ob.data.materials.append(eye_material(f"Eye_{side}", rig, eye, side))
-        drive_props(ob, rig, {"m_gaze_x": ("gaze_x", None), "m_gaze_y": ("gaze_y", None),
-                              "m_blink": (f"blink_{side}", None), "m_squint": ("squint", None)})
+        drive_props(ob, rig, {**EYE_PROPS, "m_blink": (f"blink_{side}", None)})
         parent_to_bone(ob, rig, "head")
         print(f"eye {side}: {len(ob.data.vertices)} verts")
     for k in ("brow_L", "brow_R"):

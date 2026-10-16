@@ -55,8 +55,12 @@ Meshy pintó los ojos y la boca en la textura, sobre una sola capa de superficie
   transparente y se ve la piel real del modelo.
 - La boca es otra calcomanía: abre, cierra y redondea (`mouth_open` −1…1, `mouth_round`, `smile`).
   Para cerrarla, un shape key rellena la cavidad esculpida (2 cm) en el cuerpo y en la calcomanía.
-- Cejas: shape keys `Brow_L/R` que suben o bajan la piel de la ceja sin mover el armazón.
-- Todo se maneja con propiedades del rig (`Morfi_Rig["blink_L"]`, etc.) por drivers.
+- Cejas: shape keys `Brow_L/R` (suben o bajan 1.6 cm) y `Brow_In_L/R` (inclinan: preocupado / enojado) que mueven
+  la piel de la ceja sin mover el armazón.
+- Ojos expresivos: párpado caído (`lid_drop`), inclinado (`lid_angle`: enojo o tristeza), tamaño de pupila (`pupil`),
+  ojos cerrados tranquilos (`eye_calm`). Boca: triste (`smile` < 0), de lado (`mouth_side`) y dientes (`teeth`).
+- Todo se maneja con propiedades del rig (`Morfi_Rig["blink_L"]`, etc.) por drivers; 18 expresiones listas en
+  `anim/motor.py` (`EXPRESSIONS`).
 
 ## 5. Animación (`scripts/ia3d/anim/`, `make_actions.py`)
 
@@ -66,8 +70,13 @@ los ojos antes que la cabeza y la cabeza antes que el cuerpo, arcos, retraso en 
 con un ligero rebote.
 
 Acciones: `Idle` (bucle de 5 s), `Wave`, `Walk` (bucle, en el sitio), `Jump_Happy`, `Look_Around`, `Talk`, `Present`,
-`Nod_Yes`, `Shake_No`, `Dance` (bucle). Cada una arranca y termina en el reposo y define todos los huesos y
-gestos, así se encadenan en el NLA sin saltos.
+`Nod_Yes`, `Shake_No`, `Dance` (bucle), y con el motor nuevo `Run`, emociones (`Laugh`, `Surprised`, `Sad`, `Angry`,
+`Scared`, `Calm`, `Celebrate`, `Shrug`), gestos (`Count_123`, `Thumbs_Up`, `Point_Side`, `Idea`, `Think`) y objetos
+(`Tablet`, `Calculator`, con contacto real del dedo). Cada una arranca y termina en el reposo y define todos los
+huesos y gestos, así se encadenan en el NLA sin saltos.
+
+**Motor** (manos de 4 dedos articuladas, IK de brazos con tope de alcance, objetos, contactos exactos, cuerpo
+sólido y verificación): ver [`docs/motor.md`](motor.md).
 
 **Brazos cortos y cabeza enorme.** Los brazos miden 23 cm y la cabeza 60 cm de ancho: una mano levantada
 entra en la cabeza. `check_clearance.py` mide en cada cuadro la distancia con signo de cada mano a la cabeza
@@ -94,9 +103,7 @@ $B -b --factory-startup --python scripts/ia3d/build_rig.py -- --glb work/ia3d/mo
 $B -b work/ia3d/morfi_ia_rig.blend --python scripts/ia3d/face_ortho.py -- --out work/ia3d/face
 python scripts/ia3d/measure_face.py --dir work/ia3d/face          # face_features.json + eye_outline.json
 python scripts/ia3d/inpaint_face.py --mesh work/ia3d/mesh.npz --tex work/ia3d/tex/glb1_1_Image_0.jpg --face work/ia3d/face --out work/ia3d/tex/base_color_clean.jpg
-$B -b work/ia3d/morfi_ia_rig.blend --python scripts/ia3d/build_face.py -- --features work/ia3d/face/face_features.json --out work/ia3d/morfi_ia_face.blend
-$B -b work/ia3d/morfi_ia_face.blend --python scripts/ia3d/make_actions.py -- --out work/ia3d/morfi_ia_anim.blend
-$B -b work/ia3d/morfi_ia_anim.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look.blend
+# manos, controles, cara, acciones y materiales: ver docs/motor.md §1 (morfi_ia_rig_nohands -> morfi_ia_look2)
 $B -b work/ia3d/morfi_ia_look.blend --python scripts/ia3d/render_showcase.py -- --out work/ia3d/showcase
 ```
 
@@ -104,13 +111,14 @@ $B -b work/ia3d/morfi_ia_look.blend --python scripts/ia3d/render_showcase.py -- 
 
 Es la portada del sitio (https://morfi-pet.vercel.app). El visor técnico del modelo procedural anterior
 sigue igual en `web/tecnico.html`, enlazado desde ambas páginas.
-- `scripts/ia3d/export_web.py` exporta `work/ia3d/web/morfi_live.glb`. Lleva el cuerpo con 32 huesos, las 10 acciones
-  horneadas cuadro por cuadro (el IK de las piernas y el pivote de los pies ya aplicados), los shape keys de cejas
-  y del relleno de la boca, y materiales glTF (textura 4K, normal 2K, sheen y clearcoat). Escribe también
-  `morfi_live_face.json` con las medidas de los ojos y la boca.
+- `scripts/ia3d/export_web.py` exporta `work/ia3d/web/morfi_live.glb`. Lleva el cuerpo, las manos articuladas, la
+  tablet y la calculadora, las 26 acciones horneadas cuadro por cuadro (IK de piernas y brazos ya aplicados), los
+  shape keys de cejas y del relleno de la boca, y materiales glTF (textura 4K, normal 2K, sheen y clearcoat).
+  Escribe también `morfi_live_face.json` con las medidas de los ojos y la boca.
 - `scripts/ia3d/export_face_anims.py` escribe `morfi_live_anims.json`: las curvas de la cara de cada acción
-  (parpadeo, mirada, boca, cejas…), porque glTF no transporta las propiedades del rig.
-- `npm run sync-live` copia todo a `web/public/models/` y comprime la geometría con meshopt (8.8 → 4.8 MB).
+  (parpadeo, mirada, boca, cejas…) y las 18 expresiones, porque glTF no transporta las propiedades del rig.
+- `npm run sync-live` copia todo a `web/public/models/`, quita las claves de animación redundantes (`resample`) y
+  comprime con meshopt.
   El usuario autorizó publicarlo (16-oct-2026): el GLB se versiona y Vercel lo sirve.
 - `web/src/live/face.ts` porta a GLSL los shaders de ojos y boca de Blender. `director.ts` mezcla las acciones
   con transiciones de 0.35 s y vuelve al reposo al acabar cada una. Encima añade parpadeos al azar, ojos y
@@ -120,13 +128,15 @@ sigue igual en `web/tecnico.html`, enlazado desde ambas páginas.
   sin panel), `?clean=1`, `?bg=dark`, `?anim=Wave`, `?lowpower=1`.
 - **API para el chatbot** (también funciona dentro de un iframe):
   ```js
-  morfi.play('Wave')                      // Idle, Wave, Talk, Nod_Yes, Shake_No, Look_Around, Present, Jump_Happy, Walk, Dance
+  morfi.play('Wave')                      // cualquiera de las 26 acciones (lista: morfi.actions)
+  morfi.expression('surprised')           // expresión de cara encima del cuerpo; 'neutral' la quita (lista: morfi.expressions)
   morfi.speak('¡Hola! ¿En qué te ayudo?') // mueve la boca con el texto; devuelve la duración en s
   iframe.contentWindow.postMessage({ type: 'speak', text: 'Claro, te explico…' }, '*')
   iframe.contentWindow.postMessage({ type: 'play', name: 'Nod_Yes' }, '*')
   ```
-- Prueba: `npm run build && npm run test:live`. Recorre las 10 animaciones, el habla, `postMessage`, el fondo
-  oscuro y el celular, y falla ante cualquier error de consola (capturas en `work/ia3d/viewer_test/`).
+- Prueba: `npm run build && npm run test:live`. Recorre todas las animaciones y expresiones, el habla,
+  `postMessage`, el fondo oscuro y el celular, y falla ante cualquier error de consola (capturas en
+  `work/ia3d/viewer_test/`).
 
 ## 9. Pendiente
 
