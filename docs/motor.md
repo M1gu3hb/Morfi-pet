@@ -18,6 +18,8 @@ $B -b work/ia3d/morfi_ia_rig_hands.blend --python scripts/ia3d/build_controls.py
 $B -b work/ia3d/morfi_ia_rig_full.blend --python scripts/ia3d/build_face.py -- --features work/ia3d/face/face_features.json --out work/ia3d/morfi_ia_face2.blend
 $B -b work/ia3d/morfi_ia_face2.blend --python scripts/ia3d/make_actions.py -- --out work/ia3d/morfi_ia_anim3.blend
 $B -b work/ia3d/morfi_ia_anim3.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look2.blend
+# muñecas que doblan como muñeca (sin mano que se sale de la manga) -> base de los videos
+$B -b work/ia3d/morfi_ia_look2.blend --python scripts/ia3d/fix_wrists.py -- --out work/ia3d/morfi_ia_look3.blend
 # visor web
 $B -b work/ia3d/morfi_ia_look2.blend --python scripts/ia3d/export_web.py -- --out work/ia3d/web/morfi_live.glb --face-json work/ia3d/web/morfi_live_face.json
 python scripts/ia3d/export_face_anims.py --out work/ia3d/web/morfi_live_anims.json
@@ -125,9 +127,32 @@ Cada acción guarda **todos** los huesos y gestos (en reposo si no los usa): las
 - `resolve_body()`: en todas las acciones con IK, una mano que entra en la cabeza o el torso se empuja hacia afuera
   por la normal de la superficie hasta apenas tocar.
 - `clamp_reach()`: el tope de alcance.
+- `hold_prop()`: un objeto que él sostiene va en su mano: se toma el agarre en un cuadro (la palma apoyada
+  bajo el objeto) y el hueso del objeto sigue a `hand.<lado>` cuadro por cuadro. Un objeto fijo en el espacio
+  obliga a la mano a perseguirlo y, al límite del alcance, la mano tiembla.
+- `smooth_ik()`: los solvers corrigen un cuadro a la vez (alcance, cuerpo, toques); lado a lado eso hace
+  zigzag (una mano que tiembla). Pasa un filtro temporal a los objetivos IK y deja exactos los cuadros de
+  contacto. `videos/morfi-pos/tools/diag_jitter.py` lo mide (aceleración que cambia de signo cuadro a cuadro).
 - `smooth_touches()`: en tomas largas, una mano apoyada en Morfi se resuelve cuadro por cuadro y puede caer en un
   punto distinto de un cuadro al siguiente (tiembla). La pasada la filtra (mediana + media) y la vuelve a apoyar en
   la piel sin deslizarla.
+
+### Actuación de cuerpo completo (`acting.py`)
+
+Un gesto mueve dos partes; una persona mueve todo. `Acting(p)` escribe la capa del cuerpo debajo de los
+gestos: el peso pasa de un pie al otro en cada frase (cadera, pelvis, columna en contra, el talón libre se
+despega), las rodillas ceden en las palabras con acento, el pecho se inclina hacia la cámara, pasos reales
+(el pie se despega, viaja en arco y aterriza), saltos con anticipación / estirón / squash al caer, un meneo
+feliz y golpes de mano en las palabras. Los cambios de peso se aplican en orden de tiempo al final (`finish()`).
+
+Lecciones del primer video (para cualquier coreografía):
+- La cabeza es más ancha que los hombros y sobresale al frente: una mano "junto a la cara" a la altura de la
+  cara queda dentro de la cabeza. Para contar con los dedos, la mano va al lado (x ≈ ±0.30, z ≈ 0.46).
+- Los brazos miden ~0.20 m (hombro a muñeca): un objeto sostenido va bajo la barbilla y el hombro se adelanta
+  (`shoulder.<s>.rz`) en vez de estirar el brazo.
+- Al tocar una pantalla, el índice apunta abajo y un poco a su izquierda: la muñeca queda arriba y al frente
+  del pecho (si el dedo apunta al frente, la muñeca cae dentro del torso).
+- Dos formas de mano a menos de 4 cuadros una de otra se ven como un chasquido de los dedos.
 
 ### Actuaciones largas (`performance.py`)
 

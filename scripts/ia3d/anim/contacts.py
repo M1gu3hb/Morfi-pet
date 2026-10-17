@@ -441,6 +441,91 @@ def smooth_touches(rig, action, clip, win=5, max_step=0.015, iters=6):
                 _frame(f)
 
 
+def smooth_ik(rig, action, clip, sides=("L", "R"), sigma=1.8, ramp=5):
+    """Every solver above corrects one frame at a time (reach, body, presses): side by side
+    those corrections can zig-zag (a trembling hand). Low-pass each IK target and keep the
+    contact frames exact, blending back to them over `ramp` frames."""
+    from . import rigmap
+    rigmap.assign(rig, action)
+    k = int(3 * sigma) + 1
+    g = np.exp(-0.5 * (np.arange(-k, k + 1) / sigma) ** 2)
+    g /= g.sum()
+    n = clip.n
+    for side in sides:
+        fcs = _loc_curves(action, f"hand_ik.{side}")
+        L = np.array([_get_loc(fcs, f) for f in range(n)])
+        P = np.pad(L, ((k, k), (0, 0)), mode="edge")
+        S = np.stack([np.convolve(P[:, i], g, "valid") for i in range(3)], 1)
+        m = np.zeros(n)
+        for spec in getattr(clip, "contacts", []):
+            if spec["side"] == side:
+                f0, f1 = spec["frames"]
+                m[max(0, f0):min(n, f1 + 1)] = 1.0
+        soft = m.copy()
+        for d in range(1, ramp + 1):
+            w = 1.0 - d / (ramp + 1)
+            soft[d:] = np.maximum(soft[d:], m[:-d] * w)
+            soft[:-d] = np.maximum(soft[:-d], m[d:] * w)
+        out = S * (1 - soft[:, None]) + L * soft[:, None]
+        for f in range(n):
+            _set_loc(fcs, f, out[f])
+        _refresh(fcs)
+
+
+def hold_prop(rig, action, bone, obj, side, frames, ref):
+    """The prop rides in the hand. A prop parked in space makes the hand chase it (and tremble
+    at the edge of its reach); a held prop goes wherever the hand goes. The grip is taken at
+    `ref` (prop as posed there, moved onto the palm so it rests on it), then the prop bone
+    follows hand.<side> on every frame of `frames`."""
+    from mathutils import Matrix
+    from . import rigmap
+    rigmap.assign(rig, action)
+    pb, hb = rig.pose.bones[bone], rig.pose.bones[f"hand.{side}"]
+    W = rig.matrix_world
+    hand = bpy.data.objects[f"Hand_{side}"]
+    _frame(ref)
+    T = W @ pb.matrix
+    gap, nb = _support_gap({"prop": obj, "side": side}, hand)
+    if gap is not None:                              # rest it on the palm: down by the gap
+        T = Matrix.Translation(Vector(nb * gap)) @ T
+    G = (W @ hb.matrix).inverted() @ T
+    a, b = frames
+    locs, rots = [], []
+    for f in range(a, b + 1):
+        _frame(f)
+        sc = pb.scale.copy()
+        pb.matrix = W.inverted() @ (W @ hb.matrix) @ G
+        locs.append(pb.location.copy())
+        q = pb.rotation_quaternion.copy()
+        if rots and q.dot(rots[-1]) < 0:             # keep the quaternion on one side: no flips
+            q.negate()
+        rots.append(q)
+        pb.scale = sc
+    path = f'pose.bones["{bone}"]'
+    n_all = int(bpy.context.scene.frame_end) + 1
+    for attr, vals, count, rest in (("location", locs, 3, (0.0, 0.0, 0.0)),
+                                    ("rotation_quaternion", rots, 4, (1.0, 0.0, 0.0, 0.0))):
+        for i in range(count):
+            fc = action.fcurves.find(f"{path}.{attr}", index=i) or action.fcurves.new(f"{path}.{attr}", index=i,
+                                                                                      action_group=bone)
+            old = [fc.evaluate(f) if len(fc.keyframe_points) else rest[i] for f in range(n_all)]
+            for f, v in zip(range(a, b + 1), vals):
+                if 0 <= f < n_all:
+                    old[f] = v[i]
+            fc.keyframe_points.clear()
+            fc.keyframe_points.add(n_all)
+            co = np.empty(2 * n_all)
+            co[0::2] = np.arange(n_all, dtype=float)
+            co[1::2] = old
+            fc.keyframe_points.foreach_set("co", co)
+            for kp in fc.keyframe_points:
+                kp.interpolation = "LINEAR"
+            fc.update()
+    _frame(ref)
+    gap2, _ = _support_gap({"prop": obj, "side": side}, hand)
+    return gap, gap2
+
+
 # ---------------------------------------------------------------- supports
 def _local(ob, P):
     Mi = np.array(ob.matrix_world.inverted())
