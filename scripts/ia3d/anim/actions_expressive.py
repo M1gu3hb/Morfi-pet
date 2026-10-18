@@ -545,14 +545,18 @@ def shrug():
 
 def run(n=20):
     """Run cycle in place (two strides per 0.67 s), leaning in, arms pumping; stretched in the air,
-    squashed on each landing. The showcase adds the root travel."""
+    squashed on each landing. The showcase adds the root travel.
+
+    Same gait rules as the walk, written as frames (left foot lands on frame 0, right on n / 2):
+    each arm drives forward as the OPPOSITE foot lands (elbow and hand trail it by a frame or two)
+    and the elbow closes as it comes up; the pelvis and shoulders turn against each other; the body
+    is highest in mid-flight and lowest in mid-stance."""
     c = Clip(n, loop=True)
     c.life(seed=231, breath=0.3, sway=0.3, hands=False)
-    stride, lift = 0.15, 0.085
+    stride, lift, st = 0.15, 0.085, 0.38
     f = np.arange(n)
     for s, off in (("L", 0.0), ("R", n / 2)):
         ph = ((f - off) % n) / n                    # 0..0.38 stance, 0.38..1 swing (flight in between)
-        st = 0.38
         stance = ph < st
         sw = np.clip((ph - st) / (1 - st), 0, 1)
         y = np.where(stance, -stride + 2 * stride * (ph / st), stride - 2 * stride * (0.5 - 0.5 * np.cos(np.pi * sw)))
@@ -560,26 +564,26 @@ def run(n=20):
         pitch = np.where(stance, -12 * np.exp(-(ph / 0.05) ** 2) + 26 * np.exp(-((ph - st) / 0.07) ** 2),
                          24 * np.exp(-((ph - st - 0.05) / 0.1) ** 2) - 12 * np.exp(-((ph - 0.98) / 0.05) ** 2))
         c.foot(s, y=y, z=z, pitch=pitch)
-        pump = -40 * np.cos(2 * np.pi * ph)
-        o = "R" if s == "L" else "L"
-        c.arm_fwd(o, pump)
-        c.elbow(o, 72 + 0.35 * np.maximum(C.delay(pump, 2, loop=True), 0))
-        c.wrist(o, flex=C.delay(0.25 * pump, 3, loop=True))
-        c.hand(o, [(0, "fist")])
-    land = C.sine(n, n / 2, 1.0, phase=0.0)            # +1 in the air, -1 on the stance
-    c.add("hips.lz", 0.010 * land - 0.010)
-    c.sy("head", 1.0 + 0.04 * C.delay(land, 1, loop=True))
-    c.sy("neck", 1.0 + 0.025 * C.delay(land, 1, loop=True))
-    c.add("hips.rz", C.sine(n, n, -8.0))
+    for s, fwd in (("L", n / 2), ("R", 0.0)):       # the arm is forward as the other side's foot lands
+        c.arm_fwd(s, C.cycle(n, fwd, 42.0))
+        c.elbow(s, 66 + 26 * (0.5 + 0.5 * C.cycle(n, fwd + 1.0)) ** 1.2)
+        c.wrist(s, flex=C.cycle(n, fwd + 2.0, 10.0))
+        c.hand(s, [(0, "fist")])
+    # up in mid-flight (both feet off the floor: from a toe-off to the next landing), down in mid-stance
+    air = C.cycle(n, (st * n + n / 2) / 2, 1.0, period=n / 2)
+    c.add("hips.lz", 0.010 * air - 0.010)
+    c.sy("head", 1.0 + 0.04 * C.delay(air, 1, loop=True))
+    c.sy("neck", 1.0 + 0.025 * C.delay(air, 1, loop=True))
+    c.add("hips.rz", C.cycle(n, n / 2 + 1.0, 8.0))              # leading hip forward (+rz = a turn to his left)
+    c.add("chest.rz", C.cycle(n, 1.3, 17.9))                    # shoulders against it: ~10 degrees in the world
     c.add("spine.rx", 13.0)
-    c.add("chest.rz", C.sine(n, n, 10.0))
     c.add("head.rx", C.delay(C.sine(n, n / 2, 2.5, phase=0.25), 2, loop=True) - 9.0)
     c.expr([(0, "determined")], scale=0.6)
     c.prop("smile", 0.6)
     c.prop("mouth_open", 0.2)
     c.secondary()
     c.stride = stride
-    c.stance = 0.38
+    c.stance = st
     return c
 
 

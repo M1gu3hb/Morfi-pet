@@ -49,6 +49,14 @@ def sine(n, period, amp, phase=0.0, offset=0.0):
     return offset + amp * np.sin(2 * math.pi * (f / period + phase))
 
 
+def cycle(n, peak, amp=1.0, period=None):
+    """amp * cos over `period` frames (default n, the loop) with its maximum on frame `peak` (fractional,
+    may fall outside 0..n): a gait phase written as the frame where it happens, so 'the arm is forward
+    2 frames after the opposite foot lands' reads as cycle(n, f_land + 2)."""
+    f = np.arange(n, dtype=float)
+    return amp * np.cos(2 * math.pi * (f - peak) / (period or n))
+
+
 def noise(n, period, amp, seed=0, loop=True):
     """Smooth value noise: random keys every `period` frames, monotone-interpolated."""
     rng = np.random.default_rng(seed)

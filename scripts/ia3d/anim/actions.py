@@ -116,7 +116,14 @@ def wave():
 
 def walk(speed_steps=32):
     """In-place walk cycle, two steps per loop (~1.07 s), bouncy. Root travel is added by the
-    showcase (stride * 2 per cycle), so the feet stay planted on the floor."""
+    showcase (stride * 2 per cycle), so the feet stay planted on the floor.
+
+    Gait (a human walk in cartoon sizes), written as the frame where each thing happens (left heel
+    strike = frame 0, right = n / 2): each arm swings forward as the OPPOSITE foot lands (left arm
+    forward on the right heel strike), arms trail the legs by a couple of frames and the elbow
+    closes as the arm comes forward; the pelvis turns so the hip of the leading leg is forward and
+    the shoulders turn against it; the body is lowest just after a foot lands and highest as the
+    other leg passes; the weight leans over the stance foot at mid-stance."""
     n = speed_steps
     c = Clip(n, loop=True)
     c.life(seed=21, breath=0.4, sway=0.4)
@@ -130,35 +137,39 @@ def walk(speed_steps=32):
         sw = np.clip((ph - 0.5) / 0.5, 0, 1)
         # planted: constant speed backwards (= the root travel); swing: eased forward
         y = np.where(stance, -stride + 2 * stride * (ph / 0.5), stride - 2 * stride * (0.5 - 0.5 * np.cos(np.pi * sw)))
-        z = np.where(stance, 0.0, lift * np.sin(np.pi * sw) ** 1.4)
+        # the heel touches down a hair above the floor: the toes-up pitch of the strike would sink it 6 mm
+        z = np.where(stance, 0.005 * np.exp(-(ph / 0.05) ** 2), lift * np.sin(np.pi * sw) ** 1.4)
         # heel strike: toes up; push off: heel rises (toes down relative to the floor)
         pitch = np.where(stance, -16 * np.exp(-((ph - 0.0) / 0.06) ** 2) + 18 * np.exp(-((ph - 0.5) / 0.08) ** 2),
                          22 * np.exp(-((ph - 0.55) / 0.10) ** 2) - 14 * np.exp(-((ph - 0.98) / 0.06) ** 2))
         c.foot(s, y=y, z=z, pitch=pitch)
-        # arms counter-swing (opposite arm goes forward with the leg), elbows and hands drag
-        swing = -26 * np.cos(2 * np.pi * ph)
-        o = "R" if s == "L" else "L"
-        c.arm_fwd(o, C.delay(swing, 2, loop=True))
-        c.elbow(o, 14 + 0.6 * np.maximum(C.delay(-swing, 4, loop=True), 0))
-        c.wrist(o, flex=C.delay(0.35 * swing, 5, loop=True))
-    for s in ("L", "R"):
+    # arms: contralateral. The arm on side s is forward as the other side's foot lands; the upper arm
+    # trails that by 1 frame, the elbow closes 2 frames later still and the hand drags last
+    for s, fwd in (("L", half), ("R", 0.0)):
+        c.arm_fwd(s, C.cycle(n, fwd + 1.0, 25.0))
+        c.elbow(s, 14 + 24 * (0.5 + 0.5 * C.cycle(n, fwd + 3.0)) ** 1.3)
+        c.wrist(s, flex=C.cycle(n, fwd + 4.5, 9.0))
         c.arm_raise(s, 3.0)
         c.hand(s, [(0, "soft")])
-    # bouncy: low at each contact (knees take the weight), high at passing; sway over the stance
-    # foot; pelvis twist; the head squashes a little on each contact and stretches on the pass
-    down = C.sine(n, half, 1.0, phase=0.25)          # +1 at passing, -1 at contact
-    c.add("hips.lz", 0.008 * down - 0.014)
-    c.sy("head", 1.0 + 0.03 * C.delay(down, 2, loop=True))
-    c.sy("neck", 1.0 + 0.02 * C.delay(down, 1, loop=True))
-    c.add("hips.lx", C.sine(n, n, 0.013, phase=0.25))
-    c.add("hips.rz", C.sine(n, n, -7.0, phase=0.0))
-    c.add("hips.ry", C.sine(n, n, 3.5, phase=0.25))
+    # bouncy: lowest just after each contact (knees take the weight), highest as the legs pass; the
+    # head squashes a little on each contact and stretches on the pass
+    up = C.cycle(n, n / 4 + 1.0, 1.0, period=half)  # +1 at passing (+1 frame), -1 just after a landing
+    c.add("hips.lz", 0.008 * up - 0.014)
+    c.sy("head", 1.0 + 0.03 * C.delay(up, 2, loop=True))
+    c.sy("neck", 1.0 + 0.02 * C.delay(up, 1, loop=True))
+    # weight over the stance foot at mid-stance (left foot: frame n / 4), tilting with it
+    c.add("hips.lx", C.cycle(n, n / 4, 0.013))
+    c.add("hips.ry", C.cycle(n, n / 4, 3.5))
+    c.add("chest.ry", C.cycle(n, n / 4, -2.0))
+    c.add("head.ry", C.cycle(n, n / 4 + 3, -2.5))
+    # pelvis turns so the hip of the leading leg is forward (right hip forward on the right heel
+    # strike: +rz is a turn to his left); the shoulders turn against it, a bit later, by more than
+    # the pelvis (their chain starts on it), so they end up about 6 degrees the other way in the world
+    c.add("hips.rz", C.cycle(n, half + 1.0, 7.0))
+    c.add("chest.rz", C.cycle(n, 1.7, 12.9))
+    c.add("head.rz", C.cycle(n, 5.0, -3.0))                     # the head keeps looking ahead
     c.add("spine.rx", 5.0)                                      # lean into the walk
-    c.add("chest.rz", C.sine(n, n, 8.0, phase=0.0))             # shoulders counter the pelvis
-    c.add("chest.ry", C.sine(n, n, -2.0, phase=0.25))
-    c.add("head.rz", C.delay(C.sine(n, n, -2.5, phase=0.0), 2, loop=True))
-    c.add("head.ry", C.delay(C.sine(n, n, -2.5, phase=0.25), 3, loop=True))
-    c.add("head.rx", C.delay(-2.0 * down, 3, loop=True) - 3.0)
+    c.add("head.rx", C.delay(-2.0 * up, 3, loop=True) - 3.0)
     c.expr([(0, "happy")], scale=0.8)
     c.secondary()
     c.stride = stride

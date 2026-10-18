@@ -24,9 +24,10 @@ $B -b work/ia3d/morfi_ia_face2.blend --python scripts/ia3d/fix_wrists.py -- --ou
 # los 40 clips (bake + contactos + pasadas FK; ver "Hornear en paralelo" abajo)
 $B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --out work/ia3d/morfi_ia_anim4.blend
 # anim7 = los 40 clips re-horneados con la capa de manos viva (segunda pasada, mano en reposo viva), unidos con --merge (ver "Hornear en paralelo");
+# anim8 = anim7 con Walk y Run re-horneados (brazos contralaterales, §3 "Marcha"), unidos con --merge;
 # anim6 y anim5 (clips anteriores) quedan como respaldo. Scratch_Head ya no se publica
 # materiales y estudio
-$B -b work/ia3d/morfi_ia_anim7.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look4.blend
+$B -b work/ia3d/morfi_ia_anim8.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look4.blend
 # lentes y armazón como geometría limpia (idempotente, ~30-60 s)
 $B -b work/ia3d/morfi_ia_look4.blend --python scripts/ia3d/fix_glasses.py -- --out work/ia3d/morfi_ia_look5.blend
 # cuello sin unión, puños que no atraviesa la mano, sin membrana entre dedos (idempotente; --undo restaura el cuerpo)
@@ -61,6 +62,7 @@ $B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --
 ```
 
 `morfi_ia_anim7.blend` = los 40 clips re-horneados desde `face3` con la capa de manos viva (§3 "Manos y dedos vivos"), pasados por `anim/cuff_pass.py` y unidos con `--merge`.
+`morfi_ia_anim8.blend` = los 38 clips de `anim7` sin tocar + `Walk` y `Run` re-horneados desde `face3` (`--only Walk,Run`), con `cuff_pass.py` y unidos con `--merge`: los brazos ahora van contra la pierna del mismo lado (§3 "Marcha").
 
 `morfi_ia_anim5.blend` = `anim4` + 7 clips re-horneados (Scratch_Head, Facepalm, Blow_Kiss, Think, Angry, Tablet,
 Calculator), unidos con `make_actions.py --merge anim4.blend,<partes>.blend@…`. Conserva `Scratch_Head` como acción
@@ -167,6 +169,17 @@ constante de 1.08 en el brazo izquierdo).
   salto con anticipación, estirón, squash al caer y asentamiento.
 - Más atributos del clip: `c.max_reach` (tope de alcance propio), `c.stride` (Walk, Run, Sneak: avanzan en el
   sitio y llevan este atributo en la acción), `c.loop`.
+- **Marcha** (`Walk`, `Run`): el brazo de un lado va hacia delante cuando el pie del lado OPUESTO pisa (brazo izquierdo
+  adelante en el apoyo del pie derecho; "una y una", nunca brazo y pierna del mismo lado a la vez). Se escribe con
+  `C.cycle(n, cuadro_en_que_pasa, amplitud, period=None)` (coseno con su máximo en un cuadro dado, bucle exacto): el brazo
+  llega 0-1 cuadros después del apoyo, el codo se cierra 1-2 cuadros después y la muñeca arrastra al final (`Walk`: brazo ±25°,
+  codo 14-38°; `Run`: ±42°, codo 66-92°); el codo se dobla MÁS al ir hacia delante. La pelvis gira con la cadera de la pierna
+  que va delante (`hips.rz`) y los hombros giran al revés (`chest.rz`, ~±6° en el mundo al caminar y ~±10° al correr: el valor
+  del hueso es mayor porque la cadena parte de la pelvis). El cuerpo está más bajo justo después de cada apoyo y más alto
+  cuando pasa la otra pierna (`Run`: más alto en pleno vuelo, más bajo a mitad del apoyo), y el peso se inclina sobre el pie
+  de apoyo a mitad del apoyo. Se mide con `scripts/ia3d/check_gait.py`: fase de la mano contra el pie del mismo lado
+  ≈ 180° (antes ≈ 0°). Sneak (manos en alto, sin vaivén), Hop_Steps (salto a dos pies), Spin, Dance, Dance_2 y Tap_Foot no son
+  marcha y no llevan esta regla.
 
 ### Contactos (`contacts.py`)
 
@@ -305,8 +318,8 @@ mano 4-12 mm a lo largo del antebrazo y doblar la muñeca menos (`TRIES`) hasta 
 ≤ 10 mm; suaviza el cambio (±4 cuadros + difuminado) y deja intactos los cuadros de contacto. Estirar el antebrazo
 (`.sy`) no sirve para esto: el puño de la manga va en el extremo del antebrazo y se estira con él.
 
-**Cadena**: `face3 → make_actions (--only por grupos) → cuff_pass (sobre look5) → make_actions --merge → morfi_ia_anim7.blend`
-(anim6 = primera pasada de manos; anim7 = segunda, con la mano en reposo viva) y las escenas con `make_scenes.py` → `morfi_ia_scenes3.blend`.
+**Cadena**: `face3 → make_actions (--only por grupos) → cuff_pass (sobre look5) → make_actions --merge → morfi_ia_anim8.blend`
+(anim6 = primera pasada de manos; anim7 = segunda, con la mano en reposo viva; anim8 = anim7 con la marcha corregida) y las escenas con `make_scenes.py` → `morfi_ia_scenes3.blend`.
 
 ## 4. Verificación (obligatoria antes de publicar)
 
@@ -322,7 +335,7 @@ Los scripts de Blender se corren como el resto: `$B -b work/ia3d/morfi_ia_look7.
 | `pose_probe.py --poses …` | poses estáticas del motor con su reporte de contactos |
 | `preview_anim.py --action A,B,… --out carpeta` | vista previa en Eevee (cuadros + mp4) de varias acciones en una sola sesión |
 
-Estado al 18-oct-2026 (`morfi_ia_anim7.blend` -> `morfi_ia_look7.blend`, 40 clips publicados: 11 básicos, 8 emociones, 7 de trabajo, 14 movimientos):
+Estado al 18-oct-2026 (`morfi_ia_anim8.blend` -> `morfi_ia_look7.blend`, 40 clips publicados: 11 básicos, 8 emociones, 7 de trabajo, 14 movimientos):
 
 - **Contactos** (13 clips con contacto, todos ok): Think 0.3 mm, Laugh 0.5, Surprised 0.6, Facepalm 0.3,
   Blow_Kiss 0.0; Tablet y Calculator: traslape 0.6 mm, presión 0.2, apoyo 0.6.
@@ -482,12 +495,12 @@ $B -b work/ia3d/morfi_ia_look3.blend --python scripts/ia3d/make_scenes.py -- pre
 `--fast` hornea sin los solucionadores de contactos (revisar poses). `merge` se niega a unir una escena cuya
 cantidad de cuadros no coincide con su línea de tiempo (hay que hornearla de nuevo) y refresca los cortes de
 cámara. `make_scenes.py` también tiene `sketch` (hornea en memoria y renderiza, sin guardar), `faces` y `dump`.
-La estructura de `bake_scene`: bake → tope de alcance → manos fuera del cuerpo → `smooth_ik` → toques
+La estructura de `bake_scene` (ahora en `anim/bakeclip.py`, `bake_clip`, el mismo código que usa `bake_perf.py` para las tomas de la prueba de modelos, [laboratorio.md](laboratorio.md) §10; el audio vive en `anim/audiomix.py` y las mediciones de `verify` en `anim/checks.py`): bake → tope de alcance → manos fuera del cuerpo → `smooth_ik` → toques
 (`contacts.solve`) → `smooth_touches` → manos fuera del cuerpo otra vez → tope → `smooth_ik` → `smooth_touches` ancho
 (`REST_WIN` 15 cuadros: una sola posición de reposo por toque) → `rest_on_skin` (cada cuadro de toque se mueve solo
 por la normal de la piel hasta quedar a ±1 mm) → `smooth_ik` → `rebake_arms` → objeto en la mano (`hold_prop`, al
-final) → verificación. **No** corre todavía las pasadas FK de `make_actions.py` (giro de manga, refinar, pasada de
-cuerpo): es una mejora pendiente (`make_scenes.py` podría llamarlas tras `rebake_arms`). La corrección de escala de
+final) → verificación. **No** corre por omisión las pasadas FK de `make_actions.py` (giro de manga, refinar, pasada de
+cuerpo): `make_scenes.py bake --fk-passes` (y `bake_perf.py`, por omisión) las corre tras `rebake_arms`; las escenas publicadas se hornearon sin ellas. La corrección de escala de
 `rigmap.bake` sí aplica a las escenas.
 
 Cada acción `Scene_*` lleva dos propiedades JSON: `scene` (título, `solo`, `audio`, cortes de cámara, líneas) y
