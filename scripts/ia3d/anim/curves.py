@@ -111,3 +111,43 @@ def blink_track(n, times, close=3, hold=1, open_=5):
         seg = keys(n, [(0, 0.0)] + pts + [(n, 0.0)])
         out = np.maximum(out, seg)
     return out
+
+
+def pulse(n, f0, pts, loop=False):
+    """Keys relative to frame f0 [(offset, value), ...], 0 before the first and after the last
+    (a gesture written once and placed anywhere: a nod, a squash, a hand pop)."""
+    keyed = {}
+    for df, v in [(-10 ** 6, 0.0)] + list(pts) + [(10 ** 6, 0.0)]:
+        keyed[f0 + df] = v                    # two keys on one frame: the later one wins
+    out = keys(n, sorted(keyed.items()))
+    if loop:                                  # wrap what falls past either end of a loop
+        out = out + keys(n, sorted((f + n, v) for f, v in keyed.items())) \
+            + keys(n, sorted((f - n, v) for f, v in keyed.items()))
+    return out
+
+
+def arc(n, f0, f1, height, hang=0.35):
+    """Ballistic hop from take-off f0 to landing f1: fast up, a hang at the top (cartoon timing:
+    `hang` flattens the apex), fast down. 0 outside [f0, f1]."""
+    f = np.arange(n, dtype=float)
+    u = np.clip((f - f0) / max(1.0, f1 - f0), 0.0, 1.0)
+    p = 1.0 - (2.0 * u - 1.0) ** 2                       # parabola, 1 at the apex
+    return height * p ** (1.0 - hang) * ((f > f0) & (f < f1))
+
+
+def ease(n, pts, loop=False):
+    """keys() with a snap: each segment eases out of its start hard and lands soft
+    (fast-in / slow-out spacing for pose-to-pose hits)."""
+    pts = sorted(pts)
+    out = keys(n, pts, loop=loop)
+    if len(pts) < 2:
+        return out
+    f = np.arange(n, dtype=float)
+    t = np.array([p[0] for p in pts], float)
+    v = np.array([p[1] for p in pts], float)
+    idx = np.clip(np.searchsorted(t, f, side="right") - 1, 0, len(t) - 2)
+    s = np.clip((f - t[idx]) / np.maximum(t[idx + 1] - t[idx], 1e-6), 0, 1)
+    s = 1.0 - (1.0 - s) ** 3                              # ease-out cubic: most of the move up front
+    lin = v[idx] + (v[idx + 1] - v[idx]) * s
+    inside = (f >= t[0]) & (f <= t[-1])
+    return np.where(inside, lin, out)

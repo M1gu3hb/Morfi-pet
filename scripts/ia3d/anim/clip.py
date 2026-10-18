@@ -135,6 +135,78 @@ class Clip:
     def prop(self, name, v, scale=1.0):
         self.add(f"prop.{name}", v, scale)
 
+    # ------------------------------------------------------------ cartoon layer
+    def sy(self, bone, v):
+        """Squash (< 1) / stretch (> 1) along a bone with its volume kept: absolute values around
+        1.0. The channel starts at ones, so several calls layer as deltas. head / neck are clean;
+        hips / spine / chest shear the arms (keep them within ~3 %; rebake_arms straightens the
+        arms afterwards)."""
+        key = f"{bone}.sy"
+        if key not in self.ch:
+            self.ch[key] = np.ones(self.n)
+        self.ch[key] = self.ch[key] + (self.arr(v) - 1.0)
+
+    def squash(self, f0, amount, bone="head", dur=12):
+        """Cartoon squash (amount < 0) or stretch (> 0) hitting at f0 and settling with a wobble."""
+        k = max(4, int(dur))
+        self.sy(bone, 1.0 + C.pulse(self.n, f0, [(-3, 0.0), (2, amount), (int(k * 0.45), -0.45 * amount),
+                                                 (int(k * 0.75), 0.15 * amount), (k, 0.0)], loop=self.loop))
+
+    def weight(self, v, heel=7.0):
+        """Weight over one foot: +1 his left .. -1 his right (array or keys). The hips go over the
+        foot and tilt, the spine and chest counter so the head stays over the body, the knees give
+        (soft stance) and the free heel peels off the floor."""
+        w = self.arr(v)
+        self.add("hips.lx", 0.016 * w)
+        self.add("hips.ry", 4.0 * w)
+        self.add("hips.rz", 2.0 * w)
+        self.add("hips.lz", -0.004 * np.abs(w))
+        self.add("spine.ry", -2.6 * w)
+        self.add("chest.ry", -1.6 * w)
+        self.add("head.ry", 1.4 * w)
+        for s, sg in (("L", 1.0), ("R", -1.0)):
+            self.foot(s, pitch=heel * np.clip(-sg * w, 0, 1))
+
+    def dip(self, f0, depth=0.012, chest=2.0, dur=14):
+        """Knees give and rebound on a beat (a word, a landing, a hit); the chest nods with it."""
+        n, lp = self.n, self.loop
+        k = max(6, int(dur))
+        self.add("hips.lz", C.pulse(n, f0, [(-2, 0.0), (int(k * 0.25), -depth), (int(k * 0.6), 0.3 * depth),
+                                            (k, 0.0)], loop=lp))
+        self.add("chest.rx", C.pulse(n, f0, [(-2, 0.0), (int(k * 0.3), chest), (int(k * 0.7), -0.3 * chest),
+                                             (k + 2, 0.0)], loop=lp))
+        self.add("head.rx", C.pulse(n, f0, [(0, 0.0), (int(k * 0.4), 1.2 * chest), (int(k * 0.8), -0.4 * chest),
+                                            (k + 4, 0.0)], loop=lp))
+
+    def hop(self, f0, f1, height=0.06, crouch=0.03, stretch=0.08, arms=0.0, feet=True):
+        """A jump: take-off at f0, landing at f1. Crouch before (anticipation, head squashed),
+        stretch on the way up (head and neck long, toes pointed), hang at the top, squash on the
+        landing and settle with a wobble. arms > 0 swings the (FK) arms back then up (degrees)."""
+        n, fa = self.n, f1 - f0
+        self.add("root.lz", C.arc(n, f0, f1, height))
+        self.add("hips.lz", C.pulse(n, f0, [(-10, 0.0), (-3, -crouch), (-1, -crouch * 0.85), (1, 0.0),
+                                            (fa - 1, 0.0), (fa + 3, -crouch * 0.9), (fa + 9, 0.003),
+                                            (fa + 14, 0.0)]))
+        self.add("spine.rx", C.pulse(n, f0, [(-10, 0.0), (-3, 8.0), (2, -4.0), (fa, -1.0), (fa + 3, 7.0),
+                                             (fa + 12, -1.0), (fa + 16, 0.0)]))
+        self.add("head.rx", C.pulse(n, f0, [(-10, 0.0), (-3, 4.0), (3, -6.0), (fa - 2, -2.0), (fa + 4, 6.0),
+                                            (fa + 12, -1.5), (fa + 18, 0.0)]))
+        if feet:
+            for s in ("L", "R"):
+                self.foot(s, z=C.arc(n, f0 + 1, f1 - 1, height * 0.35),
+                          pitch=C.pulse(n, f0, [(-8, 0.0), (-1, 16.0), (3, 22.0), (fa - 3, -4.0), (fa, 0.0)]))
+        self.squash(f0 - 3, -stretch * 0.8, "head", dur=6)
+        self.squash(f0 + 1, stretch, "head", dur=max(6, fa))
+        self.squash(f0 + 1, stretch * 0.4, "neck", dur=max(6, fa))
+        self.squash(f1 + 1, -stretch * 1.1, "head", dur=14)
+        self.squash(f1 + 1, -0.025, "spine", dur=12)
+        if arms:
+            for s in ("L", "R"):
+                self.arm_fwd(s, C.pulse(n, f0, [(-10, 0.0), (-3, -0.4 * arms), (3, 0.3 * arms), (fa, 0.1 * arms),
+                                                (fa + 8, -0.1 * arms), (fa + 16, 0.0)]))
+                self.arm_raise(s, C.pulse(n, f0, [(-10, 0.0), (-3, -4.0), (3, arms), (fa - 2, 0.7 * arms),
+                                                  (fa + 6, 0.2 * arms), (fa + 16, 0.0)]))
+
     # ------------------------------------------------------------ secondary motion
     def chain_angle(self, bones, axis):
         """Approximate world angle of the last bone of a chain (small-angle sum)."""

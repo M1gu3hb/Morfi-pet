@@ -1,0 +1,44 @@
+{
+  "_doc": "Líneas de las escenas completas del laboratorio (voz oficial Super VM). Cada escena junta sus líneas con pausas en scripts/ia3d/anim/scenes.py (PLAN: cuándo entra cada línea, efectos y cortes de cámara). 'solo' = habla solito (no le habla a la cámara). Generar las líneas: XI_KEY=<key> python voice/gen.py lines voice/scenes.json --voice supervm. Audio de cada escena (sin servicios): python scripts/ia3d/make_scenes.py audio -> web/public/voice/scenes/<key>.mp3 + <key>.json (alineación completa para el lip-sync).",
+  "scenes": [
+    {"key": "presentacion", "title": "¡Hola, soy Morfi!", "solo": false},
+    {"key": "calculadora", "title": "¿Dónde quedó mi calculadora?", "solo": true},
+    {"key": "idea", "title": "¡Ya sé!", "solo": true},
+    {"key": "ventas", "title": "Qué día de ventas", "solo": false},
+    {"key": "susto", "title": "¿Qué fue eso?", "solo": true},
+    {"key": "sueno", "title": "Cinco minutitos", "solo": true}
+  ],
+  "lines": [
+    {"key": "sc_presentacion_1", "text": "[excited] ¡Hola, hola! ¡Soy Morfi!"},
+    {"key": "sc_presentacion_2", "text": "Soy el ayudante de Morphiq."},
+    {"key": "sc_presentacion_3", "text": "Te ayudo a vender, a cobrar... ¡y a que tu negocio crezca!"},
+    {"key": "sc_presentacion_4", "text": "[laughs] ¿Empezamos?"},
+
+    {"key": "sc_calculadora_1", "text": "Mmm... ¿dónde dejé mi calculadora?"},
+    {"key": "sc_calculadora_2", "text": "¿Aquí? No."},
+    {"key": "sc_calculadora_3", "text": "¿Por allá? Tampoco."},
+    {"key": "sc_calculadora_4", "text": "[gasps] ¡Ah! ¡La traía yo en la mano!"},
+    {"key": "sc_calculadora_5", "text": "[laughs] Ay, Morfi..."},
+
+    {"key": "sc_idea_1", "text": "A ver, a ver... café..."},
+    {"key": "sc_idea_2", "text": "pan..."},
+    {"key": "sc_idea_3", "text": "café... pan..."},
+    {"key": "sc_idea_4", "text": "[excited] ¡Ya sé! ¡Café con pan!"},
+    {"key": "sc_idea_5", "text": "¡Soy un genio!"},
+
+    {"key": "sc_ventas_1", "text": "¡Uf! ¡Qué día!"},
+    {"key": "sc_ventas_2", "text": "Cobramos, vendimos, sonreímos..."},
+    {"key": "sc_ventas_3", "text": "[excited] ¡y la caja cuadró al centavo!"},
+    {"key": "sc_ventas_4", "text": "¡Esto merece un bailecito!"},
+
+    {"key": "sc_susto_1", "text": "[gasps] ¡Ay! ¿Qué fue eso?"},
+    {"key": "sc_susto_2", "text": "[whispers] ¿Hay alguien ahí?"},
+    {"key": "sc_susto_3", "text": "Ah... era el timbre de la caja."},
+    {"key": "sc_susto_4", "text": "[laughs] ¡Qué susto me di!"},
+
+    {"key": "sc_sueno_1", "text": "[yawns] Aaay... qué sueño..."},
+    {"key": "sc_sueno_2", "text": "Cinco minutitos nada más..."},
+    {"key": "sc_sueno_3", "text": "[gasps] ¡No, no, no! ¡Ya llegaron clientes!"},
+    {"key": "sc_sueno_4", "text": "[excited] ¡Bienvenidos!"}
+  ]
+}

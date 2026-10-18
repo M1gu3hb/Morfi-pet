@@ -1,0 +1,17 @@
+{
+  "_doc": "Frases de 'Decir' del laboratorio. Cada una lleva la emoción con la que Morfi la actúa (expresión + gesto). Las etiquetas [..] son audio tags de eleven_v3.",
+  "phrases": [
+    {"key": "hola", "text": "[excited] ¡Hola! Soy Morfi, ¿en qué te ayudo?", "mood": "joy", "gesture": "wave"},
+    {"key": "bienvenido", "text": "¡Bienvenido! ¿Qué se te antoja hoy?", "mood": "happy", "gesture": "present"},
+    {"key": "cobramos", "text": "¿Cobramos? Toca aquí y yo me encargo.", "mood": "happy", "gesture": "point"},
+    {"key": "listo", "text": "[excited] ¡Listo! Venta cobrada.", "mood": "joy", "gesture": "thumbs_up"},
+    {"key": "gracias", "text": "¡Gracias por tu compra, vuelve pronto!", "mood": "happy", "gesture": "wave"},
+    {"key": "corte", "text": "¡Corte de caja listo! Hoy vendiste muy bien.", "mood": "joy", "gesture": "celebrate"},
+    {"key": "pensar", "text": "Mmm... déjame pensar... ¡Ya sé!", "mood": "thinking", "gesture": "idea"},
+    {"key": "ups", "text": "¡Ups! Algo salió mal. Intentemos otra vez.", "mood": "surprised", "gesture": "shrug"},
+    {"key": "wow", "text": "[excited] ¡Wow! ¡Esto está increíble!", "mood": "surprised", "gesture": "cheeks"},
+    {"key": "animo", "text": "¡Vamos, tú puedes!", "mood": "determined", "gesture": "fist"},
+    {"key": "risa", "text": "[laughs] ¡Jajaja! ¡Qué buena!", "mood": "laugh", "gesture": "laugh"},
+    {"key": "acabo", "text": "¡Uy! Se acabó el café. ¿Lo pido de nuevo?", "mood": "confused", "gesture": "shrug"}
+  ]
+}

@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#eef1f7" />
   <title>Morfi en vivo</title>
-  <meta name="description" content="Morfi, la mascota de Morphiq, animado en 3D: saluda, habla, te mira y reacciona." />
+  <meta name="description" content="Morfi, la mascota de Morphiq, animado en 3D: saluda, habla con su voz, actúa escenas, te mira y reacciona." />
   <link rel="stylesheet" href="./src/live/live.css" />
 </head>
 <body>
@@ -12,12 +13,36 @@
     <canvas id="view" aria-label="Morfi en 3D"></canvas>
     <div id="status" role="status">Cargando a Morfi… <span id="progress">0%</span></div>
 
-    <button id="panel-toggle" class="panel-toggle" aria-expanded="true" aria-controls="panel">Controles</button>
-    <aside id="panel" class="panel">
-      <header>
-        <h1>Morfi <span>en vivo</span></h1>
-        <p class="ver" id="build-info"></p>
+    <div id="toolbar" class="toolbar" aria-label="Paneles">
+      <button id="panel-toggle" class="panel-toggle" aria-expanded="true" aria-controls="panel">Controles</button>
+    </div>
+    <aside id="panel" class="panel" aria-label="Controles de Morfi">
+      <div class="grip" id="panel-grip" aria-hidden="true"><span></span></div>
+      <header id="panel-head">
+        <div>
+          <h1>Morfi <span>en vivo</span></h1>
+          <p class="ver" id="build-info"></p>
+        </div>
+        <button type="button" class="close" id="panel-close" aria-label="Cerrar controles" title="Cerrar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></svg>
+        </button>
       </header>
+
+      <section aria-labelledby="h-say">
+        <h2 id="h-say">Que diga algo</h2>
+        <label class="field" for="voice"><span>Voz</span><select id="voice" disabled><option>Cargando voces…</option></select></label>
+        <p class="hint" id="voice-note">Toca una frase y Morfi la dice con su voz.</p>
+        <div class="grid phrases" id="phrases"></div>
+      </section>
+
+      <section id="sec-scenes" aria-labelledby="h-scenes">
+        <h2 id="h-scenes">Escenas</h2>
+        <p class="hint" id="scenes-hint">Actuaciones completas con voz, como un video.</p>
+        <div class="scenes" id="scenes"></div>
+        <h3 id="h-videos" hidden>Video completo</h3>
+        <div class="scenes" id="videos"></div>
+        <label class="switch" hidden><input type="checkbox" role="switch" id="cinema" checked /><span>Cámara de cine <small>se mueve sola en las escenas</small></span></label>
+      </section>
 
       <section>
         <h2>Animaciones</h2>
@@ -34,6 +59,11 @@
         <div class="grid" id="work"></div>
       </section>
 
+      <section id="sec-moves" hidden>
+        <h2>Movimientos</h2>
+        <div class="grid" id="moves"></div>
+      </section>
+
       <section>
         <h2>Expresión de la cara</h2>
         <p class="hint">Se suma a cualquier animación. Toca otra vez para quitarla.</p>
@@ -41,17 +71,9 @@
       </section>
 
       <section>
-        <h2>Que diga algo</h2>
-        <form id="say-form" class="say">
-          <input id="say-text" type="text" maxlength="240" value="¡Hola! Soy Morfi, ¿en qué te ayudo hoy?" aria-label="Texto que dirá Morfi" />
-          <button type="submit">Decir</button>
-        </form>
-      </section>
-
-      <section>
         <h2>Comportamiento</h2>
-        <label class="check"><input type="checkbox" id="follow" checked /> Me sigue con la mirada</label>
-        <label class="check"><input type="checkbox" id="kiosk" /> Modo pantalla (se mueve solo)</label>
+        <label class="switch"><input type="checkbox" role="switch" id="follow" checked /><span>Me sigue con la mirada</span></label>
+        <label class="switch"><input type="checkbox" role="switch" id="kiosk" /><span>Modo pantalla <small>se mueve solo</small></span></label>
         <div class="row" id="bgs">
           <button data-bg="light" class="on">Fondo claro</button>
           <button data-bg="dark">Fondo oscuro</button>
@@ -63,6 +85,26 @@
         <span id="stats"></span>
       </footer>
     </aside>
+
+    <div id="player" class="player" role="region" aria-label="Escena en reproducción" hidden>
+      <button type="button" class="pbtn" id="player-pause" aria-label="Pausa">
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 6v12M15.5 6v12" /></svg>
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.8v12.4L18 12z" /></svg>
+        <span id="player-pause-label">Pausa</span>
+      </button>
+      <div class="pmeta">
+        <div class="ptitle"><strong id="player-title"></strong><span id="player-time">0:00</span></div>
+        <input id="player-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Avance de la escena" />
+      </div>
+      <button type="button" class="pbtn" id="player-stop" aria-label="Detener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" /></svg>
+        <span>Detener</span>
+      </button>
+    </div>
+    <button type="button" id="sound-hint" class="toast" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /></svg>
+      Toca para activar el sonido
+    </button>
   </div>
   <script type="module" src="./src/live/main.ts"></script>
 </body>

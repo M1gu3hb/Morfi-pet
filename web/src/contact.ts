@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader.js';
 import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShader.js';
-import { patchShader as patchDualQuat } from './dqskin';
+import { markDualQuat, patchShader as patchDualQuat } from './dqskin';
 
 export class ContactShadow {
   readonly plane: THREE.Mesh;
@@ -41,6 +41,7 @@ export class ContactShadow {
       );
     };
     this.depthMat.customProgramCacheKey = () => 'contact|dq';
+    markDualQuat(this.depthMat);
     this.depthMat.depthTest = false;
     this.depthMat.depthWrite = false;
     this.hBlur = new THREE.ShaderMaterial(HorizontalBlurShader);

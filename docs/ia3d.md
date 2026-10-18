@@ -69,11 +69,14 @@ de cabeza, parpadeos y resortes para cubos y capucha (`curves.spring/jiggle`). P
 los ojos antes que la cabeza y la cabeza antes que el cuerpo, arcos, retraso en manos y cubos, y asentamiento
 con un ligero rebote.
 
-Acciones: `Idle` (bucle de 5 s), `Wave`, `Walk` (bucle, en el sitio), `Jump_Happy`, `Look_Around`, `Talk`, `Present`,
-`Nod_Yes`, `Shake_No`, `Dance` (bucle), y con el motor nuevo `Run`, emociones (`Laugh`, `Surprised`, `Sad`, `Angry`,
-`Scared`, `Calm`, `Celebrate`, `Shrug`), gestos (`Count_123`, `Thumbs_Up`, `Point_Side`, `Idea`, `Think`) y objetos
-(`Tablet`, `Calculator`, con contacto real del dedo). Cada una arranca y termina en el reposo y define todos los
-huesos y gestos, así se encadenan en el NLA sin saltos.
+Acciones (40; la lista con etiquetas y grupos está en [`docs/motor.md`](motor.md) §5): `Idle` (bucle de 5 s), `Wave`,
+`Walk` (bucle, en el sitio), `Jump_Happy`, `Look_Around`, `Talk`, `Present`, `Nod_Yes`, `Shake_No`, `Dance` (bucle),
+`Run`, emociones (`Laugh`, `Surprised`, `Sad`, `Angry`, `Scared`, `Calm`, `Celebrate`, `Shrug`), gestos (`Count_123`,
+`Thumbs_Up`, `Point_Side`, `Idea`, `Think`), objetos (`Tablet`, `Calculator`, con contacto real del dedo) y 14
+movimientos (`Spin`, `Hop_Steps`, `Dance_2`, `Bow`, `Yawn_Stretch`, `Victory`, `Wave_Both`, `Peek`, `Shiver`,
+`Sneak`, `Sleepy`, `Tap_Foot`, `Facepalm`, `Blow_Kiss`). Cada una arranca y termina en el reposo y
+define todos los huesos, gestos y escalas, así se encadenan en el NLA sin saltos. Además, 6 escenas completas con
+voz (`Scene_*`, motor.md §8).
 
 **Motor** (manos de 4 dedos articuladas, IK de brazos con tope de alcance, objetos, contactos exactos, cuerpo
 sólido y verificación): ver [`docs/motor.md`](motor.md).
@@ -89,6 +92,18 @@ están verificados.
 Cada cara del modelo recibe un material según su color de textura y su zona: piel de felpa (sheen), sudadera
 de fleece, playera de algodón, metal en el cierre y las puntas de los cordones (solo lo gris rodeado de sudadera),
 tenis, armazón de acetato brillante y cejas mate. Los lentes tienen una capa de vidrio real con reflejos.
+
+**Lentes y armazón (`fix_glasses.py` + `glasses_geom.py`).** La malla de Meshy trae el armazón pintado y esculpido
+15–46 mm sobre la piel (abanicos de triángulos y una orilla en dientes de sierra), y los lentes eran una copia
+cuadriculada de la cara. Un paso posterior, sobre cualquier .blend de la cadena y idempotente (guarda los datos
+originales en la malla), mide el armazón pintado en un mapa cilíndrico de la cabeza y lo reconstruye como una sola
+malla de cuadriláteros, `Glasses_Frame` (aros, puente y patillas, bordes redondeados, ranura para el lente, rígida
+en el hueso de la cabeza); hace lentes polares nuevos (`Lens_L`/`Lens_R`, una cúpula lisa sobre toda la abertura);
+aplana el relieve viejo bajo el armazón; mantiene la piel ≥ 3 mm detrás de los lentes y 0.6 mm detrás de las
+calcomanías de los ojos; y saca la zona de los lentes de las claves de mejillas, boca y mandíbula. Medido: la
+holgura del lente a la piel pasó de −11.1/−6.3 mm (la atravesaba) a +4.7/+3.5 mm; 8 882 triángulos de armazón y
+2 × 1 440 de lentes. Uso: `$B -b work/ia3d/morfi_ia_look4.blend --python scripts/ia3d/fix_glasses.py -- --out
+work/ia3d/morfi_ia_look5.blend` (cadena completa en motor.md §1).
 Estudio: fondo curvo, luces de área (principal, relleno, contra, cenital y de rebote) y el HDRI de estudio
 de Blender para los reflejos. Vista de color **Standard**: con AgX el azul de marca se volvía lavanda y con
 Khronos PBR Neutral, violeta.
@@ -103,7 +118,7 @@ $B -b --factory-startup --python scripts/ia3d/build_rig.py -- --glb work/ia3d/mo
 $B -b work/ia3d/morfi_ia_rig.blend --python scripts/ia3d/face_ortho.py -- --out work/ia3d/face
 python scripts/ia3d/measure_face.py --dir work/ia3d/face          # face_features.json + eye_outline.json
 python scripts/ia3d/inpaint_face.py --mesh work/ia3d/mesh.npz --tex work/ia3d/tex/glb1_1_Image_0.jpg --face work/ia3d/face --out work/ia3d/tex/base_color_clean.jpg
-# manos, controles, cara, acciones y materiales: ver docs/motor.md §1 (morfi_ia_rig_nohands -> morfi_ia_look2)
+# manos, controles, cara, muñecas, acciones, materiales y lentes: ver docs/motor.md §1 (morfi_ia_rig_nohands -> morfi_ia_look5)
 $B -b work/ia3d/morfi_ia_look.blend --python scripts/ia3d/render_showcase.py -- --out work/ia3d/showcase
 ```
 
@@ -111,35 +126,34 @@ $B -b work/ia3d/morfi_ia_look.blend --python scripts/ia3d/render_showcase.py -- 
 
 Es la portada del sitio (https://morfi-pet.vercel.app). El visor técnico del modelo procedural anterior
 sigue igual en `web/tecnico.html`, enlazado desde ambas páginas.
-- `scripts/ia3d/export_web.py` exporta `work/ia3d/web/morfi_live.glb`. Lleva el cuerpo, las manos articuladas, la
-  tablet y la calculadora, las 26 acciones horneadas cuadro por cuadro (IK de piernas y brazos ya aplicados), los
-  shape keys de cejas y del relleno de la boca, y materiales glTF (textura 4K, normal 2K, sheen y clearcoat).
-  Escribe también `morfi_live_face.json` con las medidas de los ojos y la boca.
+Todo el detalle del laboratorio (paneles, parámetros de URL, API, archivos publicados, cómo publicar y verificar)
+está en [`docs/laboratorio.md`](laboratorio.md). Lo que depende del modelo:
+- `scripts/ia3d/export_web.py` se corre sobre el **look final** (`morfi_ia_look5.blend`: anim5 → look4 → lentes) y
+  exporta `work/ia3d/web/morfi_live.glb`. Lleva el cuerpo, las manos articuladas, la tablet y la calculadora, los
+  40 clips horneados cuadro por cuadro (IK de piernas y brazos ya aplicados), los shape keys de cejas y del
+  relleno de la boca, `Glasses_Frame` (nodo y malla propios, rígido en el hueso de la cabeza, material
+  `Glasses_Frame`) y materiales glTF (textura 4K, normal 2K, sheen y clearcoat). Los lentes `Lens_L`/`Lens_R`
+  llevan un material marcador (`MorfiLens`) que el visor reemplaza. Escribe también `morfi_live_face.json` con las
+  medidas de los ojos y la boca. Falla con `KeyError` si el .blend no trae los 40 clips de `ACTIONS`.
 - `scripts/ia3d/export_face_anims.py` escribe `morfi_live_anims.json`: las curvas de la cara de cada acción
-  (parpadeo, mirada, boca, cejas…) y las 18 expresiones, porque glTF no transporta las propiedades del rig.
+  (parpadeo, mirada, boca, cejas…), su etiqueta y grupo (`anim/catalog.py`) y las 18 expresiones, porque glTF no
+  transporta las propiedades del rig.
+- `scripts/ia3d/export_scenes.py` exporta las escenas aparte (`morfi_live_scenes.glb` solo con animación y su
+  JSON), ver motor.md §1 y §8.
 - `npm run sync-live` copia todo a `web/public/models/`, quita las claves de animación redundantes (`resample`) y
-  comprime con meshopt.
-  El usuario autorizó publicarlo (16-oct-2026): el GLB se versiona y Vercel lo sirve.
+  comprime con meshopt. El usuario autorizó publicarlo (16-oct-2026): el GLB se versiona y Vercel lo sirve.
 - `web/src/live/face.ts` porta a GLSL los shaders de ojos y boca de Blender. `director.ts` mezcla las acciones
-  con transiciones de 0.35 s y vuelve al reposo al acabar cada una. Encima añade parpadeos al azar, ojos y
-  cabeza que siguen al cursor o a la cámara, habla a partir de un texto y, en "modo pantalla", pequeñas
-  acciones solas.
-- Clic sobre Morfi: reacciona (salto, sí, saludo). Parámetros de URL: `?kiosk=1` (pantalla de punto de venta,
-  sin panel), `?clean=1`, `?bg=dark`, `?anim=Wave`, `?lowpower=1`.
-- **API para el chatbot** (también funciona dentro de un iframe):
-  ```js
-  morfi.play('Wave')                      // cualquiera de las 26 acciones (lista: morfi.actions)
-  morfi.expression('surprised')           // expresión de cara encima del cuerpo; 'neutral' la quita (lista: morfi.expressions)
-  morfi.speak('¡Hola! ¿En qué te ayudo?') // mueve la boca con el texto; devuelve la duración en s
-  iframe.contentWindow.postMessage({ type: 'speak', text: 'Claro, te explico…' }, '*')
-  iframe.contentWindow.postMessage({ type: 'play', name: 'Nod_Yes' }, '*')
-  ```
-- Prueba: `npm run build && npm run test:live`. Recorre todas las animaciones y expresiones, el habla,
-  `postMessage`, el fondo oscuro y el celular, y falla ante cualquier error de consola (capturas en
+  con transiciones de 0.35 s y vuelve al reposo al acabar cada una; encima, parpadeos al azar, ojos y cabeza que
+  siguen al cursor o a la cámara, frases con la voz real y "modo pantalla".
+- API para el chatbot (también dentro de un iframe): `window.morfi` (`play`, `speak`, `say`, `expression`, `scene`,
+  `stop`, `follow`, `kiosk`, `status`…) y `postMessage` de tipo `play`, `speak`, `say`, `expression`, `scene`,
+  `stop`; el estilo en `window.morfiStyle`. Ejemplos en laboratorio.md §4.
+- Prueba: `cd web && npm run build && npm run test:live` (falla ante cualquier error de consola; capturas en
   `work/ia3d/viewer_test/`).
 
 ## 9. Pendiente
 
-- Labios sincronizados con audio real (hoy la boca sigue el texto); con una voz TTS se puede mover con la amplitud.
+- La boca ya sigue el audio real en las frases y las escenas del laboratorio; el chatbot (`morfi.speak`) todavía
+  mueve la boca solo con el texto.
 - La sudadera suelta (`SUDADERA.glb`) no se usó: la sudadera de la malla principal se deforma bien con el rig
   y separarla dejaría un hueco sin cuerpo debajo. Sirve para un primer plano o para simular tela más adelante.

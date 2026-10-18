@@ -1,0 +1,15 @@
+{
+  "_doc": "Voces para Morfi (ElevenLabs, modelo eleven_v3, es). Miguel eligió Super VM (17-oct-2026): es su voz oficial; las demás quedan en el laboratorio solo para comparar. 'pitch' en semitonos: la toma se baja con rubberband (formantes preservados) para que la voz quede pequeña y amigable pero claramente masculina. 'default' = la voz que usa el laboratorio mientras Miguel elige.",
+  "default": "supervm",
+  "model": "eleven_v3",
+  "settings": {"stability": 0.5, "similarity_boost": 0.8},
+  "voices": [
+    {"key": "thorthugo_grave", "name": "Thorthugo grave", "id": "WOY6pnQ1WCg0mrOZ54lM", "pitch": -4,
+     "note": "La que eligió Miguel en el video, 4 semitonos abajo: misma personalidad, sin tono de mujer (F0 mediana 228 Hz)."},
+    {"key": "maskito", "name": "Maskito", "id": "bEUyorX06jkv9l51DuwR", "pitch": 0, "note": "Mascota alegre (246 Hz)."},
+    {"key": "supervm", "name": "Super VM", "id": "gQRS0Lnh5XQOAqujMqUX", "pitch": 0, "note": "Héroe amigable (239 Hz)."},
+    {"key": "sebastian", "name": "Sebastián", "id": "p7cwnUviDFhhX9y8sG2Q", "pitch": 0, "note": "Adolescente latino, cálido (205 Hz)."},
+    {"key": "cuentacuentos", "name": "Cuentacuentos", "id": "A2ekoyYWxhBmOk8bT2mw", "pitch": 0, "note": "Joven, ligero, rápido (178 Hz)."},
+    {"key": "mark", "name": "Mark", "id": "DUnzBkwtjRWXPr6wRbmL", "pitch": 0, "note": "Caricaturesco y muy expresivo (136 Hz)."}
+  ]
+}

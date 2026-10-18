@@ -9,6 +9,8 @@ glTF cannot carry Blender's procedural shaders or rig custom properties, so:
   * the eye, mouth and lens objects keep their geometry and UVs and get placeholder
     materials named MorfiEye_R / MorfiEye_L / MorfiMouth / MorfiLens: the viewer
     replaces them with GLSL ports of the Blender shaders (web/src/live/face.ts);
+  * the rebuilt glasses frame (fix_glasses.py) goes out as its own node and mesh,
+    Glasses_Frame, rigid on the head joint, with a plain glossy PBR material of the same name;
   * the eye and mouth shader constants go to a JSON next to the GLB;
   * the face curves (blink, gaze, mouth...) are exported by export_face_anims.py.
 Bones are sampled every frame, so the leg IK and foot roll are baked in.
@@ -42,22 +44,88 @@ def parse_args():
     return ap.parse_args(argv)
 
 
-def downscale(img, size, path, fmt):
-    """Write a smaller copy of a Blender image (read from its file or packed data) with PIL."""
+def pil_image(img):
+    """A Blender image (read from its file or packed data) as an RGB PIL image."""
     src = bpy.path.abspath(img.filepath) if img.filepath else ""
     if src and os.path.exists(src):
-        im = Image.open(src).convert("RGB")
-    else:                                              # packed (e.g. from the GLB): read its pixels
-        import numpy as np
-        w, h = img.size
-        px = np.empty(w * h * 4, np.float32)
-        img.pixels.foreach_get(px)
-        arr = (np.clip(px.reshape(h, w, 4)[::-1, :, :3], 0, 1) * 255 + 0.5).astype(np.uint8)
-        im = Image.fromarray(arr)
-    im = im.resize((size, size), Image.LANCZOS)
+        return Image.open(src).convert("RGB")
+    import numpy as np                                 # packed (e.g. from the GLB): read its pixels
+    w, h = img.size
+    px = np.empty(w * h * 4, np.float32)
+    img.pixels.foreach_get(px)
+    arr = (np.clip(px.reshape(h, w, 4)[::-1, :, :3], 0, 1) * 255 + 0.5).astype(np.uint8)
+    return Image.fromarray(arr)
+
+
+def downscale(img, size, path, fmt):
+    """Write a smaller copy of a Blender image with PIL."""
+    im = pil_image(img).resize((size, size), Image.LANCZOS)
     im.save(path, quality=88) if fmt == "JPEG" else im.save(path)
     out = bpy.data.images.load(path)
     return out
+
+
+def hull(pts):
+    """Convex hull (counter-clockwise) of 2D points, Andrew's monotone chain."""
+    pts = sorted(map(tuple, pts))
+    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for seq, out in ((pts, lo), (pts[::-1], up)):
+        for p in seq:
+            while len(out) >= 2 and cross(out[-2], out[-1], p) <= 0:
+                out.pop()
+            out.append(p)
+    return lo[:-1] + up[:-1]
+
+
+def flat_skin_in_lens_openings(body):
+    """The skin under the lenses is a patchwork of star-shaped atlas islands left by the old painted
+    frame (fix_glasses.py only presses its relief down). Their jagged borders sample the neighbouring
+    islands and, with an eye closed, show through the lens as thin white zig-zags. The faces inside the
+    lens openings are pointed at one spot of the atlas that has the same skin colour and a flat normal:
+    no islands, no borders (the rim of the opening sits under the new frame)."""
+    import numpy as np
+    me = body.data
+    names = [m.name for m in me.materials]
+    if "Glasses_Frame" not in bpy.data.objects or "Skin" not in names or "Frame" not in names:
+        return
+    first = me.materials[0]
+    base = next(n.image for n in first.node_tree.nodes if n.type == "TEX_IMAGE" and n.image.size[0] >= 8192)
+    normal = next(n.image for n in first.node_tree.nodes if n.type == "TEX_IMAGE" and n.image.name.startswith("normal"))
+    S = 1024
+    col = np.asarray(pil_image(base).resize((S, S), Image.BOX), dtype=np.float32)
+    nor = np.asarray(pil_image(normal).resize((S, S), Image.BOX), dtype=np.float32)
+    ok_mat = {names.index("Skin"), names.index("Frame")}
+    ctr = np.array([body.matrix_world @ p.center for p in me.polygons])
+    sel = np.zeros(len(me.polygons), dtype=bool)
+    for side in ("L", "R"):
+        lens = bpy.data.objects[f"Lens_{side}"]
+        lc = np.array([lens.matrix_world @ v.co for v in lens.data.vertices])
+        poly = np.array(hull(lc[:, [0, 2]]))
+        inside = np.ones(len(ctr), dtype=bool)
+        for a, b in zip(poly, np.roll(poly, -1, axis=0)):          # left of every edge = inside
+            inside &= (b[0] - a[0]) * (ctr[:, 2] - a[1]) - (b[1] - a[1]) * (ctr[:, 0] - a[0]) > 0
+        sel |= inside & (ctr[:, 1] < lc[:, 1].max())
+    sel &= np.array([p.material_index in ok_mat for p in me.polygons])
+    uv = me.uv_layers.active.data
+    loops = [i for p in me.polygons if sel[p.index] for i in p.loop_indices]
+    px = np.array([[uv[i].uv[0] * (S - 1), (1 - uv[i].uv[1]) * (S - 1)] for i in loops])
+    target = np.median(col[np.clip(px[:, 1].round().astype(int), 0, S - 1), np.clip(px[:, 0].round().astype(int), 0, S - 1)], axis=0)
+    # best W x W window of the atlas: the target colour, a flat normal, no detail
+    W = 24
+    cost = np.abs(col - target).max(axis=2) + 0.5 * np.abs(nor[:, :, :2] - 128.0).max(axis=2)
+    cs = np.pad(cost, ((1, 0), (1, 0))).cumsum(0).cumsum(1)
+    mean = (cs[W:, W:] - cs[:-W, W:] - cs[W:, :-W] + cs[:-W, :-W]) / (W * W)
+    c2 = np.pad(cost * cost, ((1, 0), (1, 0))).cumsum(0).cumsum(1)
+    var = (c2[W:, W:] - c2[:-W, W:] - c2[W:, :-W] + c2[:-W, :-W]) / (W * W) - mean * mean
+    score = mean + np.sqrt(np.maximum(var, 0))
+    y0, x0 = np.unravel_index(np.argmin(score), score.shape)
+    u, v = (x0 + W / 2) / S, 1 - (y0 + W / 2) / S
+    for i in loops:
+        uv[i].uv = (u, v)
+    me.update()
+    print("lens openings:", int(sel.sum()), "faces on one flat skin spot, uv", round(u, 3), round(v, 3),
+          "colour", target.round().tolist(), "window cost", round(float(score[y0, x0]), 2))
 
 
 def web_body_materials(body, out_dir, tex_size, normal_size):
@@ -103,6 +171,26 @@ def web_body_materials(body, out_dir, tex_size, normal_size):
         body.data.materials[i] = mat
 
 
+def web_glasses_frame():
+    """Glasses_Frame (fix_glasses.py): a constant-colour glossy material glTF can carry as is
+    (baseColorFactor, roughness, clearcoat), whatever nodes the render material has."""
+    ob = bpy.data.objects.get("Glasses_Frame")
+    if ob is None:
+        return
+    old = ob.data.materials[0]
+    src = next(n for n in old.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    vals = {k: (tuple(src.inputs[k].default_value) if hasattr(src.inputs[k].default_value, "__len__")
+                else src.inputs[k].default_value) for k in BSDF_KEYS + ["Base Color", "IOR"]}
+    old.name = "Glasses_Frame_render"
+    mat = bpy.data.materials.new("Glasses_Frame")
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    for k, v in vals.items():
+        bsdf.inputs[k].default_value = v
+    ob.data.materials[0] = mat
+    ob.data.name = "Glasses_Frame"
+
+
 def placeholder(name):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
@@ -134,7 +222,9 @@ def main():
             ob.data.shape_keys.animation_data_clear()
             for kb in ob.data.shape_keys.key_blocks[1:]:
                 kb.value = 0.0
+    flat_skin_in_lens_openings(body)
     web_body_materials(body, out_dir, args.tex, args.normal)
+    web_glasses_frame()
     for side in ("R", "L"):
         bpy.data.objects[f"Eye_Decal_{side}"].data.materials[0] = placeholder(f"MorfiEye_{side}")
         bpy.data.objects[f"Lens_{side}"].data.materials[0] = placeholder("MorfiLens")

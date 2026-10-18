@@ -1,10 +1,13 @@
 """Morfi's actions, authored as curves (30 fps).
 
-Every action starts and ends on the relaxed idle pose, so they chain without pops.
+Every action starts and ends near the relaxed idle pose, so they chain without pops.
 Principles used throughout: anticipation before big moves, eyes lead the head and the
 head leads the body, arcs (heads dip when they turn), overlap (hands and cubes lag),
-settles with a small overshoot, and the always-on life layer (breathing, micro head
-motion, blinks).
+fast-in / slow-out hits that overshoot and settle, the weight always over a foot (knees
+that give), squash & stretch on the head and neck (clip.squash / clip.hop) and the
+always-on life layer (breathing, micro head motion, blinks).
+
+He is a cartoon: poses are pushed until they read from across the room, then held.
 """
 import numpy as np
 
@@ -13,80 +16,104 @@ from .clip import Clip
 
 
 def idle():
-    """Relaxed standing loop: breathing, weight shift, glances, blinks (5 s)."""
+    """Relaxed standing loop: breathing, the weight from one foot to the other, glances (5 s)."""
     n = 150
     c = Clip(n, loop=True)
     c.life(seed=3, blinks=[38, 112, 121])
-    # weight shift over the whole loop: hips over the left foot, then the right
-    c.add("hips.lx", C.sine(n, n, 0.006))
-    c.add("hips.lz", C.sine(n, n / 2, 0.0012, phase=0.25) - 0.004)   # knees a little soft
-    c.add("hips.ry", C.sine(n, n, 1.0, phase=0.02))
-    c.add("hips.rz", C.sine(n, n, 1.6, phase=0.20))
-    c.add("spine.ry", C.sine(n, n, -1.4, phase=0.05))
-    c.add("chest.ry", C.sine(n, n, -0.6, phase=0.08))
-    c.add("chest.rz", C.sine(n, n, -1.0, phase=0.28))
-    c.add("neck.ry", C.sine(n, n, 0.8, phase=0.14))
+    # weight shift: over his left foot, then his right, each with a small overshoot and a knee give
+    c.weight(C.keys(n, [(0, -0.55), (12, 0.62), (17, 0.5), (70, 0.48), (87, -0.62), (92, -0.5), (148, -0.55)],
+                    loop=True))
+    c.dip(14, depth=0.006, chest=1.2, dur=14)
+    c.dip(89, depth=0.006, chest=1.2, dur=14)
+    c.add("hips.lz", -0.004)
+    # breathing you can see: the chest swells (volume kept) and the head rides on it
+    breath = C.sine(n, n / 2, 1.0, phase=0.1)
+    c.sy("chest", 1.0 + 0.012 * breath)
+    c.sy("neck", 1.0 + 0.01 * C.delay(breath, 4, loop=True))
     for s, ph in (("L", 0.25), ("R", 0.75)):
-        c.arm_fwd(s, C.delay(C.sine(n, n, 1.3, phase=ph), 6, loop=True))
-        c.arm_raise(s, C.delay(C.sine(n, n, 0.8 * (1 if s == "L" else -1)), 8, loop=True))
-    # glances: the eyes move first, quick, and hold
-    c.prop("gaze_x", [(0, 0.0), (44, 0.0), (47, 0.28), (78, 0.28), (81, 0.0), (128, 0.0), (131, -0.18),
-                      (142, -0.18), (146, 0.0)])
-    c.prop("gaze_y", [(0, 0.0), (44, 0.0), (47, 0.05), (78, 0.05), (81, 0.0)])
-    c.add("head.rz", [(0, 0), (47, 0), (60, 4.0), (78, 4.0), (92, 0), (131, 0), (140, -2.5), (148, 0)])
-    c.prop("smile", 0.35)
+        c.arm_fwd(s, C.delay(C.sine(n, n, 2.0, phase=ph), 6, loop=True))
+        c.arm_raise(s, C.delay(C.sine(n, n, 1.2 * (1 if s == "L" else -1)), 8, loop=True))
+    # glances: the eyes go first and quick, the head follows on an arc with a small overshoot,
+    # a curious tilt while it holds
+    c.prop("gaze_x", [(0, 0.0), (44, 0.0), (46, 0.42), (78, 0.38), (80, 0.0), (128, 0.0), (130, -0.3),
+                      (142, -0.28), (145, 0.0)], )
+    c.prop("gaze_y", [(0, 0.0), (44, 0.0), (46, 0.1), (78, 0.08), (80, 0.0)])
+    c.add("head.rz", [(0, 0), (45, 0), (49, -1.2), (58, 8.5), (63, 7.0), (78, 7.0), (84, 8.0), (94, -1.0), (100, 0),
+                      (130, 0), (133, 1.0), (139, -5.0), (143, -4.0), (149, 0)])
+    c.add("head.rx", [(0, 0), (48, 0), (53, 2.0), (60, -1.0), (80, -1.0), (88, 1.5), (96, 0)])
+    c.add("head.ry", [(0, 0), (50, 0), (60, 5.0), (78, 4.0), (92, 0), (149, 0)])
+    c.add("chest.rz", [(0, 0), (52, 0), (64, 2.5), (80, 2.5), (98, 0)])
+    c.prop("brow_L", [(0, 0), (44, 0), (47, 0.35), (78, 0.25), (84, 0), (128, 0), (131, 0.2), (144, 0)])
+    c.prop("brow_R", [(0, 0), (44, 0), (47, 0.2), (78, 0.15), (84, 0), (128, 0), (131, 0.3), (144, 0)])
+    c.prop("smile", [(0, 0.4), (50, 0.55), (80, 0.5), (110, 0.4)])
+    # the fingers fidget once
+    c.curl("L", C.pulse(n, 100, [(-4, 0), (2, 14), (8, -6), (14, 0)], loop=True))
     c.secondary()
     return c
 
 
 def wave():
-    """Friendly wave with the right hand (3.5 s).
+    """Big friendly wave with the right hand: '¡Hola!' (3.5 s).
 
-    Morfi's arms are 23 cm long and his head 60 cm wide: a raised hand would go into
-    the head (measured with check_clearance.py / search_wave.py). The wave keeps the
-    elbow at shoulder height and the forearm on a diagonal, so the hand waves beside
-    the lower corner of the head with 2-4 cm to spare, and the wrist does the flapping.
+    Morfi's arms are 20 cm long and his head 60 cm wide: a raised hand would go into the head
+    (check_clearance.py / search_wave.py). The wave keeps the elbow at shoulder height and the
+    forearm on a diagonal out to the side, so the hand waves beside the lower corner of the head;
+    the arm stretches a little on the way up (FK, volume kept) and the wrist drags behind the
+    forearm like a flag.
     """
     n = 105
     c = Clip(n)
-    c.life(seed=11, blinks=[90])
+    c.life(seed=11, blinks=[92], hands=False)
     s = "R"
     f = np.arange(n)
-    # anticipation: tiny dip and the arm drops back before rising
-    c.add("hips.lz", [(0, -0.004), (6, -0.009), (14, -0.002), (22, -0.004), (90, -0.004), (104, -0.004)])
-    c.arm_raise(s, [(0, 0), (6, -4), (16, 48), (21, 41), (25, 44), (80, 44), (91, -6), (98, 1), (104, 0)])
-    c.arm_swing(s, [(0, 0), (8, 0), (16, 24), (80, 24), (92, 0), (104, 0)])
-    c.forearm_lift(s, [(0, 0), (9, 0), (18, 39), (24, 32), (80, 32), (90, 0), (104, 0)])
-    c.elbow(s, [(0, 0), (12, 0), (20, 6), (80, 6), (92, 0), (104, 0)])
-    # the wave: forearm rocks about the elbow, the hand flaps a little later and wider
-    env = C.keys(n, [(0, 0), (22, 0), (28, 1), (74, 1), (82, 0), (104, 0)])
-    w = np.sin(2 * np.pi * (f - 22) / 15.0) * env
-    c.forearm_lift(s, -np.where(w < 0, 8.0, 12.0) * w)    # swings wider away from the head
-    c.wrist(s, side=C.delay(-18.0 * w, 3), flex=[(0, 0), (16, 0), (22, -6), (80, -6), (92, 0), (104, 0)])
-    c.curl(s, [(0, 0), (14, 0), (20, -12), (80, -12), (92, 0)])
-    c.palm(s, [(0, 0), (12, 0), (20, 72), (80, 72), (91, 0), (104, 0)])   # palm to the viewer
-    # the body answers: chest opens to the camera, head tilts a touch away from the hand,
-    # a little bounce on every wave
-    c.add("spine.ry", [(0, 0), (8, 0.8), (22, 2.0), (80, 2.0), (96, 0), (104, 0)])
-    c.add("head.ry", [(0, 0), (12, 0), (24, 4), (80, 3), (96, 0), (104, 0)])
-    c.add("head.rx", [(0, 0), (8, 2.5), (20, -3), (80, -2), (96, 0), (104, 0)])
-    c.add("hips.lz", 0.002 * np.maximum(0, np.sin(2 * np.pi * (f - 22) / 15.0)) * env)
-    c.add("chest.rz", [(0, 0), (20, -4), (80, -4), (96, 0)])
-    c.prop("smile", [(0, 0.35), (16, 0.9), (84, 0.9), (104, 0.4)])
-    c.prop("brow_L", [(0, 0), (14, 0.6), (30, 0.4), (84, 0.4), (100, 0)])
-    c.prop("brow_R", [(0, 0), (14, 0.6), (30, 0.4), (84, 0.4), (100, 0)])
+    # anticipation: the weight goes to the other foot, the arm drops and cocks back before it rises
+    c.weight([(0, 0), (6, 0.45), (14, 0.9), (20, 0.75), (84, 0.75), (96, -0.1), (104, 0)])
+    c.add("hips.lz", [(0, -0.004), (7, -0.016), (14, -0.002), (20, -0.006), (88, -0.006), (98, -0.010),
+                      (104, -0.004)])
+    c.arm_raise(s, [(0, 0), (7, -8), (15, 48), (20, 41), (25, 44), (80, 44), (90, -8), (97, 2), (104, 0)])
+    c.arm_fwd(s, [(0, 0), (7, -12), (15, 4), (80, 4), (90, 6), (104, 0)])
+    c.arm_swing(s, [(0, 0), (8, 0), (16, 26), (80, 26), (92, 0), (104, 0)])
+    c.forearm_lift(s, [(0, 0), (9, -6), (17, 48), (22, 38), (26, 41), (80, 41), (90, 0), (104, 0)])
+    c.elbow(s, [(0, 0), (7, 18), (17, 4), (80, 4), (92, 8), (104, 0)])
+    c.stretch(s, [(0, 1.0), (10, 1.0), (16, 1.06), (24, 1.03), (80, 1.03), (90, 1.0), (104, 1.0)])
+    # the wave: forearm rocks about the elbow, the hand flags behind it, wider away from the head
+    env = C.keys(n, [(0, 0), (22, 0), (27, 1), (76, 1), (84, 0), (104, 0)])
+    w = np.sin(2 * np.pi * (f - 22) / 13.0) * env
+    c.forearm_lift(s, -np.where(w < 0, 15.0, 8.0) * w)
+    c.wrist(s, side=C.delay(-28.0 * w, 4), flex=[(0, 0), (8, 14), (16, -10), (22, -6), (80, -6), (90, 10),
+                                                  (98, 0), (104, 0)])
+    c.palm(s, [(0, 0), (10, 0), (18, 78), (80, 74), (91, 0), (104, 0)])   # palm to the viewer
+    c.hand(s, [(0, "relaxed"), (8, "soft"), (16, "spread"), (82, "spread"), (92, "relaxed"), (104, "relaxed")])
+    c.hand("L", [(0, "relaxed"), (14, "soft"), (88, "soft"), (104, "relaxed")])
+    c.arm_raise("L", [(0, 0), (14, 6), (88, 6), (104, 0)])
+    # the body answers: leans away from the hand, opens the chest to the camera, bounces on every
+    # wave; the head stretches up on the '¡hola!' and tilts towards the hand
+    c.add("spine.ry", [(0, 0), (8, -2.0), (18, 4.5), (80, 4.0), (96, 0), (104, 0)])
+    c.add("head.ry", [(0, 0), (10, -3), (22, 7), (80, 6), (96, 0), (104, 0)])
+    c.add("head.rx", [(0, 0), (7, 4.5), (16, -6), (22, -3), (80, -3), (96, 1), (104, 0)])
+    c.add("chest.rz", [(0, 0), (16, -6), (80, -5), (96, 0)])
+    c.squash(8, -0.06, "head", dur=6)
+    c.squash(15, 0.08, "head", dur=16)
+    bounce = np.maximum(0, np.sin(2 * np.pi * (f - 22) / 13.0)) * env
+    c.add("hips.lz", -0.004 * bounce)
+    c.add("chest.rx", 1.5 * C.delay(bounce, 2))
+    c.add("head.rx", -1.2 * C.delay(bounce, 3))
+    c.expr([(0, "happy", 0.6), (12, "joy"), (40, "happy"), (84, "happy"), (104, "happy", 0.5)])
+    c.prop("mouth_open", [(0, 0), (14, 0.2), (20, 0.5), (30, 0.1), (104, 0)])        # '¡hola!'
+    c.prop("brow_L", [(0, 0), (6, -0.2), (14, 0.5), (30, 0.2), (84, 0.2), (100, 0)])
+    c.prop("brow_R", [(0, 0), (6, -0.2), (14, 0.5), (30, 0.2), (84, 0.2), (100, 0)])
     c.secondary()
     return c
 
 
 def walk(speed_steps=32):
-    """In-place walk cycle, two steps per loop (~1.07 s). Root travel is added by the
+    """In-place walk cycle, two steps per loop (~1.07 s), bouncy. Root travel is added by the
     showcase (stride * 2 per cycle), so the feet stay planted on the floor."""
     n = speed_steps
     c = Clip(n, loop=True)
     c.life(seed=21, breath=0.4, sway=0.4)
     stride = 0.115                     # forward reach of each foot from its rest spot
-    lift = 0.04
+    lift = 0.05
     half = n / 2
     f = np.arange(n)
     for s, off in (("L", 0.0), ("R", half)):
@@ -97,83 +124,101 @@ def walk(speed_steps=32):
         y = np.where(stance, -stride + 2 * stride * (ph / 0.5), stride - 2 * stride * (0.5 - 0.5 * np.cos(np.pi * sw)))
         z = np.where(stance, 0.0, lift * np.sin(np.pi * sw) ** 1.4)
         # heel strike: toes up; push off: heel rises (toes down relative to the floor)
-        pitch = np.where(stance, -14 * np.exp(-((ph - 0.0) / 0.06) ** 2) + 16 * np.exp(-((ph - 0.5) / 0.08) ** 2),
-                         18 * np.exp(-((ph - 0.55) / 0.10) ** 2) - 12 * np.exp(-((ph - 0.98) / 0.06) ** 2))
+        pitch = np.where(stance, -16 * np.exp(-((ph - 0.0) / 0.06) ** 2) + 18 * np.exp(-((ph - 0.5) / 0.08) ** 2),
+                         22 * np.exp(-((ph - 0.55) / 0.10) ** 2) - 14 * np.exp(-((ph - 0.98) / 0.06) ** 2))
         c.foot(s, y=y, z=z, pitch=pitch)
-        # arms counter-swing (opposite arm goes forward with the leg)
-        swing = -18 * np.cos(2 * np.pi * ph)
-        c.arm_fwd("R" if s == "L" else "L", C.delay(swing, 2, loop=True))
+        # arms counter-swing (opposite arm goes forward with the leg), elbows and hands drag
+        swing = -26 * np.cos(2 * np.pi * ph)
+        o = "R" if s == "L" else "L"
+        c.arm_fwd(o, C.delay(swing, 2, loop=True))
+        c.elbow(o, 14 + 0.6 * np.maximum(C.delay(-swing, 4, loop=True), 0))
+        c.wrist(o, flex=C.delay(0.35 * swing, 5, loop=True))
     for s in ("L", "R"):
-        fwd = c.get(f"upper_arm.{s}.rx") * -1
-        c.elbow(s, 10 + 0.5 * np.maximum(fwd, 0))
-        c.arm_raise(s, 2.0)
-    # hips: low at each contact, high at passing; sway over the stance foot; pelvis twist
-    c.add("hips.lz", C.sine(n, half, 0.006, phase=0.25) - 0.010)
-    c.add("hips.lx", C.sine(n, n, 0.011, phase=0.25))
-    c.add("hips.rz", C.sine(n, n, -5.0, phase=0.0))
-    c.add("hips.ry", C.sine(n, n, 2.5, phase=0.25))
-    c.add("spine.rx", 4.0)                                      # lean into the walk
-    c.add("chest.rz", C.sine(n, n, 6.0, phase=0.0))             # shoulders counter the pelvis
-    c.add("chest.ry", C.sine(n, n, -1.5, phase=0.25))
-    c.add("head.rz", C.delay(C.sine(n, n, -1.5, phase=0.0), 2, loop=True))
-    c.add("head.ry", C.delay(C.sine(n, n, -1.2, phase=0.25), 3, loop=True))
-    c.add("head.rx", C.delay(C.sine(n, half, 1.2, phase=0.25), 3, loop=True) - 3.0)
-    c.prop("smile", 0.5)
+        c.arm_raise(s, 3.0)
+        c.hand(s, [(0, "soft")])
+    # bouncy: low at each contact (knees take the weight), high at passing; sway over the stance
+    # foot; pelvis twist; the head squashes a little on each contact and stretches on the pass
+    down = C.sine(n, half, 1.0, phase=0.25)          # +1 at passing, -1 at contact
+    c.add("hips.lz", 0.008 * down - 0.014)
+    c.sy("head", 1.0 + 0.03 * C.delay(down, 2, loop=True))
+    c.sy("neck", 1.0 + 0.02 * C.delay(down, 1, loop=True))
+    c.add("hips.lx", C.sine(n, n, 0.013, phase=0.25))
+    c.add("hips.rz", C.sine(n, n, -7.0, phase=0.0))
+    c.add("hips.ry", C.sine(n, n, 3.5, phase=0.25))
+    c.add("spine.rx", 5.0)                                      # lean into the walk
+    c.add("chest.rz", C.sine(n, n, 8.0, phase=0.0))             # shoulders counter the pelvis
+    c.add("chest.ry", C.sine(n, n, -2.0, phase=0.25))
+    c.add("head.rz", C.delay(C.sine(n, n, -2.5, phase=0.0), 2, loop=True))
+    c.add("head.ry", C.delay(C.sine(n, n, -2.5, phase=0.25), 3, loop=True))
+    c.add("head.rx", C.delay(-2.0 * down, 3, loop=True) - 3.0)
+    c.expr([(0, "happy")], scale=0.8)
     c.secondary()
     c.stride = stride
     return c
 
 
 def happy_jump():
-    """Celebration hop: crouch, jump with arms out, land soft, settle (2.3 s)."""
-    n = 70
+    """'¡Feliz!': crouch, a big hop with arms flung up, legs tucked, land soft, wobble (2.5 s)."""
+    n = 75
     c = Clip(n)
-    c.life(seed=31, breath=0.5, blinks=[60])
-    air = C.keys(n, [(0, 0), (16, 0), (24, 0.075), (30, 0.095), (36, 0.075), (43, 0), (n - 1, 0)])
-    c.add("root.lz", air)
-    c.add("hips.lz", [(0, -0.004), (12, -0.035), (17, 0.004), (24, 0.0), (36, 0.0), (43, -0.008),
-                      (47, -0.032), (56, 0.003), (62, -0.005), (69, -0.004)])
+    c.life(seed=31, breath=0.5, blinks=[66], hands=False)
+    t0, t1 = 18, 35                                   # take-off, landing
+    c.hop(t0, t1, height=0.12, crouch=0.042, stretch=0.10)
+    c.add("hips.lz", -0.004)
+    c.add("chest.rx", [(0, 0), (14, 5), (19, -5), (30, -3), (37, 5), (48, -1), (56, 0)])
     for s in ("L", "R"):
-        c.foot(s, z=[(0, 0), (18, 0), (24, 0.025), (34, 0.03), (40, 0.0), (69, 0)],
-               pitch=[(0, 0), (12, 0), (17, 18), (22, 8), (36, -6), (42, 0), (69, 0)])
-        c.arm_fwd(s, [(0, 0), (12, -22), (17, 10), (24, 5), (36, 5), (46, -8), (56, 2), (69, 0)])
-        # "yay": arms open wide and up to shoulder height (higher would hit the head)
-        c.arm_raise(s, [(0, 0), (12, 2), (19, 40), (26, 46), (36, 42), (46, 18), (58, 2), (69, 0)])
-        c.arm_swing(s, [(0, 0), (12, -4), (19, 12), (36, 12), (50, 0)])
-        c.forearm_lift(s, [(0, 0), (16, 0), (22, 26), (34, 20), (46, 0), (69, 0)])
-        c.elbow(s, [(0, 0), (12, 20), (20, 8), (36, 8), (48, 18), (69, 0)])
-        c.palm(s, [(0, 0), (16, 0), (22, 65), (40, 65), (52, 0)])
-        c.wrist(s, side=[(0, 0), (19, 0), (24, -14), (30, 8), (36, -6), (46, 0)])
-        c.curl(s, [(0, 0), (12, 10), (18, -12), (40, -12), (50, 0)])
-    c.add("spine.rx", [(0, 0), (12, 9), (17, -5), (26, -3), (40, 0), (47, 7), (57, -1.5), (64, 0)])
-    c.add("chest.rx", [(0, 0), (12, 5), (17, -4), (26, -2), (40, 0), (47, 4), (57, -1), (64, 0)])
-    c.add("head.rx", [(0, 0), (12, 6), (18, -8), (28, -6), (40, 2), (47, 6), (56, -2), (66, 0)])
-    c.prop("smile", [(0, 0.4), (14, 0.6), (20, 1.0), (55, 1.0), (69, 0.7)])
-    c.prop("squint", [(0, 0), (18, 0.0), (24, 0.5), (50, 0.5), (66, 0)])
-    c.prop("brow_L", [(0, 0), (16, 0.8), (40, 0.6), (60, 0)])
-    c.prop("brow_R", [(0, 0), (16, 0.8), (40, 0.6), (60, 0)])
+        c.foot(s, z=C.arc(n, t0 + 3, t1 - 2, 0.03))                   # knees tuck at the top
+        c.arm_fwd(s, [(0, 0), (8, 4), (15, -26), (20, 12), (27, 6), (34, 4), (40, -10), (50, 3), (60, 0)])
+        # "¡yay!": arms fling wide and up beside the head (higher would hit it), a little stretch
+        c.arm_raise(s, [(0, 0), (8, -2), (15, -6), (20, 42), (26, 48), (33, 44), (40, 20), (50, -4), (58, 2),
+                        (66, 0)])
+        c.arm_swing(s, [(0, 0), (14, -6), (20, 14), (34, 12), (48, 0)])
+        c.forearm_lift(s, [(0, 0), (17, 0), (22, 36), (28, 30), (34, 30), (44, 0), (66, 0)])
+        c.elbow(s, [(0, 0), (14, 26), (20, 6), (34, 10), (42, 24), (54, 6), (66, 0)])
+        c.stretch(s, [(0, 1.0), (18, 1.0), (23, 1.07), (32, 1.05), (40, 1.0)])
+        c.palm(s, [(0, 0), (16, 0), (22, 70), (38, 65), (50, 0)])
+        c.wrist(s, side=[(0, 0), (19, 0), (24, -18), (29, 10), (34, -8), (40, 4), (46, 0)])
+        c.hand(s, [(0, "relaxed"), (12, "fist"), (19, "spread"), (38, "spread"), (50, "soft"), (66, "relaxed")])
+    # a happy wiggle of the head at the top
+    c.add("head.ry", [(0, 0), (22, 0), (26, 6), (31, -5), (36, 2), (44, 0)])
+    c.expr([(0, "happy", 0.6), (12, "happy"), (19, "joy"), (24, "laugh"), (34, "laugh"), (40, "joy"),
+            (n - 1, "happy")])
+    c.prop("mouth_open", [(0, 0), (16, -0.3), (20, 0.2), (50, 0.1), (n - 1, 0)])
+    c.prop("brow_L", [(0, 0), (14, -0.3), (19, 0.4), (40, 0.3), (60, 0)])
+    c.prop("brow_R", [(0, 0), (14, -0.3), (19, 0.4), (40, 0.3), (60, 0)])
     c.secondary()
     return c
 
 
 def look_around():
-    """Curious look to each side, eyes first, head on an arc, a tilt at each hold (5 s)."""
+    """Curious look to each side: eyes first, a small counter-turn, a snappy turn on an arc with an
+    overshoot, the weight goes that way and the neck stretches to peer (5 s)."""
     n = 150
     c = Clip(n)
     c.life(seed=41, blinks=[40, 103, 140])
-    c.prop("gaze_x", [(0, 0), (4, 0), (7, 0.65), (22, 0.35), (54, 0.35), (57, -0.65), (76, -0.35),
-                      (108, -0.35), (111, 0.0), (149, 0)])
-    c.prop("gaze_y", [(0, 0), (7, 0.05), (54, 0.1), (57, -0.05), (108, 0.0)])
-    c.add("head.rz", [(0, 0), (6, 0), (22, 30), (26, 28), (54, 28), (60, 26), (78, -28), (82, -26),
-                      (108, -26), (114, -24), (128, 1.5), (134, 0)])
-    c.add("neck.rz", [(0, 0), (8, 0), (24, 8), (54, 8), (80, -8), (108, -8), (130, 0)])
-    c.add("chest.rz", [(0, 0), (10, 0), (28, 5), (56, 5), (84, -5), (110, -5), (134, 0)])
-    # arcs: the head dips as it passes the middle of a turn, and tilts while holding
-    c.add("head.rx", [(0, 0), (12, 3), (22, -1), (54, -1), (66, 5), (78, -1), (108, -1), (118, 4), (130, 0)])
-    c.add("head.ry", [(0, 0), (22, 0), (32, 9), (50, 7), (60, 0), (80, 0), (88, -7), (104, -6), (114, 0)])
-    c.prop("brow_L", [(0, 0), (20, 0.5), (50, 0.4), (60, 0), (85, 0.3), (104, 0.2), (115, 0)])
-    c.prop("brow_R", [(0, 0), (20, 0.3), (50, 0.2), (60, 0), (85, 0.5), (104, 0.4), (115, 0)])
-    c.prop("smile", [(0, 0.35), (60, 0.2), (115, 0.2), (140, 0.45)])
+    c.prop("gaze_x", [(0, 0), (4, 0), (6, 0.75), (20, 0.4), (54, 0.4), (56, -0.75), (72, -0.4),
+                      (108, -0.4), (110, 0.0), (149, 0)])
+    c.prop("gaze_y", [(0, 0), (6, 0.08), (54, 0.12), (56, -0.05), (108, 0.0)])
+    # counter-turn (anticipation), snap with overshoot, settle; dip through the middle of each turn
+    c.add("head.rz", [(0, 0), (5, 0), (9, -4), (19, 37), (24, 31), (28, 33), (52, 31), (57, 36), (60, 33),
+                      (72, -36), (77, -30), (81, -32), (106, -30), (110, -33), (124, 3), (130, -1), (136, 0)])
+    c.add("neck.rz", [(0, 0), (9, -1), (20, 10), (52, 9), (74, -10), (108, -9), (128, 0)])
+    c.add("chest.rz", [(0, 0), (11, -1), (24, 7), (54, 6), (78, -7), (110, -6), (132, 0)])
+    c.add("head.rx", [(0, 0), (9, 1), (14, 5), (20, -2), (52, -2), (64, 6), (72, -2), (108, -2), (116, 5),
+                      (126, -1), (134, 0)])
+    c.add("head.ry", [(0, 0), (20, 0), (30, 11), (48, 8), (60, 0), (74, 0), (84, -10), (102, -8), (114, 0)])
+    # the weight goes to the side he looks at and he leans in to peer, neck long
+    c.weight([(0, 0), (12, 0), (24, 0.8), (54, 0.7), (64, 0), (76, -0.8), (108, -0.7), (124, 0.1), (134, 0)])
+    c.add("spine.rx", [(0, 0), (20, 0), (30, 5), (52, 4), (64, 0), (82, 5), (104, 4), (120, 0)])
+    c.sy("neck", [(0, 1.0), (22, 1.0), (32, 1.06), (50, 1.05), (62, 1.0), (82, 1.06), (102, 1.05), (116, 1.0)])
+    c.squash(19, 0.035, "head", dur=10)
+    c.squash(72, 0.035, "head", dur=10)
+    c.prop("brow_L", [(0, 0), (6, 0.7), (20, 0.5), (50, 0.4), (60, 0), (74, 0.35), (104, 0.25), (115, 0)])
+    c.prop("brow_R", [(0, 0), (6, 0.35), (20, 0.3), (50, 0.2), (60, 0), (74, 0.7), (104, 0.5), (115, 0)])
+    c.prop("mouth_round", [(0, 0), (70, 0), (76, 0.45), (100, 0.35), (110, 0)])     # "¿mmh?"
+    c.prop("mouth_open", [(0, 0), (70, 0), (76, -0.1), (110, 0)])
+    c.prop("pupil", [(0, 0), (6, 0.3), (50, 0.2), (60, 0), (74, 0.3), (104, 0.2), (115, 0)])
+    c.prop("smile", [(0, 0.35), (60, 0.25), (115, 0.25), (140, 0.55)])
     c.add("hips.lz", -0.004)
     c.secondary()
     return c
@@ -197,3 +242,6 @@ ACTIONS.update(EXPRESSIVE)
 from .actions_props import PROPS_ACTIONS  # noqa: E402
 
 ACTIONS.update(PROPS_ACTIONS)
+from .actions_moves import MOVES  # noqa: E402
+
+ACTIONS.update(MOVES)

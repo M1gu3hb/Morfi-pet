@@ -1,0 +1,417 @@
+{
+ "default": "supervm",
+ "voices": [
+  {
+   "key": "thorthugo_grave",
+   "name": "Thorthugo grave",
+   "note": "La que eligió Miguel en el video, 4 semitonos abajo: misma personalidad, sin tono de mujer (F0 mediana 228 Hz)."
+  },
+  {
+   "key": "maskito",
+   "name": "Maskito",
+   "note": "Mascota alegre (246 Hz)."
+  },
+  {
+   "key": "supervm",
+   "name": "Super VM",
+   "note": "Héroe amigable (239 Hz)."
+  },
+  {
+   "key": "sebastian",
+   "name": "Sebastián",
+   "note": "Adolescente latino, cálido (205 Hz)."
+  },
+  {
+   "key": "cuentacuentos",
+   "name": "Cuentacuentos",
+   "note": "Joven, ligero, rápido (178 Hz)."
+  },
+  {
+   "key": "mark",
+   "name": "Mark",
+   "note": "Caricaturesco y muy expresivo (136 Hz)."
+  }
+ ],
+ "phrases": [
+  {
+   "key": "hola",
+   "text": "[excited] ¡Hola! Soy Morfi, ¿en qué te ayudo?",
+   "mood": "joy",
+   "gesture": "wave"
+  },
+  {
+   "key": "bienvenido",
+   "text": "¡Bienvenido! ¿Qué se te antoja hoy?",
+   "mood": "happy",
+   "gesture": "present"
+  },
+  {
+   "key": "cobramos",
+   "text": "¿Cobramos? Toca aquí y yo me encargo.",
+   "mood": "happy",
+   "gesture": "point"
+  },
+  {
+   "key": "listo",
+   "text": "[excited] ¡Listo! Venta cobrada.",
+   "mood": "joy",
+   "gesture": "thumbs_up"
+  },
+  {
+   "key": "gracias",
+   "text": "¡Gracias por tu compra, vuelve pronto!",
+   "mood": "happy",
+   "gesture": "wave"
+  },
+  {
+   "key": "corte",
+   "text": "¡Corte de caja listo! Hoy vendiste muy bien.",
+   "mood": "joy",
+   "gesture": "celebrate"
+  },
+  {
+   "key": "pensar",
+   "text": "Mmm... déjame pensar... ¡Ya sé!",
+   "mood": "thinking",
+   "gesture": "idea"
+  },
+  {
+   "key": "ups",
+   "text": "¡Ups! Algo salió mal. Intentemos otra vez.",
+   "mood": "surprised",
+   "gesture": "shrug"
+  },
+  {
+   "key": "wow",
+   "text": "[excited] ¡Wow! ¡Esto está increíble!",
+   "mood": "surprised",
+   "gesture": "cheeks"
+  },
+  {
+   "key": "animo",
+   "text": "¡Vamos, tú puedes!",
+   "mood": "determined",
+   "gesture": "fist"
+  },
+  {
+   "key": "risa",
+   "text": "[laughs] ¡Jajaja! ¡Qué buena!",
+   "mood": "laugh",
+   "gesture": "laugh"
+  },
+  {
+   "key": "acabo",
+   "text": "¡Uy! Se acabó el café. ¿Lo pido de nuevo?",
+   "mood": "confused",
+   "gesture": "shrug"
+  }
+ ],
+ "clips": {
+  "thorthugo_grave": {
+   "acabo": {
+    "dur": 3.76
+   },
+   "animo": {
+    "dur": 2.08
+   },
+   "bienvenido": {
+    "dur": 3.04
+   },
+   "cobramos": {
+    "dur": 3.44
+   },
+   "corte": {
+    "dur": 4.56
+   },
+   "gracias": {
+    "dur": 2.96
+   },
+   "hola": {
+    "dur": 3.12
+   },
+   "listo": {
+    "dur": 3.04
+   },
+   "pensar": {
+    "dur": 3.12
+   },
+   "risa": {
+    "dur": 3.6
+   },
+   "ups": {
+    "dur": 4.32
+   },
+   "wow": {
+    "dur": 3.92
+   }
+  },
+  "maskito": {
+   "acabo": {
+    "dur": 3.04
+   },
+   "animo": {
+    "dur": 1.6
+   },
+   "bienvenido": {
+    "dur": 2.32
+   },
+   "cobramos": {
+    "dur": 2.72
+   },
+   "corte": {
+    "dur": 3.12
+   },
+   "gracias": {
+    "dur": 2.24
+   },
+   "hola": {
+    "dur": 2.64
+   },
+   "listo": {
+    "dur": 2.08
+   },
+   "pensar": {
+    "dur": 2.8
+   },
+   "risa": {
+    "dur": 3.44
+   },
+   "ups": {
+    "dur": 3.44
+   },
+   "wow": {
+    "dur": 2.4
+   }
+  },
+  "supervm": {
+   "acabo": {
+    "dur": 3.28
+   },
+   "animo": {
+    "dur": 1.84
+   },
+   "bienvenido": {
+    "dur": 2.48
+   },
+   "cobramos": {
+    "dur": 2.96
+   },
+   "corte": {
+    "dur": 2.96
+   },
+   "gracias": {
+    "dur": 2.56
+   },
+   "hola": {
+    "dur": 2.56
+   },
+   "listo": {
+    "dur": 2.08
+   },
+   "pensar": {
+    "dur": 3.36
+   },
+   "risa": {
+    "dur": 2.16
+   },
+   "sc_calculadora_1": {
+    "dur": 2.88
+   },
+   "sc_calculadora_2": {
+    "dur": 1.84
+   },
+   "sc_calculadora_3": {
+    "dur": 2.32
+   },
+   "sc_calculadora_4": {
+    "dur": 2.8
+   },
+   "sc_calculadora_5": {
+    "dur": 1.92
+   },
+   "sc_idea_1": {
+    "dur": 2.4
+   },
+   "sc_idea_2": {
+    "dur": 1.2
+   },
+   "sc_idea_3": {
+    "dur": 2.32
+   },
+   "sc_idea_4": {
+    "dur": 2.4
+   },
+   "sc_idea_5": {
+    "dur": 1.68
+   },
+   "sc_presentacion_1": {
+    "dur": 2.32
+   },
+   "sc_presentacion_2": {
+    "dur": 1.6
+   },
+   "sc_presentacion_3": {
+    "dur": 4.0
+   },
+   "sc_presentacion_4": {
+    "dur": 2.16
+   },
+   "sc_sueno_1": {
+    "dur": 2.48
+   },
+   "sc_sueno_2": {
+    "dur": 1.68
+   },
+   "sc_sueno_3": {
+    "dur": 2.4
+   },
+   "sc_sueno_4": {
+    "dur": 1.52
+   },
+   "sc_susto_1": {
+    "dur": 2.88
+   },
+   "sc_susto_2": {
+    "dur": 1.04
+   },
+   "sc_susto_3": {
+    "dur": 1.68
+   },
+   "sc_susto_4": {
+    "dur": 2.4
+   },
+   "sc_ventas_1": {
+    "dur": 1.52
+   },
+   "sc_ventas_2": {
+    "dur": 2.96
+   },
+   "sc_ventas_3": {
+    "dur": 2.48
+   },
+   "sc_ventas_4": {
+    "dur": 2.0
+   },
+   "ups": {
+    "dur": 3.92
+   },
+   "wow": {
+    "dur": 2.32
+   }
+  },
+  "sebastian": {
+   "acabo": {
+    "dur": 2.96
+   },
+   "animo": {
+    "dur": 1.44
+   },
+   "bienvenido": {
+    "dur": 2.16
+   },
+   "cobramos": {
+    "dur": 2.48
+   },
+   "corte": {
+    "dur": 2.88
+   },
+   "gracias": {
+    "dur": 2.16
+   },
+   "hola": {
+    "dur": 1.92
+   },
+   "listo": {
+    "dur": 2.32
+   },
+   "pensar": {
+    "dur": 2.96
+   },
+   "risa": {
+    "dur": 2.64
+   },
+   "ups": {
+    "dur": 3.36
+   },
+   "wow": {
+    "dur": 2.72
+   }
+  },
+  "cuentacuentos": {
+   "acabo": {
+    "dur": 3.52
+   },
+   "animo": {
+    "dur": 1.44
+   },
+   "bienvenido": {
+    "dur": 2.24
+   },
+   "cobramos": {
+    "dur": 2.64
+   },
+   "corte": {
+    "dur": 2.72
+   },
+   "gracias": {
+    "dur": 2.16
+   },
+   "hola": {
+    "dur": 1.84
+   },
+   "listo": {
+    "dur": 1.76
+   },
+   "pensar": {
+    "dur": 3.6
+   },
+   "risa": {
+    "dur": 2.24
+   },
+   "ups": {
+    "dur": 3.84
+   },
+   "wow": {
+    "dur": 2.08
+   }
+  },
+  "mark": {
+   "acabo": {
+    "dur": 3.04
+   },
+   "animo": {
+    "dur": 1.76
+   },
+   "bienvenido": {
+    "dur": 2.48
+   },
+   "cobramos": {
+    "dur": 2.72
+   },
+   "corte": {
+    "dur": 3.68
+   },
+   "gracias": {
+    "dur": 2.4
+   },
+   "hola": {
+    "dur": 2.32
+   },
+   "listo": {
+    "dur": 2.0
+   },
+   "pensar": {
+    "dur": 2.96
+   },
+   "risa": {
+    "dur": 3.2
+   },
+   "ups": {
+    "dur": 3.76
+   },
+   "wow": {
+    "dur": 2.4
+   }
+  }
+ }
+}

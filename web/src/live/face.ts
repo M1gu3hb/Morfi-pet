@@ -23,6 +23,9 @@ export function neutralFace(): FaceState {
   return f;
 }
 
+// hard limits of the shader inputs (rig units): past these the lids or the lips fold over
+const LIM = { gaze: 1.6, blink: 1.5, squint: 1.3, lid: 1.2, pupil: 1.5, calm: 1.2, open: 2.2, round: 2.0, frown: 1.2, smile: 1.6, side: 1.4 };
+
 const GLSL_COMMON = /* glsl */ `
 float ss(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
 `;
@@ -162,11 +165,11 @@ export class MorfiFace {
         m.material = decalMaterial(MOUTH_GLSL, 'morfiMouth', this.mouth, 0.5);
         m.renderOrder = 1; m.castShadow = false;
         this.mouthDecal = m;
-      } else if (name.startsWith('MorfiLens')) {
-        // thin clear glass: reflections only (transmission blurs what is behind)
+      } else if (name.startsWith('MorfiLens') || /^Lens_/.test(m.name)) {     // placeholder material or the lens mesh
+        // black additive glass: reflections only, the pupils behind stay dark
         m.material = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff, roughness: 0.03, metalness: 0, transparent: true, opacity: 0.1, depthWrite: false,
-          clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.4, specularIntensity: 1,
+          color: 0x000000, opacity: 1, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+          roughness: 0.05, clearcoat: 0.5, clearcoatRoughness: 0.02, envMapIntensity: 1.0, specularIntensity: 1,
         });
         m.renderOrder = 2; m.castShadow = false;
       } else if (m.morphTargetDictionary && 'Brow_L' in m.morphTargetDictionary) {
@@ -176,27 +179,30 @@ export class MorfiFace {
   }
 
   apply(f: FaceState): void {
-    const R = this.eyes.R, L = this.eyes.L;
-    R.eGazeX.value = L.eGazeX.value = f.gaze_x;
-    R.eGazeY.value = L.eGazeY.value = f.gaze_y;
-    R.eBlink.value = THREE.MathUtils.clamp(f.blink_R, 0, 1);
-    L.eBlink.value = THREE.MathUtils.clamp(f.blink_L, 0, 1);
+    // the Blender drivers do not clamp the shader inputs (scripts/ia3d/build_face.py MOUTH_PROPS /
+    // EYE_PROPS), and the performances push some past 1 (a wide "a", a squeezed blink): follow them,
+    // within hard limits that keep the shaders' shapes valid
     const clamp = THREE.MathUtils.clamp;
+    const R = this.eyes.R, L = this.eyes.L;
+    R.eGazeX.value = L.eGazeX.value = clamp(f.gaze_x, -LIM.gaze, LIM.gaze);
+    R.eGazeY.value = L.eGazeY.value = clamp(f.gaze_y, -LIM.gaze, LIM.gaze);
+    R.eBlink.value = clamp(f.blink_R, 0, LIM.blink);
+    L.eBlink.value = clamp(f.blink_L, 0, LIM.blink);
     for (const e of [R, L]) {
-      e.eSquint.value = clamp(f.squint, 0, 1);
-      e.eLidDrop.value = clamp(f.lid_drop, 0, 1);
-      e.eLidAngle.value = clamp(f.lid_angle, -1, 1);
-      e.ePupilScale.value = 1 + 0.3 * clamp(f.pupil, -1, 1);
-      e.eClosedCurve.value = 1 - 1.6 * clamp(f.eye_calm, 0, 1);
+      e.eSquint.value = clamp(f.squint, 0, LIM.squint);
+      e.eLidDrop.value = clamp(f.lid_drop, 0, LIM.lid);
+      e.eLidAngle.value = clamp(f.lid_angle, -LIM.lid, LIM.lid);
+      e.ePupilScale.value = 1 + 0.3 * clamp(f.pupil, -LIM.pupil, LIM.pupil);
+      e.eClosedCurve.value = 1 - 1.6 * clamp(f.eye_calm, 0, LIM.calm);
     }
-    // the same mappings as the Blender drivers (scripts/ia3d/build_face.py MOUTH_PROPS / EYE_PROPS)
-    const sm = clamp(f.smile, -1, 1);
-    this.mouth.mOpen.value = Math.max(0, 0.5 + 0.5 * clamp(f.mouth_open, -1, 1));   // the rig props are -1..1
+    const sm = clamp(f.smile, -LIM.frown, LIM.smile);
+    this.mouth.mOpen.value = Math.max(0, 0.5 + 0.5 * clamp(f.mouth_open, -1, LIM.open));
     this.mouth.mSmile.value = 0.55 + 0.45 * Math.max(sm, 0) + 1.55 * Math.min(sm, 0);
-    this.mouth.mRound.value = clamp(f.mouth_round, 0, 1);
+    this.mouth.mRound.value = clamp(f.mouth_round, 0, LIM.round);
     this.mouth.mTeeth.value = clamp(f.teeth, 0, 1);
-    this.mouth.mSide.value = clamp(f.mouth_side, -1, 1);
-    // lower-face morphs, on the skin and on the mouth decal alike (build_face.py FACE_KEYS)
+    this.mouth.mSide.value = clamp(f.mouth_side, -LIM.side, LIM.side);
+    // lower-face morphs, on the skin and on the mouth decal alike (build_face.py FACE_KEYS); shape
+    // keys stay inside their slider range, as Blender clamps them
     const side = clamp(f.mouth_side, -1, 1), smile = Math.max(clamp(f.smile, -1, 1), 0), sq = clamp(f.squint, 0, 1);
     const lower: Record<string, number> = {
       Cheek_L: Math.min(1, 0.75 * smile + 0.8 * Math.max(-side, 0) + 0.35 * sq),

@@ -87,6 +87,10 @@ def bake(rig, name, channels, n, loop=False):
             channels.setdefault(f"{pb.name}.s", np.zeros(n))      # props hidden unless shown
         if pb.name in ("prop",) or pb.name.startswith("hand_ik"):
             channels.setdefault(f"{pb.name}.lx", np.zeros(n))
+        # scale too: a bone an action does not scale would keep the stretch or squash the
+        # previous action left on it (the bake, the solvers and the NLA all evaluate in a row)
+        if f"{pb.name}.s" not in channels and f"{pb.name}.sy" not in channels:
+            channels[f"{pb.name}.sy"] = np.ones(n)
     if "forearm.L" in rig.pose.bones and rig.pose.bones["forearm.L"].constraints.get("ArmIK"):
         for side in ("L", "R"):
             channels.setdefault(f"ik.{side}", np.zeros(n))

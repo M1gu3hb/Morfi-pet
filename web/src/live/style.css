@@ -1,0 +1,89 @@
+/* "Estilo" panel (style_panel.ts): its own toolbar button and panel, with live.css' colours.
+   Left side panel on a desktop, bottom sheet on a phone; big touch targets. */
+.style-toggle {
+  min-height: 44px; padding: 0 16px; font-weight: 600; background: var(--panel);
+  box-shadow: 0 0 0 1px var(--line), 0 8px 20px rgba(10, 20, 50, 0.12);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.style-toggle.on { background: var(--brand); color: #fff; box-shadow: 0 6px 14px rgba(7, 87, 245, 0.28); }
+
+.style-panel {
+  position: absolute; left: 16px; top: 16px; z-index: 3; width: 300px; max-height: calc(100% - 32px); overflow: auto;
+  padding: 14px 16px 16px; border-radius: 18px; background: var(--panel); color: var(--ink);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 0 0 1px var(--line), 0 18px 40px rgba(10, 20, 50, 0.14);
+  transform: translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; visibility: hidden;
+  transition: transform 0.35s cubic-bezier(.2, .8, .2, 1), opacity 0.25s ease, visibility 0s linear 0.35s;
+}
+.style-panel.open {
+  transform: none; opacity: 1; pointer-events: auto; visibility: visible;
+  transition: transform 0.35s cubic-bezier(.2, .8, .2, 1), opacity 0.25s ease, visibility 0s;
+}
+.style-panel .sp-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.style-panel .sp-title { margin: 2px 0 0; font-size: 22px; letter-spacing: -0.02em; color: var(--brand); }
+.style-panel .sp-sub { margin: 2px 0 4px; font-size: 12px; color: var(--muted); }
+.style-panel .sp-close {
+  flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  margin: -4px -6px 0 0; background: transparent;
+}
+.style-panel .sp-close:hover { background: var(--btn); }
+.style-panel .sp-close svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+.style-panel .sp-sec { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.style-panel .sp-switch {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 48px; cursor: pointer;
+}
+.style-panel .sp-switch-text { display: flex; flex-direction: column; gap: 2px; }
+.style-panel .sp-switch-text strong { font-size: 15px; }
+.style-panel .sp-switch-text small { font-size: 12px; color: var(--muted); }
+.style-panel .sp-switch input { position: absolute; right: 0; top: 50%; width: 52px; height: 32px; margin: -16px 0 0; opacity: 0; cursor: pointer; }
+.style-panel .sp-track {
+  flex: none; position: relative; width: 52px; height: 32px; border-radius: 16px; background: var(--btn);
+  box-shadow: inset 0 0 0 1px var(--line); transition: background 0.2s ease; pointer-events: none;
+}
+.style-panel .sp-track::after {
+  content: ""; position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 6px rgba(10, 20, 50, 0.25); transition: transform 0.2s cubic-bezier(.2, .8, .2, 1);
+}
+.style-panel .sp-switch input:checked + .sp-track { background: var(--brand); }
+.style-panel .sp-switch input:checked + .sp-track::after { transform: translateX(20px); }
+.style-panel .sp-switch input:focus-visible + .sp-track { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.style-panel .sp-sliders { display: flex; flex-direction: column; gap: 2px; transition: opacity 0.2s ease; }
+.style-panel .sp-sec.off .sp-sliders { opacity: 0.45; }
+.style-panel .sp-slider { display: block; padding: 4px 0 0; }
+.style-panel .sp-row { display: flex; justify-content: space-between; font-size: 13px; }
+.style-panel .sp-row output { color: var(--muted); font-variant-numeric: tabular-nums; }
+.style-panel input[type="range"] {
+  --p: 50%;
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 40px; margin: 0;
+  background: transparent; cursor: pointer; touch-action: pan-y;
+}
+.style-panel input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--brand) var(--p), var(--btn) var(--p));
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.style-panel input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--btn); }
+.style-panel input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--brand); }
+.style-panel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%;
+  background: var(--brand); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(10, 20, 50, 0.3);
+  transition: transform 0.12s ease;
+}
+.style-panel input[type="range"]::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--brand); border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(10, 20, 50, 0.3);
+}
+.style-panel input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+.style-panel input[type="range"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 8px; }
+.style-panel .sp-reset { width: 100%; min-height: 44px; margin-top: 14px; font-weight: 600; }
+
+html.clean .style-panel, html.clean .style-toggle { display: none !important; }
+
+@media (max-width: 720px) {
+  .style-panel {
+    left: 16px; right: 16px; top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: 62%;
+    transform: translateY(calc(100% + 24px));
+  }
+}

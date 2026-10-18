@@ -5,8 +5,10 @@ punto de venta). Todo es código: una acción es una función de Python que llen
 el motor la hornea al rig, resuelve los contactos con los objetos, impide que el cuerpo se atraviese y lo
 verifica. Nada se ajusta a mano en Blender.
 
-Archivos: `scripts/ia3d/anim/` (`clip.py`, `motor.py`, `contacts.py`, `rigmap.py`, `curves.py`, acciones en
-`actions*.py`) y los scripts de verificación en `scripts/ia3d/`.
+Archivos: `scripts/ia3d/anim/` (`clip.py`, `motor.py`, `contacts.py`, `rigmap.py`, `curves.py`, `acting.py`,
+`performance.py`, acciones en `actions*.py`, `catalog.py` con las etiquetas del visor y `scenes.py` con las escenas)
+y los scripts de hornear, exportar y verificar en `scripts/ia3d/` (`make_actions.py`, `make_scenes.py`,
+`export_*.py`, `check_*.py`).
 
 ## 1. Cadena de construcción
 
@@ -16,17 +18,51 @@ B=/d/tools/bl.sh     # Blender 4.5 portátil en D:, temporales en D:
 $B -b work/ia3d/morfi_ia_rig_nohands.blend --python scripts/ia3d/build_hands.py -- --out work/ia3d/morfi_ia_rig_hands.blend
 $B -b work/ia3d/morfi_ia_rig_hands.blend --python scripts/ia3d/build_controls.py -- --out work/ia3d/morfi_ia_rig_full.blend
 $B -b work/ia3d/morfi_ia_rig_full.blend --python scripts/ia3d/build_face.py -- --features work/ia3d/face/face_features.json --out work/ia3d/morfi_ia_face2.blend
-$B -b work/ia3d/morfi_ia_face2.blend --python scripts/ia3d/make_actions.py -- --out work/ia3d/morfi_ia_anim3.blend
-$B -b work/ia3d/morfi_ia_anim3.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look2.blend
-# muñecas que doblan como muñeca (sin mano que se sale de la manga) -> base de los videos
-$B -b work/ia3d/morfi_ia_look2.blend --python scripts/ia3d/fix_wrists.py -- --out work/ia3d/morfi_ia_look3.blend
-# visor web
-$B -b work/ia3d/morfi_ia_look2.blend --python scripts/ia3d/export_web.py -- --out work/ia3d/web/morfi_live.glb --face-json work/ia3d/web/morfi_live_face.json
+# muñecas que doblan como muñeca (sin mano que se sale de la manga): ANTES de hornear, para que los
+# contactos se resuelvan sobre el rig que los va a reproducir
+$B -b work/ia3d/morfi_ia_face2.blend --python scripts/ia3d/fix_wrists.py -- --out work/ia3d/morfi_ia_face3.blend
+# los 40 clips (bake + contactos + pasadas FK; ver "Hornear en paralelo" abajo)
+$B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --out work/ia3d/morfi_ia_anim4.blend
+# anim5 = anim4 + 7 clips re-horneados y unidos con --merge (ver "Hornear en paralelo"); Scratch_Head ya no se publica
+# materiales y estudio
+$B -b work/ia3d/morfi_ia_anim5.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look4.blend
+# lentes y armazón como geometría limpia (idempotente, ~30-60 s) -> base final
+$B -b work/ia3d/morfi_ia_look4.blend --python scripts/ia3d/fix_glasses.py -- --out work/ia3d/morfi_ia_look5.blend
+# visor web: el GLB principal, las curvas de cara de los clips y las escenas
+$B -b work/ia3d/morfi_ia_look5.blend --python scripts/ia3d/export_web.py -- --out work/ia3d/web/morfi_live.glb --face-json work/ia3d/web/morfi_live_face.json
 python scripts/ia3d/export_face_anims.py --out work/ia3d/web/morfi_live_anims.json
+$B -b work/ia3d/morfi_ia_look5.blend --python scripts/ia3d/export_scenes.py -- --scenes work/ia3d/morfi_ia_scenes.blend \
+    --pos "D:/MIS PROYECTOS/MORFI PET/MORFI PET/videos/morfi-pos/blender/pos_video.blend" \
+    --pos-audio "D:/MIS PROYECTOS/MORFI PET/MORFI PET/videos/morfi-pos/audio/mix.wav" \
+    --out work/ia3d/web/morfi_live_scenes.glb --json work/ia3d/web/morfi_live_scenes.json --audio-dir web/public/voice/scenes
 cd web && npm run sync-live && npm run build && npm run test:live
 ```
 
-`make_actions.py --only Tablet,Calculator` re-hornea solo esas acciones (y conserva las demás del archivo).
+`morfi_ia_scenes.blend` sale de `make_scenes.py` (§8). Los pasos de `export_scenes.py` y de la web (qué es cada
+archivo, publicar, verificar): [laboratorio.md](laboratorio.md) §5-8.
+
+**Cadena anterior (videos).** Los videos del POS se renderizaron con `look3`: `face2 → make_actions → anim3 →
+build_look → look2 → fix_wrists → look3` (26 clips, sin el arreglo de contactos FK ni los lentes nuevos). Quedan
+como están; para un video nuevo se parte de `look5`.
+
+**Hornear en paralelo.** El bake completo toca contactos cuadro por cuadro: una sola corrida de los 40 clips
+tarda más de una hora. Se parte en grupos con `--only` (cada uno a su archivo, varios Blender a la vez, ~35
+min en total con 11 grupos) y se unen con `--merge`:
+
+```bash
+$B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --only Think,Laugh --out parts/a.blend
+$B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --only Tablet,Calculator --out parts/b.blend
+# unir: las acciones se cargan tal cual, no se hornea nada; "archivo@A+B" toma solo esas (los últimos archivos ganan)
+$B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --merge parts/a.blend,parts/b.blend@Tablet --out work/ia3d/morfi_ia_anim4.blend
+```
+
+`morfi_ia_anim5.blend` = `anim4` + 7 clips re-horneados (Scratch_Head, Facepalm, Blow_Kiss, Think, Angry, Tablet,
+Calculator), unidos con `make_actions.py --merge anim4.blend,<partes>.blend@…`. Conserva `Scratch_Head` como acción
+sin usar; los exportadores solo publican los nombres de `ACTIONS`.
+
+`--only` hornea solo esas acciones y guarda un archivo que contiene solo ellas; el archivo completo se arma con
+`--merge`, que avisa con `MISSING` las que no están. Los exportadores (`export_web.py`, `export_face_anims.py`)
+exigen los 40 nombres de `ACTIONS`: si el .blend no los tiene, `export_web.py` falla con `KeyError`.
 `build_controls.py --props-only` reconstruye solo la tablet y la calculadora.
 
 ## 2. El esqueleto
@@ -43,7 +79,11 @@ cd web && npm run sync-live && npm run build && npm run test:live
 - **Controles** (`build_controls.py`):
   - IK de brazo (`hand_ik.<s>`, `elbow_pole.<s>`), apagado salvo cuando una acción lo pide (canal `ik.<s>`).
     El IK de Blender estira sin límite; el motor **topa el alcance a 1.08× el largo del brazo**
-    (`contacts.MAX_REACH`): estiramiento de caricatura, nunca brazo de chicle.
+    (`contacts.MAX_REACH`): estiramiento de caricatura, nunca brazo de chicle. Un clip que se toca la cara pide
+    un poco más con `c.max_reach = 1.10` / `1.12` (ver §7).
+- **Muñecas** (`fix_wrists.py`): el dorso de la mano (detrás de la articulación) sigue al antebrazo y se funde con
+  la mano en 3 cm, el puño de la manga sigue al antebrazo con 30 % de la mano, y un `Limit Rotation` en
+  `hand.<s>` (después del `Copy Rotation` del objetivo IK) mantiene la muñeca en un rango humano.
   - Objetos: hueso `prop` frente al pecho, con `prop_tablet` y `prop_calc` (escala 0 = oculto). Los objetivos de
     las manos cuelgan de `prop`, así una mano que sostiene algo lo sigue a donde vaya.
 - **Cara** (`build_face.py`, propiedades del rig de −1 a 1 o de 0 a 1): `blink_L/R`, `gaze_x/y`, `mouth_open`,
@@ -87,11 +127,14 @@ Se registra en un diccionario de `actions*.py` (`ACTIONS.update(...)`) y `make_a
 | `<hueso>.tw` | giro sobre el propio eje |
 | `<hueso>.cx/cz` | ejes locales (dedos: +cx dobla hacia la palma, cz abre) |
 | `<hueso>.lx/ly/lz` | traslación en metros (raíz, cadera, IK, objeto) |
-| `<hueso>.s` / `.sy` | escala uniforme (objetos: 0/1) / estirar con volumen |
+| `<hueso>.s` / `.sy` | escala uniforme (objetos: 0/1) / estirar con volumen (`rigmap.bake` escribe la escala `(s/√sy, s·sy, s/√sy)`) |
 | `ik.<L/R>` | 0..1, IK del brazo |
 | `prop.<cara>` | propiedad de la cara (`prop.smile`…); `prop.rx`, `prop.lx`… son del hueso `prop` |
 
 Cada acción guarda **todos** los huesos y gestos (en reposo si no los usa): las acciones se encadenan sin saltos.
+Eso incluye la **escala**: `rigmap.bake` escribe escala 1 en todo hueso que el clip no escala (si no, el
+estirón del clip anterior se quedaba pegado: `Nod_Yes`, `Sad`, `Calm` y `Shake_No` heredaban un estirón
+constante de 1.08 en el brazo izquierdo).
 
 ### Ayudas del motor (`clip.py`, `motor.py`)
 
@@ -112,6 +155,12 @@ Cada acción guarda **todos** los huesos y gestos (en reposo si no los usa): las
   `orient_keys(lado, [(cuadro, dirección_dedos, dirección_palma)], prop_rot=...)` → `c.reach_rot(...)`.
   Con un objeto girado, los puntos se convierten con `prop_space()` / `prop_world()`.
 - Objetos: `c.show("prop_tablet", [(0, 1)])`, `c.place_prop(loc=[...], rot=[...])`.
+- Estirón: `c.stretch(lado, [(cuadro, factor)])` (`.sy` de brazo y antebrazo, hasta ~1.12; 1.0 = reposo),
+  `c.sy("head", 1.0 + curva)` para el squash de cabeza/cuello (valores absolutos alrededor de 1.0, varias llamadas
+  se suman como deltas; cadera, columna y pecho deforman los brazos: dentro de ±3 %), `c.hop(f0, f1, height, crouch, stretch, arms)` para un
+  salto con anticipación, estirón, squash al caer y asentamiento.
+- Más atributos del clip: `c.max_reach` (tope de alcance propio), `c.stride` (Walk, Run, Sneak: avanzan en el
+  sitio y llevan este atributo en la acción), `c.loop`.
 
 ### Contactos (`contacts.py`)
 
@@ -136,6 +185,10 @@ Cada acción guarda **todos** los huesos y gestos (en reposo si no los usa): las
 - `smooth_touches()`: en tomas largas, una mano apoyada en Morfi se resuelve cuadro por cuadro y puede caer en un
   punto distinto de un cuadro al siguiente (tiembla). La pasada la filtra (mediana + media) y la vuelve a apoyar en
   la piel sin deslizarla.
+
+Pasadas que corren después de convertir los brazos a FK (`rebake_arms`, ver §7): `resolve_body_fk` (pasada de
+cuerpo), `clear_sleeves_fk` (giro de la manga) y `refine_contacts_fk` (refinar contactos); `hands_keep_size` es el
+contexto que mantiene el tamaño de las manos mientras se resuelve el IK.
 
 ### Actuación de cuerpo completo (`acting.py`)
 
@@ -168,39 +221,180 @@ Ver `anim/actions_props.py` (`Tablet`, `Calculator`): son la plantilla para acci
 
 ## 4. Verificación (obligatoria antes de publicar)
 
+Los scripts de Blender se corren como el resto: `$B -b work/ia3d/morfi_ia_anim5.blend --python scripts/ia3d/<script>.py -- <args>`.
+
 | script | qué mide |
 |---|---|
 | `check_props.py --action Tablet,Calculator` | traslape de manos y cuerpo con los objetos (≤ 1 mm), cada toque (≤ 1.5 mm), apoyo de la palma, manos y mangas contra cabeza y torso |
 | `check_clearance.py --action X` | distancia con signo de cada mano a la cabeza y al torso, cuadro por cuadro |
-| `check_feet.py` | pies que se hunden o resbalan al caminar |
-| `reach_map.py --side L --orient palm_up` | mapa de posiciones alcanzables sin estirar ni chocar |
+| `check_feet.py [--actions A,B]` | pies que se hunden o resbalan al caminar |
+| `reach_map.py --side L --orient palm_up --out …` | mapa de posiciones alcanzables sin estirar ni chocar |
 | `pose_probe.py --poses …` | poses estáticas del motor con su reporte de contactos |
-| `preview_anim.py --action A,B,…` | vista previa en Eevee (cuadros + mp4) de varias acciones en una sola sesión |
+| `preview_anim.py --action A,B,… --out carpeta` | vista previa en Eevee (cuadros + mp4) de varias acciones en una sola sesión |
 
-Estado al 16-oct-2026: las 26 acciones respetan el tope de alcance (≤ 1.10). Tablet y calculadora: índice a
-≤ 0.1 mm de cada tecla o punto de la pantalla, palma a ≤ 0.3 mm del objeto, sin traslapes, y la mano que teclea
-no toca la barbilla ni el pecho. Toques al propio cuerpo (`BODY_TOL` 3 mm, piel blanda): palmas en las mejillas
-(Sorpresa) ≤ 0.8 mm, palma en la panza (Risa) ≤ 0.1 mm, índice en la barbilla (Pensar) ≤ 4.5 mm en 5 cuadros
-al límite del alcance. La manga roza la chamarra (tela contra tela) al llevar el brazo al frente; no se ve de frente
-ni de tres cuartos.
+Estado al 17-oct-2026 (`morfi_ia_anim5.blend`, 40 clips publicados: 11 básicos, 8 emociones, 7 de trabajo, 14 movimientos):
 
-## 5. Acciones disponibles
+- **Contactos** (13 clips con contacto, todos ok): Think 0.3 mm, Laugh 0.5, Surprised 0.6, Facepalm 0.3,
+  Blow_Kiss 0.0; Tablet y Calculator: traslape 0.6 mm, presión 0.2, apoyo 0.6.
+- **`check_props`**: pasan 38 de 41 (medido antes de quitar Scratch_Head). Think y Laugh salen marcados solo donde una mano descansa en el cuerpo (Think:
+  falso positivo probable por el forro interior de la sudadera abierta, que `check_props` cuenta como torso;
+  `check_clearance` da +1.7 cm; Laugh: la palma en la panza es a propósito). `Scratch_Head` tenía un problema
+  real de manga y se quitó del conjunto publicado.
+- **Mano contra cabeza** fuera de los toques: ≥ 0.42 cm. Las lecturas de −5.0 cm contra el torso en
+  `check_clearance` (Tablet, Calculator, Dance_2, Blow_Kiss) son errores de signo; `check_props` da +0.2 a +3.7 cm.
+- **Pies** (`check_feet`): se hunden como máximo 4.7 mm; los pies plantados resbalan < 0.5 mm por cuadro salvo donde
+  es a propósito (Walk/Run/Sneak en el sitio, el pivote de Spin, el choque de rodillas de Scared/Shiver, el
+  arrastre de Sad, el paso de Bow). Sus cifras de velocidad para `Run` y `Sneak` no valen: usa la de `Walk`.
+- **Bucles**: el salto en el punto de unión ≤ 1.5× el mayor paso por cuadro.
+- **Squash y stretch**: `head.sy` 0.89–1.11; columna, pecho y cadera dentro de ±3 %; estirón de brazo ≤ 1.13 con la
+  mano contraescalada para que los dedos no se alarguen.
+- **Alcance**: el tope por omisión es 1.08 (los clips que tocan la cara piden 1.10–1.12).
+- Tablet y calculadora: índice a ≤ 0.1 mm de cada tecla o punto de la pantalla (IK) y la mano que teclea no toca la
+  barbilla ni el pecho. Los toques al propio cuerpo toleran `BODY_TOL` 3 mm (piel blanda).
+- Vistas previas de los clips y hojas de contacto: se revisaron todas a ojo (Eevee, tres cuartos frontal).
 
-Básicas: `Idle`, `Wave`, `Talk`, `Nod_Yes`, `Shake_No`, `Look_Around`, `Present`, `Jump_Happy`, `Walk`, `Run`, `Dance`.
-Emociones: `Laugh`, `Surprised`, `Sad`, `Angry`, `Scared`, `Calm`, `Celebrate`, `Shrug`.
-Gestos y trabajo: `Count_123`, `Thumbs_Up`, `Point_Side`, `Idea`, `Think`, `Tablet` (tutorial: toca tres puntos de la
-pantalla y voltea a la cámara), `Calculator` (teclea cinco teclas y pulgar arriba).
+**Limitaciones conocidas.**
+- `Scratch_Head` no se publica: con brazos de 20 cm no alcanza la parte alta de la cabeza y no se leía como
+  rascarse (la función sigue en `actions_moves.py`, sin registrar).
+- Los toques a la cara caen en la mandíbula o debajo de la cara, porque el frente de la cara está a más de 1.12 del
+  largo del brazo. De frente, `Facepalm` se lee como "la cabeza descansa en la mano".
+- La pasada de cuerpo cambia visiblemente algunas poses: manos que estaban dentro del borde de la cabeza quedan más
+  abajo o más abiertas (cuadros corregidos: Shiver 160, Wave_Both 136, Dance_2 100; el punto de disco de Dance_2 va
+  ahora hacia afuera y abajo, no arriba).
+- `check_feet.py` y `check_props.py` (ver arriba) tienen esas dos imprecisiones conocidas.
+
+## 5. Acciones disponibles (40)
+
+Cada clip tiene etiqueta y grupo en `anim/catalog.py` (`CATALOG`, función `entry(nombre)`; un clip sin entrada es un
+error): `export_face_anims.py` los escribe en `morfi_live_anims.json` y el visor arma sus botones con ellos.
+
+| Grupo | Clips (etiqueta) |
+|---|---|
+| `actions` (11) | `Idle` (Reposo), `Wave` (Saludar), `Talk` (Hablar), `Nod_Yes` (Sí), `Shake_No` (No), `Look_Around` (Curioso), `Present` (Presentar), `Jump_Happy` (¡Feliz!), `Walk` (Caminar), `Run` (Correr), `Dance` (Bailar) |
+| `emotions` (8) | `Laugh` (Reír), `Surprised` (Sorpresa), `Sad` (Triste), `Angry` (Enojado), `Scared` (Miedo), `Calm` (Tranquilo), `Celebrate` (Festejar), `Shrug` (No sé) |
+| `work` (7) | `Tablet` (Tablet (tutorial): toca tres puntos de la pantalla y voltea a la cámara), `Calculator` (Calculadora: teclea cinco teclas y pulgar arriba), `Count_123` (Contar 1-2-3), `Point_Side` (Señalar), `Thumbs_Up` (Pulgar arriba), `Idea` (¡Idea!), `Think` (Pensar) |
+| `moves` (14, `anim/actions_moves.py`) | `Spin` (Giro con brinco), `Hop_Steps` (Saltitos), `Dance_2` (Baile con brazos, bucle), `Bow` (Reverencia), `Yawn_Stretch` (Bostezo y estirón), `Victory` (¡Vamos!), `Wave_Both` (Saludo a dos manos), `Peek` (Asomarse), `Shiver` (Tiritar de frío), `Sneak` (De puntitas), `Sleepy` (Cabeceo de sueño), `Tap_Foot` (Impaciente), `Facepalm` (¡Ay, no!), `Blow_Kiss` (Mandar un beso) |
+
+Los clips están en `actions.py` (básicos), `actions_social.py`, `actions_expressive.py`, `actions_props.py` y
+`actions_moves.py`; todos suben a `ACTIONS` (`actions.py`). Los bucles son `Idle`, `Walk`, `Run`, `Dance`,
+`Dance_2`, `Sneak`; `Walk`, `Run` y `Sneak` avanzan en el sitio. Cada clip termina cerca del reposo: el visor
+vuelve a `Idle` con una mezcla de 0.35 s que no se nota. `Victory` es el clip del gesto `fist` de las frases con voz.
 
 ## 6. En el visor web
 
+El visor ("Morfi en vivo") tiene su propio documento: [laboratorio.md](laboratorio.md) (paneles, parámetros de URL,
+archivos publicados, cómo publicar). La API, en corto:
+
 ```js
-morfi.play('Calculator')          // cualquier acción de la lista
-morfi.expression('surprised')     // expresión de cara encima de lo que haga el cuerpo ('neutral' la quita)
-morfi.speak('Toca aquí para cobrar')
-iframe.contentWindow.postMessage({ type: 'expression', name: 'happy' }, '*')
+morfi.play('Calculator')                // cualquier clip de morfi.actions
+morfi.expression('surprised')           // expresión de cara encima del cuerpo ('neutral' la quita)
+morfi.speak('Toca aquí para cobrar')    // solo texto, sin audio
+morfi.say('hola')                       // frase con la voz real y la boca sincronizada con el audio
+await morfi.scene('Scene_Idea')         // una escena completa con voz y cámara de cine
+morfi.stop()
+iframe.contentWindow.postMessage({ type: 'say', key: 'gracias' }, '*')
+// tipos de mensaje: play (name), speak (text), say (key, voice?), expression (name), scene (name), stop
+window.morfiStyle.outline(false)        // el contorno; window.morfiStyle.fx(false) apaga los efectos de movimiento
 ```
 
-## 7. Para el skill de tutoriales (pendiente, no creado)
+El skinning del visor es de cuaterniones duales **con escala por hueso** (`web/src/dqskin.ts`): separa la parte
+rígida y la escala de cada hueso, como el "Preserve Volume" de Blender, así el estirón de los brazos (`.sy`) se ve
+igual en la web (error medio < 0.2 mm contra Blender con las poses de prueba).
+
+## 7. Contactos finales y brazo estirado
+
+Orden de `make_actions.py` por clip (`bake_one` y luego `main`):
+
+1. **Bake** de los canales a huesos (`rigmap.bake`), con `contacts.set_max_reach(clip.max_reach)`.
+2. **IK:** `clamp_reach` → `resolve_body` (salvo clips con objeto en la mano) → `solve` (presiones, apoyos de palma,
+   toques al propio cuerpo) → `clamp_reach`, con `hands_keep_size` (las manos no heredan el estirón del IK).
+3. **Brazos a FK** con `rebake_arms`: el brazo evaluado de cada cuadro (IK y contactos incluidos) se pasa a FK y se
+   anima cada hueso para que su eje caiga exactamente donde estaba (mismo codo, misma muñeca), **estirado con su
+   volumen** (más largo y más delgado); la mano recupera su tamaño. Estadística por brazo: error de muñeca (mm),
+   de dirección (grados), estirón máximo y cizalla que queda.
+4. **Giro de la manga** (`clear_sleeves_fk`): cuando una mano descansa en la cabeza, el brazo gira sobre la línea
+   hombro-muñeca (el codo sale, la muñeca queda quieta y la mano conserva su orientación). Se prueban 10 ángulos
+   (±6° a ±40°) en el primer cuadro, el de en medio y el último del toque; gana el que más despega la manga; se
+   mantiene durante el toque y entra y sale con su rampa.
+5. **Refinar contactos** (`refine_contacts_fk`, tolerancia 0.6 mm): vuelve a cerrar los toques de la cara y los
+   apoyos de palma sobre el brazo FK final; la conversión a FK más el límite de muñeca los había abierto 2-5 mm.
+6. **Pasada de cuerpo** (`resolve_body_fk`): si una mano o manga entra en la cabeza o el torso, todo el brazo gira
+   sobre el hombro hasta quedar a 4 mm (`FK_MARGIN`); la corrección entra y sale en 7 cuadros (`FK_FADE`), da la
+   vuelta en los bucles y se salta los cuadros que son de un contacto. Un clip con objeto en la mano no la lleva
+   (`_skip`: giraría el brazo contra el objeto).
+7. **Verificación** de contactos sobre la acción final (`contacts.verify`).
+
+**Cómo llega a la cara un brazo de 20 cm** (la técnica, y por qué se ve bien):
+- El clip pide `c.max_reach = 1.10`–`1.12` (el tope normal es 1.08) y un objetivo IK en la piel; el estirón es
+  de caricatura, hasta 1.13 a lo largo del hueso y ~0.94 a lo ancho (volumen conservado), con la mano
+  contraescalada: **no se alargan los dedos ni se ve un brazo de chicle**.
+- Aun así el frente de la cara queda más allá de 1.12 veces el brazo: los toques caen en la mandíbula o debajo de
+  la cara (ver Limitaciones). Para tocar algo más arriba hay que inclinar la cabeza hacia la mano (la cabeza baja
+  como máximo ~7° al mirar, ver `look_at`).
+- Los demás clips no estiran más allá de ~1.10 para no pasar de la caricatura.
+
+## 8. Escenas
+
+Una escena es una toma continua con varias líneas de voz (voz oficial Super VM), el cuerpo completo actuando y los
+cortes de cámara pensados para el visor. Código: `anim/scenes.py` (Python puro, sin Blender: el exportador
+reconstruye de él las curvas de cara) y `make_scenes.py`.
+
+**Escenas** (`SCENES` en `scenes.py`; título y `solo` salen de `voice/scenes.json`):
+
+| clave | título | `solo` | acción | duración |
+|---|---|---|---|---|
+| `presentacion` | ¡Hola, soy Morfi! | no | `Scene_Presentacion` | 349 cuadros (11.6 s) |
+| `calculadora` | ¿Dónde quedó mi calculadora? | sí | `Scene_Calculadora` | 428 (14.3 s) |
+| `idea` | ¡Ya sé! | sí | `Scene_Idea` | 359 (12.0 s) |
+| `ventas` | Qué día de ventas | no | `Scene_Ventas` | 422 (14.1 s) |
+| `susto` | ¿Qué fue eso? | sí | `Scene_Susto` | 346 (11.5 s) |
+| `sueno` | Cinco minutitos | sí | `Scene_Sueno` | 386 (12.9 s) |
+
+`solo` = habla solito (no le habla a la cámara; el visor lo ve de lado). Se suma `POS_Video` (el video del punto
+de venta, tal cual del proyecto del video; `export_scenes.py` convierte su cámara en cortes gruesos).
+
+**`PLAN`** (`scenes.py`): por escena, `starts` (segundo en que entra cada línea), `tail` (silencio tras la
+última palabra), `sfx` (`[["bell", 0.55], …]`; tipos: `bell`, `bell2`, `chime`, `pop`, sintetizados en
+`make_scenes.py`) y `cams` (`[[t, "wide"|"medium"|"close"|"face"], …]`, los cortes de cámara del visor). Las
+líneas son las de `voice/scenes.json` con clave `sc_<escena>_<n>`, en orden. Funciones: `timeline(key)` (líneas
+sobre la línea de tiempo, con cada palabra ajustada a los cuadros con voz de su propio audio), `build(key, tl)`
+(el `Performance`), `finish(p)` (el `Clip`), `meta(tl)` (lo que usan la exportación y el reproductor).
+
+**Pasos**:
+
+```bash
+B=/d/tools/bl.sh
+# 0. la voz de las líneas (ElevenLabs; la llave solo en el comando) -> web/public/voice/supervm/sc_*.mp3
+XI_KEY=<llave> python voice/gen.py lines voice/scenes.json --voice supervm
+# 1. el audio de cada escena (Python + ffmpeg): líneas con sus pausas + efectos, nivelado -> web/public/voice/scenes/<clave>.mp3 y .json
+python scripts/ia3d/make_scenes.py audio [--only susto,sueno]
+# 2. hornear (un Blender por escena puede correr a la vez); acción Scene_<Clave> en el rig
+$B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_scenes.py -- bake --only susto --out <dir>/scene_susto.blend [--fast]
+# 3. juntar todas en un archivo
+$B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_scenes.py -- merge --parts <dir>/scene_*.blend --out work/ia3d/morfi_ia_scenes.blend
+# 4. verificar y ver vistas previas con audio (look3 tiene los materiales; las acciones se agregan)
+$B -b work/ia3d/morfi_ia_scenes.blend --python scripts/ia3d/make_scenes.py -- verify [--only susto]
+$B -b work/ia3d/morfi_ia_look3.blend --python scripts/ia3d/make_scenes.py -- preview --src work/ia3d/morfi_ia_scenes.blend --only susto --out <dir>/preview [--res 50 --step 1]
+# 5. exportar al visor (ver §1: export_scenes.py sobre look5) y sync-live
+```
+
+`--fast` hornea sin los solucionadores de contactos (revisar poses). `merge` se niega a unir una escena cuya
+cantidad de cuadros no coincide con su línea de tiempo (hay que hornearla de nuevo) y refresca los cortes de
+cámara. `make_scenes.py` también tiene `sketch` (hornea en memoria y renderiza, sin guardar), `faces` y `dump`.
+La estructura de `bake_scene`: bake → tope de alcance → manos fuera del cuerpo → `smooth_ik` → toques
+(`contacts.solve`) → `smooth_touches` → manos fuera del cuerpo otra vez → tope → `smooth_ik` → `smooth_touches` ancho
+(`REST_WIN` 15 cuadros: una sola posición de reposo por toque) → `rest_on_skin` (cada cuadro de toque se mueve solo
+por la normal de la piel hasta quedar a ±1 mm) → `smooth_ik` → `rebake_arms` → objeto en la mano (`hold_prop`, al
+final) → verificación. **No** corre todavía las pasadas FK de `make_actions.py` (giro de manga, refinar, pasada de
+cuerpo): es una mejora pendiente (`make_scenes.py` podría llamarlas tras `rebake_arms`). La corrección de escala de
+`rigmap.bake` sí aplica a las escenas.
+
+Cada acción `Scene_*` lleva dos propiedades JSON: `scene` (título, `solo`, `audio`, cortes de cámara, líneas) y
+`contacts`. Al exportar, el visor recibe `models/morfi_live_scenes.json` y `.glb` (ver [laboratorio.md](laboratorio.md) §5-6).
+Vistas previas de una escena: `make_scenes.py preview` pone la cámara en sus cortes (`wide` z 0.55 a 3.5 m,
+`medium` 0.58 a 2.6, `close` 0.66 a 1.95, `face` 0.72 a 1.4, lente de 50 mm) y arma un mp4 con el audio.
+
+## 9. Para el skill de tutoriales (pendiente, no creado)
 
 Lo que el skill necesitará, ya disponible: acciones parametrizables por código, toques exactos sobre puntos de una
 pantalla (`contacts`), expresiones y habla por texto, verificación automática y render (`render_showcase.py`).
