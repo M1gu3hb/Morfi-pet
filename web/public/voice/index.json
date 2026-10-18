@@ -30,6 +30,26 @@
    "key": "mark",
    "name": "Mark",
    "note": "Caricaturesco y muy expresivo (136 Hz)."
+  },
+  {
+   "key": "charlee",
+   "name": "Charlee",
+   "note": "Personaje de fantasía, juguetón y alegre (222 Hz)."
+  },
+  {
+   "key": "hal",
+   "name": "Hal",
+   "note": "Amigo animado, entusiasta y claro (229 Hz)."
+  },
+  {
+   "key": "synchro_sam",
+   "name": "Synchro Sam",
+   "note": "Emociones exageradas, muy de caricatura (213 Hz)."
+  },
+  {
+   "key": "max",
+   "name": "Max",
+   "note": "Personaje de caricatura, enérgico y simpático (221 Hz)."
   }
  ],
  "phrases": [
@@ -411,6 +431,158 @@
    },
    "wow": {
     "dur": 2.4
+   }
+  },
+  "charlee": {
+   "acabo": {
+    "dur": 3.6
+   },
+   "animo": {
+    "dur": 1.6
+   },
+   "bienvenido": {
+    "dur": 2.56
+   },
+   "cobramos": {
+    "dur": 3.12
+   },
+   "corte": {
+    "dur": 4.48
+   },
+   "gracias": {
+    "dur": 2.48
+   },
+   "hola": {
+    "dur": 2.4
+   },
+   "listo": {
+    "dur": 2.4
+   },
+   "pensar": {
+    "dur": 3.52
+   },
+   "risa": {
+    "dur": 3.2
+   },
+   "ups": {
+    "dur": 4.0
+   },
+   "wow": {
+    "dur": 3.12
+   }
+  },
+  "hal": {
+   "acabo": {
+    "dur": 3.68
+   },
+   "animo": {
+    "dur": 1.92
+   },
+   "bienvenido": {
+    "dur": 2.4
+   },
+   "cobramos": {
+    "dur": 3.28
+   },
+   "corte": {
+    "dur": 4.32
+   },
+   "gracias": {
+    "dur": 3.2
+   },
+   "hola": {
+    "dur": 2.16
+   },
+   "listo": {
+    "dur": 2.08
+   },
+   "pensar": {
+    "dur": 3.6
+   },
+   "risa": {
+    "dur": 2.88
+   },
+   "ups": {
+    "dur": 4.0
+   },
+   "wow": {
+    "dur": 3.52
+   }
+  },
+  "synchro_sam": {
+   "acabo": {
+    "dur": 2.72
+   },
+   "animo": {
+    "dur": 1.6
+   },
+   "bienvenido": {
+    "dur": 2.24
+   },
+   "cobramos": {
+    "dur": 2.48
+   },
+   "corte": {
+    "dur": 3.2
+   },
+   "gracias": {
+    "dur": 2.4
+   },
+   "hola": {
+    "dur": 2.24
+   },
+   "listo": {
+    "dur": 2.0
+   },
+   "pensar": {
+    "dur": 3.04
+   },
+   "risa": {
+    "dur": 2.08
+   },
+   "ups": {
+    "dur": 3.28
+   },
+   "wow": {
+    "dur": 2.8
+   }
+  },
+  "max": {
+   "acabo": {
+    "dur": 3.52
+   },
+   "animo": {
+    "dur": 1.84
+   },
+   "bienvenido": {
+    "dur": 2.56
+   },
+   "cobramos": {
+    "dur": 3.44
+   },
+   "corte": {
+    "dur": 4.24
+   },
+   "gracias": {
+    "dur": 2.8
+   },
+   "hola": {
+    "dur": 2.16
+   },
+   "listo": {
+    "dur": 2.4
+   },
+   "pensar": {
+    "dur": 3.6
+   },
+   "risa": {
+    "dur": 2.64
+   },
+   "ups": {
+    "dur": 4.0
+   },
+   "wow": {
+    "dur": 2.88
    }
   }
  }

@@ -50,7 +50,7 @@ venta MorphiqPOS para negocios chicos (cafeterías, panaderías, tiendas).
 
 - **Super VM** de ElevenLabs (voice id `gQRS0Lnh5XQOAqujMqUX`), modelo `eleven_v3`, idioma `es`,
   `stability 0.5`, `similarity_boost 0.8`, sin cambio de tono (`pitch 0`). Miguel la eligió el 17-oct-2026 entre 6
-  candidatas; `voice/voices.json` guarda las 6 (`default: "supervm"`) y el laboratorio las deja para comparar.
+  candidatas; `voice/voices.json` guarda ahora 10 (`default: "supervm"`; las 4 nuevas —Charlee, Hal, Synchro Sam y Max— van después de "Mark", parecidas a Super VM, sin cambio de tono) y el laboratorio las deja para comparar.
   Las escenas siempre usan Super VM.
 - Historia: el video del POS usó **Thorthugo** (`WOY6pnQ1WCg0mrOZ54lM`); le gustó lo amigable y "chiquito",
   pero a veces sonaba a mujer (medición de esa sesión: F0 mediana ~280 Hz, 62 % del tiempo arriba de 260 Hz). En
@@ -64,7 +64,7 @@ venta MorphiqPOS para negocios chicos (cafeterías, panaderías, tiendas).
   mueven la boca; el audio sale normalizado a −16 LUFS y a 96 kbps):
 
   ```bash
-  XI_KEY=<llave> python voice/gen.py phrases                       # las 12 frases de "Que diga algo" en las 6 voces
+  XI_KEY=<llave> python voice/gen.py phrases                       # las 12 frases de "Que diga algo" en las 10 voces
   XI_KEY=<llave> python voice/gen.py phrases --voices supervm      # solo una voz (--force regenera las que ya existen)
   XI_KEY=<llave> python voice/gen.py lines voice/scenes.json --voice supervm   # líneas de las escenas
   python voice/gen.py index                                        # solo reescribe web/public/voice/index.json
@@ -113,6 +113,25 @@ Lo que Miguel aprobó como "súper expresivo" (video del POS v2) y lo que pidió
    dibujados de personalidad (foco de idea, gota de sudor, líneas de sorpresa) están bien; partículas y destellos
    decorativos, no.
 
+**Lista obligatoria antes de publicar cualquier animación o escena nueva** (regla de Miguel, 18-oct-2026; no se
+publica nada que no la pase, y se anotan las cifras en el reporte):
+
+- [ ] **Analizada en detalle, cuadro por cuadro**, no solo la hoja de contacto: se ven los cuadros del medio y los
+  extremos de cada gesto, de frente y de tres cuartos.
+- [ ] **Nada atraviesa nada.** Las manos y los antebrazos nunca salen por la manga ni atraviesan el puño (la
+  sudadera siempre queda encima de la mano): `check_sleeves.py` sin cruces de pulgar, dedos ni palma (0 mm) y sin
+  mano fuera de la manga por encima de ~12 mm; las manos nunca entran en la cabeza ni en el cuerpo: `check_props.py`
+  y `check_clearance.py` (los toques a la cara y al cuerpo dentro de su tolerancia, nada traslapado). Si la mano
+  bajada y estirada se hunde en el puño, la mano se estira un poquito (`cuff_pass.py`), no se esconde.
+- [ ] **Nada rígido.** El cuerpo Y las manos y los dedos están vivos, variados y naturales para el movimiento y la
+  emoción: cada dedo con su propio tiempo, sin la misma forma de mano repetida, sin chasquidos entre formas, sin
+  tener que moverse todo el tiempo (natural quiere decir que se mueve cuando el movimiento lo pide).
+- [ ] **Renders de cerca de las manos revisados** (por lo menos 3 momentos de cada mano en cada gesto de manos, en el
+  visor o en Blender), uno por uno, a ojo.
+- [ ] **Cuello limpio en giros fuertes** (`Look_Around`, `Shake_No`, `Spin` y cualquier giro o inclinación de la
+  cabeza): sin tira estirada entre cabeza y chamarra; medido con la elongación de aristas de la zona del cuello.
+- [ ] Verificaciones de siempre: contactos, pies, bucles y `npm run test:live` limpio (motor.md §4).
+
 Cómo escribir una acción, los canales, los contactos y las actuaciones largas: [motor.md](motor.md).
 
 ## 5. Escenas con voz (actuaciones completas)
@@ -137,7 +156,7 @@ calculadora, idea, ventas, susto, sueño; en cuatro habla solito) más el video 
 24 muestras (`videos/morfi-pos/tools/scene.py`), la luz de estudio de `scripts/ia3d/studio.py` y gestión de color
 **Standard** (AgX y Khronos PBR Neutral cambian el azul de marca: lavanda y violeta). El material original se
 queda (look "v1"). En la composición se le da a Morfi una gradación ligera (`eq=saturation=1.08:contrast=1.04`
-sobre su capa, con el alfa intacto, en `tools/compose.py`). El modelo para un video nuevo es `look5` (la cadena
+sobre su capa, con el alfa intacto, en `tools/compose.py`). El modelo para un video nuevo es `look7` (la cadena
 está en [motor.md](motor.md) §1); el video del POS se renderizó con `look3`.
 
 Cadena del video del POS (`videos/morfi-pos/`, fuera del repo): `tools/vo.py` (voz) → `tools/timing.py`

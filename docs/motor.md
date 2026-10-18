@@ -23,27 +23,31 @@ $B -b work/ia3d/morfi_ia_rig_full.blend --python scripts/ia3d/build_face.py -- -
 $B -b work/ia3d/morfi_ia_face2.blend --python scripts/ia3d/fix_wrists.py -- --out work/ia3d/morfi_ia_face3.blend
 # los 40 clips (bake + contactos + pasadas FK; ver "Hornear en paralelo" abajo)
 $B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --out work/ia3d/morfi_ia_anim4.blend
-# anim5 = anim4 + 7 clips re-horneados y unidos con --merge (ver "Hornear en paralelo"); Scratch_Head ya no se publica
+# anim7 = los 40 clips re-horneados con la capa de manos viva (segunda pasada, mano en reposo viva), unidos con --merge (ver "Hornear en paralelo");
+# anim6 y anim5 (clips anteriores) quedan como respaldo. Scratch_Head ya no se publica
 # materiales y estudio
-$B -b work/ia3d/morfi_ia_anim5.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look4.blend
-# lentes y armazón como geometría limpia (idempotente, ~30-60 s) -> base final
+$B -b work/ia3d/morfi_ia_anim7.blend --python scripts/ia3d/build_look.py -- --regions work/ia3d/regions/regions.npz --face work/ia3d/face --out work/ia3d/morfi_ia_look4.blend
+# lentes y armazón como geometría limpia (idempotente, ~30-60 s)
 $B -b work/ia3d/morfi_ia_look4.blend --python scripts/ia3d/fix_glasses.py -- --out work/ia3d/morfi_ia_look5.blend
-# visor web: el GLB principal, las curvas de cara de los clips y las escenas
-$B -b work/ia3d/morfi_ia_look5.blend --python scripts/ia3d/export_web.py -- --out work/ia3d/web/morfi_live.glb --face-json work/ia3d/web/morfi_live_face.json
+# cuello sin unión, puños que no atraviesa la mano, sin membrana entre dedos (idempotente; --undo restaura el cuerpo)
+$B -b work/ia3d/morfi_ia_look5.blend --python scripts/ia3d/fix_body.py -- --out work/ia3d/morfi_ia_look6.blend
+# piel de las cejas sin triángulos visibles (mismas posiciones de ceja; idempotente, marca `brows_fix`) -> base final
+$B -b work/ia3d/morfi_ia_look6.blend --python scripts/ia3d/fix_brows.py -- --out work/ia3d/morfi_ia_look7.blend
+# visor web: el GLB principal, las curvas de cara de los clips y las escenas (siempre sobre look7)
+$B -b work/ia3d/morfi_ia_look7.blend --python scripts/ia3d/export_web.py -- --out work/ia3d/web/morfi_live.glb --face-json work/ia3d/web/morfi_live_face.json
 python scripts/ia3d/export_face_anims.py --out work/ia3d/web/morfi_live_anims.json
-$B -b work/ia3d/morfi_ia_look5.blend --python scripts/ia3d/export_scenes.py -- --scenes work/ia3d/morfi_ia_scenes.blend \
-    --pos "D:/MIS PROYECTOS/MORFI PET/MORFI PET/videos/morfi-pos/blender/pos_video.blend" \
-    --pos-audio "D:/MIS PROYECTOS/MORFI PET/MORFI PET/videos/morfi-pos/audio/mix.wav" \
-    --out work/ia3d/web/morfi_live_scenes.glb --json work/ia3d/web/morfi_live_scenes.json --audio-dir web/public/voice/scenes
+$B -b work/ia3d/morfi_ia_look7.blend --python scripts/ia3d/export_scenes.py -- --scenes work/ia3d/morfi_ia_scenes3.blend     --pos "D:/MIS PROYECTOS/MORFI PET/MORFI PET/videos/morfi-pos/blender/pos_video.blend"     --pos-audio "D:/MIS PROYECTOS/MORFI PET/MORFI PET/videos/morfi-pos/audio/mix.wav"     --out work/ia3d/web/morfi_live_scenes.glb --json work/ia3d/web/morfi_live_scenes.json --audio-dir web/public/voice/scenes
 cd web && npm run sync-live && npm run build && npm run test:live
 ```
 
-`morfi_ia_scenes.blend` sale de `make_scenes.py` (§8). Los pasos de `export_scenes.py` y de la web (qué es cada
+`morfi_ia_scenes3.blend` (las 6 escenas con la capa de manos viva; `morfi_ia_scenes2.blend` y `morfi_ia_scenes.blend` son versiones anteriores) sale de `make_scenes.py` (§8). Los pasos de `export_scenes.py` y de la web (qué es cada
 archivo, publicar, verificar): [laboratorio.md](laboratorio.md) §5-8.
 
 **Cadena anterior (videos).** Los videos del POS se renderizaron con `look3`: `face2 → make_actions → anim3 →
 build_look → look2 → fix_wrists → look3` (26 clips, sin el arreglo de contactos FK ni los lentes nuevos). Quedan
-como están; para un video nuevo se parte de `look5`.
+como están; para un video nuevo se parte de `look7`.
+
+**Orden de `fix_body.py` y `fix_brows.py`**: `fix_body` cambia la topología de `Morfi_Body` (separa la costura del cuello, añade la "copa" bajo la cabeza, quita las membranas entre dedos), por lo que los polígonos ya no son todos triángulos; `fix_brows` va después y trabaja con triángulos y cuadriláteros (triangula en abanico para calcular el campo de las cejas). Comprobado en `look7`: vértices = claves de forma = UV = pesos sin vértices sin peso, 0 caras degeneradas, 0 UV volteados.
 
 **Hornear en paralelo.** El bake completo toca contactos cuadro por cuadro: una sola corrida de los 40 clips
 tarda más de una hora. Se parte en grupos con `--only` (cada uno a su archivo, varios Blender a la vez, ~35
@@ -55,6 +59,8 @@ $B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --
 # unir: las acciones se cargan tal cual, no se hornea nada; "archivo@A+B" toma solo esas (los últimos archivos ganan)
 $B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_actions.py -- --merge parts/a.blend,parts/b.blend@Tablet --out work/ia3d/morfi_ia_anim4.blend
 ```
+
+`morfi_ia_anim7.blend` = los 40 clips re-horneados desde `face3` con la capa de manos viva (§3 "Manos y dedos vivos"), pasados por `anim/cuff_pass.py` y unidos con `--merge`.
 
 `morfi_ia_anim5.blend` = `anim4` + 7 clips re-horneados (Scratch_Head, Facepalm, Blow_Kiss, Think, Angry, Tablet,
 Calculator), unidos con `make_actions.py --merge anim4.blend,<partes>.blend@…`. Conserva `Scratch_Head` como acción
@@ -219,12 +225,96 @@ los contactos → `verify`.
 
 Ver `anim/actions_props.py` (`Tablet`, `Calculator`): son la plantilla para acciones con objetos.
 
+## Manos y dedos vivos
+
+Miguel: las manos se sentían rígidas, "el mismo caso que tenía el cuerpo primero": la misma pose de dedos en todos
+los clips, todos los dedos cambiando de forma a la vez, un saludo sin articulación. La regla: **no se le
+hardcodea movimiento a los dedos clip por clip; la capa de manos del motor lo hace sola** y el autor del clip
+solo decide la intención (qué forma, cuándo, qué gesto). No significa moverse todo el tiempo: una mano en reposo
+se mueve poco, pero nunca igual ni congelada.
+
+**Qué hace el motor solo** (`motor.hand_channels`, `motor.hand_follow`; las usan `c.hand`, `c.secondary()` y
+`Performance`, así que todo clip y toda escena las reciben):
+- **Cascada**: cada dedo se mueve en su propio reloj. Al abrir va primero el índice, al cerrar los dedos de afuera;
+  la falange de la punta llega después de su base y el pulgar tiene su tiempo (`LAG_OPEN`, `LAG_CLOSE`). Cada
+  transición sortea un desfase distinto (0-0.8 cuadros), así dos repeticiones no son iguales.
+- **Resorte con rebasamiento**: cada dedo sigue su curva con un resorte propio (`FINGER_SPRING`: el índice rápido,
+  el anular y el pulgar más lentos, la punta más lenta que la base): llegan un poco tarde, se pasan un poco y
+  se asientan.
+- **Sin chasquidos**: dos formas distintas a menos de 4 cuadros (`MIN_GAP`) se separan (la segunda se mueve hacia
+  adelante, nunca antes).
+- **Manos relajadas nunca idénticas**: cada forma suelta (`LOOSE`: relajada, suave, abierta, abierta de par en par)
+  recibe un desplazamiento aleatorio por llave, un gradiente de curvatura (índice el más recto, anular el más
+  cerrado) y una deriva lenta y asíncrona por dedo y por mano (semilla = `c.life(seed=…)`). Las formas
+  exactas (`tap`, `grip`, `hold_flat`, `pinch`, `point`, `count*`) casi no varían: un toque o una palma que carga
+  un objeto necesitan sus ángulos.
+- **Arrastre y seguimiento** (`hand_follow`, dentro de `c.secondary()`): la muñeca se queda atrás del antebrazo y
+  rebasa al frenar (resorte sobre el ángulo del brazo); los dedos se arrastran con la velocidad del brazo (las
+  puntas se estiran un poco y el abanico se abre) y se asientan después. Una mano que ningún clip dibujó recibe una
+  mano relajada viva (`c.life(hands=…)` ya no escribe el mismo `curl` en todos los dedos).
+- **Límites anatómicos** (`CURL_LIMITS`, `FAN_LIMITS`, `THUMB_OUT_LIMITS`): sin hiperextensión, sin dedos cruzados,
+  el pulgar fuera de la palma; se aplican al final sobre todo lo que se haya sumado.
+- **Mano y puño** (`cuff_pass.py`, ver abajo): donde la muñeca doblada mete la palma o el pulgar detrás del puño de
+  la manga, se estira la mano unos milímetros y, si no basta, la muñeca se dobla menos (se conserva el giro de la
+  palma).
+
+**Segunda pasada (la mano en reposo, la que más se ve)**: la forma `relaxed` ya no se enrosca sobre la pose de
+reposo (que de por sí es una curva suave de ~55°: sumar +44° daba un guante de dos lóbulos). Ahora parte de ella
+y la abre un poco: gradiente índice → anular (−6 / +4 / +14° en la base), **abanico de 12-15°** (huecos entre los
+dedos) y el pulgar recogido junto al índice (`thumb_out` −20°; `THUMB_OUT_LIMITS` baja a −30°). Encima, el motor
+añade solo, en toda forma suelta:
+- **Carácter por mano** (`pers`): cada mano (semilla distinta por lado y por clip) lleva su propio desplazamiento de
+  curvatura por dedo, de pulgar y de abanico (±7° / ±8° / ±2°), así izquierda y derecha nunca coinciden. Pesa
+  según lo suelta que sea la forma (`pw`): reposo 1, puño ~0.6, formas exactas 0.
+- **Cambios de dedo** (`finger_shifts`): cada dedo, cada 2-4 s, se acomoda en otra curvatura (±14°), la sostiene y
+  regresa; más una deriva de ±5° y el abanico que respira. Visible pero calmado.
+- **Esfuerzo del puño**: `fist` y formas intermedias se aprietan y aflojan lento (`eff`, ~±4°).
+- **Muñeca viva** (`hand_follow`): una mano libre se mece con la respiración (`chest.rx`) y el cambio de peso
+  (`hips.ry`) más un ruido lento de ±3° en flexión, lado, giro y torsión, distinto por lado.
+- **Formas exactas de verdad**: una forma con `_loose` ≤ 0.05 (`exact(...)` en las escenas, la yema que toca la
+  barbilla) no recibe deriva, cambio de dedo ni arrastre (`free`): un dedo que debe llegar a la piel llega.
+- `c.hand_flutter(lado, fuerza, cuándo)` (`motor.hand_flutter`): temblor nervioso, cada dedo con su ritmo
+  (3-6 cuadros, ~3°). Lo usan `scared` y `shiver`.
+- Forma nueva `palm_up` (palma abierta con dedos relajados, curvos y algo separados): `shrug`; en `yawn_stretch`
+  el estirón abre `spread` (no puño) y baja a `palm_up`.
+Cómo revisarlo: ráfaga de 10 cuadros en 2 s de la mano de `Idle` y de otro clip relajado (los dedos deben
+cambiar visiblemente, izquierda ≠ derecha, huecos entre dedos, pulgar junto al índice).
+
+**Qué debe seguir haciendo el autor del clip**:
+- Poner llaves de forma de mano (`c.hand`) con intención y en el momento del gesto; no repetir la misma forma
+  en todos los gestos (`spread` no es "mano abierta" en general: `open`, `soft`, `stop`, `claw`, `fist`, `grip`).
+  Entre forma y forma, al menos 4 cuadros; para un golpe pon la llave "antes" 2-3 cuadros antes del tiempo.
+- Gestos con articulación propia: `c.finger_roll(lado, onda, amp, lag)` (cascada rodante: un saludo, un aleteo,
+  dedos que se agitan), `c.hand_beat(lado, [cuadros], fuerza)` (la mano se abre y se separa en un énfasis),
+  `motor.wave_drive(n, f0, f1, period, seed, phase)` (onda de saludo con periodo y tamaño de cada vaivén
+  distintos, entra en ~5 cuadros y muere en ~8). Un saludo real mueve todo el brazo: codo que guía
+  (`c.elbow(s, k * delay(w, -2))`), antebrazo que se mece, muñeca en lado y flexión a un cuarto de vuelta de fase
+  (elipse), palma que gira unos grados por vaivén y dedos en cascada tras la muñeca (ver `wave()`).
+- Pulgar: oposición natural en las formas (`thumb_out`); nunca dejarlo dentro de la palma.
+- Una mano de reposo (no tocada por el clip) basta con `c.life(...)`: no escribir `c.curl` igual en todos los
+  dedos; un `c.curl` suma encima y es un movimiento de todos a la vez (úsalo solo como pulso corto).
+- En clips con contactos (`contacts`/`supports`), la forma de mano del toque va como forma exacta (`tap`, `hold_flat`).
+- Después de hornear: `python scripts/ia3d/…` métricas, `check_props.py` en clips de contacto y
+  `check_sleeves.py --action <clips>` (columnas `x_thumb/x_fingers/x_palm` = mano detrás del puño; en reposo
+  quedan ~4.5 mm y hasta ~9 mm con la palma muy girada).
+
+**Pasada de puño** (`anim/cuff_pass.py`): corre sobre un .blend con materiales (look5 o look7; necesita las caras
+`Hoodie`/`Skin` de `check_sleeves.py`), lee las acciones ya horneadas de otro archivo y escribe las corregidas en un
+tercero que se une con `make_actions.py --merge`. Por cuadro prueba, de lo más barato a lo más fuerte, estirar la
+mano 4-12 mm a lo largo del antebrazo y doblar la muñeca menos (`TRIES`) hasta que lo que sobresalga del puño sea
+≤ 10 mm; suaviza el cambio (±4 cuadros + difuminado) y deja intactos los cuadros de contacto. Estirar el antebrazo
+(`.sy`) no sirve para esto: el puño de la manga va en el extremo del antebrazo y se estira con él.
+
+**Cadena**: `face3 → make_actions (--only por grupos) → cuff_pass (sobre look5) → make_actions --merge → morfi_ia_anim7.blend`
+(anim6 = primera pasada de manos; anim7 = segunda, con la mano en reposo viva) y las escenas con `make_scenes.py` → `morfi_ia_scenes3.blend`.
+
 ## 4. Verificación (obligatoria antes de publicar)
 
-Los scripts de Blender se corren como el resto: `$B -b work/ia3d/morfi_ia_anim5.blend --python scripts/ia3d/<script>.py -- <args>`.
+Los scripts de Blender se corren como el resto: `$B -b work/ia3d/morfi_ia_look7.blend --python scripts/ia3d/<script>.py -- <args>`.
 
 | script | qué mide |
 |---|---|
+| `check_sleeves.py --action all --step 3 [--actions-from work/ia3d/morfi_ia_scenes3.blend]` | la mano y el antebrazo contra la manga y el puño (mm que sobresale / atraviesa, por mano y cuadro; `--raw` cuenta también puntos en el aire junto a la abertura) |
 | `check_props.py --action Tablet,Calculator` | traslape de manos y cuerpo con los objetos (≤ 1 mm), cada toque (≤ 1.5 mm), apoyo de la palma, manos y mangas contra cabeza y torso |
 | `check_clearance.py --action X` | distancia con signo de cada mano a la cabeza y al torso, cuadro por cuadro |
 | `check_feet.py [--actions A,B]` | pies que se hunden o resbalan al caminar |
@@ -232,7 +322,7 @@ Los scripts de Blender se corren como el resto: `$B -b work/ia3d/morfi_ia_anim5.
 | `pose_probe.py --poses …` | poses estáticas del motor con su reporte de contactos |
 | `preview_anim.py --action A,B,… --out carpeta` | vista previa en Eevee (cuadros + mp4) de varias acciones en una sola sesión |
 
-Estado al 17-oct-2026 (`morfi_ia_anim5.blend`, 40 clips publicados: 11 básicos, 8 emociones, 7 de trabajo, 14 movimientos):
+Estado al 18-oct-2026 (`morfi_ia_anim7.blend` -> `morfi_ia_look7.blend`, 40 clips publicados: 11 básicos, 8 emociones, 7 de trabajo, 14 movimientos):
 
 - **Contactos** (13 clips con contacto, todos ok): Think 0.3 mm, Laugh 0.5, Surprised 0.6, Facepalm 0.3,
   Blow_Kiss 0.0; Tablet y Calculator: traslape 0.6 mm, presión 0.2, apoyo 0.6.
@@ -252,6 +342,17 @@ Estado al 17-oct-2026 (`morfi_ia_anim5.blend`, 40 clips publicados: 11 básicos,
 - Tablet y calculadora: índice a ≤ 0.1 mm de cada tecla o punto de la pantalla (IK) y la mano que teclea no toca la
   barbilla ni el pecho. Los toques al propio cuerpo toleran `BODY_TOL` 3 mm (piel blanda).
 - Vistas previas de los clips y hojas de contacto: se revisaron todas a ojo (Eevee, tres cuartos frontal).
+
+**Integración final de la ronda 2 (`anim7` → `look7`, `scenes3`, 18-oct-2026; `--step 3` en los 40 clips + 6 escenas).**
+- `look7`: 65 511 vértices, 123 162 caras (122 874 triángulos y 288 cuadrados), 0 sin peso, 0 caras degeneradas, 0 giros de UV; muñecas con
+  Copy Rotation + Limit Rotation; marcas `brows_fix`, `body_fix_orig`, `glasses_fix_orig`; `Glasses_Frame` y `Lens_L/R`; 40 clips.
+- `check_sleeves`: cruces de pulgar, dedos y palma de la pared del puño y piel fuera de la manga = **0 mm** en los 46; mano fuera de la manga:
+  `Blow_Kiss` (D) 10.0 mm, `Sneak` (I) 6.0, `Shiver` (I) 4.9, todos los demás (incluidas las 6 escenas) 0.0.
+- `check_props` (paso 2): `Count_123`, `Point_Side`, `Present`, `Idea`, `Surprised` y `Thumbs_Up` pasan; `Tablet` y `Calculator` traslape 0.5-0.6 mm,
+  presión 0.2, apoyo 0.5-0.6 (los −2.0 cm contra el torso son el error de signo conocido); `Think`, `Laugh`, `Facepalm` y
+  `Blow_Kiss` salen `ok=False` solo donde la mano toca la cara o el cuerpo a propósito (mano-cabeza ≈ 0 cm).
+- Cuello: tubo liso, sin dientes azules en Idle, `Look_Around` ni `Shake_No`; quedan unas pocas facetas pequeñas en la parte baja de la cabeza
+  en giros fuertes (visibles desde abajo, junto al borde de la capucha).
 
 **Limitaciones conocidas.**
 - `Scratch_Head` no se publica: con brazos de 20 cm no alcanza la parte alta de la cabeza y no se leía como
@@ -375,7 +476,7 @@ $B -b work/ia3d/morfi_ia_face3.blend --python scripts/ia3d/make_scenes.py -- mer
 # 4. verificar y ver vistas previas con audio (look3 tiene los materiales; las acciones se agregan)
 $B -b work/ia3d/morfi_ia_scenes.blend --python scripts/ia3d/make_scenes.py -- verify [--only susto]
 $B -b work/ia3d/morfi_ia_look3.blend --python scripts/ia3d/make_scenes.py -- preview --src work/ia3d/morfi_ia_scenes.blend --only susto --out <dir>/preview [--res 50 --step 1]
-# 5. exportar al visor (ver §1: export_scenes.py sobre look5) y sync-live
+# 5. exportar al visor (ver §1: export_scenes.py sobre look7, escenas de scenes3) y sync-live
 ```
 
 `--fast` hornea sin los solucionadores de contactos (revisar poses). `merge` se niega a unir una escena cuya

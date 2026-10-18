@@ -12,6 +12,7 @@ import numpy as np
 
 from . import curves as C
 from .clip import Clip
+from . import motor
 from .motor import orient_keys
 
 
@@ -43,7 +44,7 @@ def spin():
         c.forearm_lift(s, [(0, 0), (t1, 0), (t1 + 5, 26), (70, 22), (84, 0)])
         c.palm(s, [(0, 0), (t1, 0), (t1 + 5, 70), (70, 66), (84, 0)])
         c.stretch(s, [(0, 1.0), (t1 + 1, 1.0), (t1 + 5, 1.07), (t1 + 12, 1.04), (70, 1.04), (82, 1.0)])
-        c.hand(s, [(0, "relaxed"), (12, "fist"), (t1 - 1, "fist"), (t1 + 4, "spread"), (72, "spread"), (84, "relaxed")])
+        c.hand(s, [(0, "relaxed"), (10, "fist"), (t1 - 4, "fist"), (t1 + 4, "spread"), (72, "spread"), (84, "relaxed")])
     c.dip(t1 + 18, depth=0.008)
     c.expr([(0, "happy", 0.6), (10, "determined", 0.6), (t0 + 2, "joy"), (t1 - 2, "joy"), (t1 + 3, "laugh"),
             (t1 + 14, "joy"), (n - 1, "happy")])
@@ -124,7 +125,7 @@ def dance_2():
     c.arm_raise("L", disco * 18)
     c.elbow("L", disco * 92)
     c.forearm_in("L", disco * -10)
-    c.hand("R", [(0, "fist"), (28, "fist"), (31, "point_pop"), (36, "point"), (56, "point"), (59, "fist")])
+    c.hand("R", [(0, "fist"), (26, "fist"), (31, "point_pop"), (36, "point"), (54, "point"), (59, "fist")])
     c.hand("L", [(0, "fist")])
     c.expr([(0, "joy")], scale=0.9)
     c.prop("mouth_open", C.sine(n, 2 * beat, 0.25, phase=0.1) + 0.15)
@@ -194,7 +195,7 @@ def yawn_stretch():
         c.arm_fwd(s, C.keys(n, [(0, 0), (10, 8), (30, -6), (56, -6), (70, 0)]))
         c.elbow(s, C.keys(n, [(0, 0), (12, 30), (30, 0), (56, 0), (64, 20), (80, 0)]))
         c.stretch(s, 1.0 + 0.08 * pos)
-        c.hand(s, [(0, "relaxed"), (14, "soft"), (28, "fist"), (56, "fist"), (62, "spread"), (72, "relaxed")])
+        c.hand(s, [(0, "relaxed"), (14, "soft"), (30, "spread"), (54, "spread"), (62, "palm_up"), (74, "relaxed")])
     c.add("hips.lz", 0.014 * pos - 0.004 - 0.012 * np.clip(-st, 0, None))
     quiver = C.noise(n, 2, 1.0, seed=13, loop=False) * C.keys(n, [(0, 0), (30, 0), (34, 1), (54, 1), (58, 0)])
     c.add("chest.ry", 1.2 * quiver)
@@ -233,8 +234,8 @@ def victory():
     c.arm_fwd(s, [(0, 0), (14, -16), (19, 2), (40, 2), (46, 30), (70, 28), (84, 0)])
     c.stretch(s, [(0, 1.0), (16, 1.0), (19, 1.06), (26, 1.04), (40, 1.03), (45, 1.0)])
     c.palm(s, [(0, 0), (14, 0), (19, 20), (40, 20), (46, 50), (70, 50), (84, 0)])
-    c.hand(s, [(0, "relaxed"), (8, "fist"), (76, "fist"), (86, "relaxed")])
-    c.hand("L", [(0, "relaxed"), (12, "fist"), (76, "fist"), (86, "relaxed")])
+    c.hand(s, [(0, "relaxed"), (8, "fist"), (28, "grip"), (42, "grip"), (49, "fist"), (76, "fist"), (86, "relaxed")])
+    c.hand("L", [(0, "relaxed"), (12, "fist"), (32, "grip"), (43, "grip"), (50, "fist"), (76, "fist"), (86, "relaxed")])
     c.elbow("L", [(0, 0), (12, 50), (19, 30), (46, 60), (70, 56), (84, 0)])
     c.arm_raise("L", [(0, 0), (19, 10), (46, 6), (84, 0)])
     # '¡sí!': the fist pulls down, the left knee comes up, the body crunches
@@ -267,11 +268,15 @@ def wave_both():
         c.forearm_lift(s, [(0, 0), (9, -4), (17, 48), (22, 39), (26, 42), (80, 42), (90, 0), (104, 0)])
         c.elbow(s, [(0, 0), (6, 16), (17, 4), (80, 4), (92, 6), (104, 0)])
         c.stretch(s, [(0, 1.0), (10, 1.0), (16, 1.06), (24, 1.04), (80, 1.04), (90, 1.0)])
-        w = np.sin(2 * np.pi * ((f - 20) / 13.0 + ph)) * env
+        w = motor.wave_drive(n, 20, 84, period=13.0, seed=471 + (0 if s == "L" else 9), phase=ph)
         c.forearm_lift(s, -np.where(w < 0, 15.0, 7.0) * w)
-        c.wrist(s, side=C.delay(-26.0 * w, 4), flex=[(0, 0), (16, -8), (80, -8), (92, 0)])
-        c.palm(s, [(0, 0), (10, 0), (18, 76), (80, 72), (91, 0), (104, 0)])
-        c.hand(s, [(0, "relaxed"), (8, "soft"), (16, "spread"), (82, "spread"), (92, "relaxed")])
+        c.elbow(s, 4.0 * C.delay(w, -2.0))
+        c.wrist(s, side=C.delay(-24.0 * w, 3.5), flex=np.array(C.keys(n, [(0, 0), (16, -8), (80, -8), (92, 0)]))
+                + 8.0 * C.delay(w, 6.0))
+        c.palm(s, C.keys(n, [(0, 0), (10, 0), (18, 76), (80, 72), (91, 0), (104, 0)]) + 8.0 * C.delay(w, 2.0))
+        c.finger_roll(s, C.delay(w, 3.0), amp=10.0, lag=1.5)
+        c.hand(s, [(0, "relaxed"), (8, "soft"), (17, "open" if s == "L" else "spread"), (82, "open" if s == "L" else "spread"),
+                   (94, "relaxed")])
     bounce = np.maximum(0, np.sin(2 * np.pi * (f - 20) / 6.5)) * env
     c.add("hips.lz", -0.006 * bounce - 0.004)
     for s in ("L", "R"):
@@ -348,6 +353,7 @@ def shiver():
         c.forearm_in(s, [(0, 0), (12, 26), (70, 26), (80, 0)])
         c.arm_raise(s, [(0, 0), (12, -4), (70, -4), (80, 0)])
         c.hand(s, [(0, "relaxed"), (10, "fist"), (72, "fist"), (82, "relaxed")])
+        c.hand_flutter(s, 1.3, env)                                          # shivering fingers
         c.elbow(s, 4.0 * C.delay(tr, 1 + (s == "R")))
         c.foot(s, turn=-6.0 * sg * env + 4.0 * sg * chatter)                 # knees in, knocking
     c.prop("teeth", 0.8 * env)
@@ -567,7 +573,9 @@ def facepalm():
     c.contacts.append({"side": s, "touch": "head", "point": (-0.06, -0.19, 0.60), "frames": (26, 78), "ramp": 6,
                        "region": [f"hand.{s}", f"index.01.{s}", f"middle.01.{s}", f"ring.01.{s}", f"index.02.{s}",
                                   f"middle.02.{s}", f"ring.02.{s}"]})
-    c.hand(s, [(0, "relaxed"), (14, "spread"), (82, "spread"), (92, "relaxed")])
+    # the fingers that stand up his cheek are part of the touch: exact angles (the contact solver aims them)
+    cheek = dict(motor.HAND_SHAPES["spread"], _loose=0.05)
+    c.hand(s, [(0, "relaxed"), (14, cheek), (82, cheek), (92, "relaxed")])
     c.hand("L", [(0, "relaxed"), (24, "rest"), (80, "rest"), (94, "relaxed")])
     c.arm_raise("L", [(0, 0), (24, -6), (80, -6), (94, 0)])
     c.sy("chest", [(0, 1.0), (44, 1.0), (52, 1.02), (62, 0.985), (72, 1.0)])     # the sigh
@@ -610,7 +618,9 @@ def blow_kiss():
     c.palm(s, [(0, 0), (20, 40), (26, -50), (60, -46), (76, 0)])
     c.wrist(s, flex=[(0, 0), (22, 0), (27, -22), (31, 12), (36, 0), (76, 0)])           # the flick
     c.stretch(s, [(0, 1.0), (22, 1.0), (26, 1.08), (32, 1.05), (60, 1.05), (72, 1.0)])
-    c.hand(s, [(0, "relaxed"), (8, "hold_flat"), (21, "hold_flat"), (25, "spread"), (60, "spread"), (74, "relaxed")])
+    flutter = np.sin(2 * np.pi * (np.arange(n) - 27) / 9.0) * C.keys(n, [(0, 0), (27, 0), (30, 1), (46, 0.5), (60, 0), (n - 1, 0)])
+    c.finger_roll(s, flutter, amp=10.0, lag=1.5)
+    c.hand(s, [(0, "relaxed"), (8, "hold_flat"), (21, "hold_flat"), (26, "spread"), (44, "open"), (62, "soft"), (76, "relaxed")])
     c.hand("L", [(0, "relaxed"), (24, "soft"), (60, "soft"), (76, "relaxed")])
     c.add("spine.rx", [(0, 0), (12, -2), (22, -2), (28, 5), (34, 3), (60, 2), (76, 0)])
     c.add("head.ry", [(0, 0), (10, 5), (22, 6), (30, -5), (60, -6), (76, 0)])

@@ -12,12 +12,12 @@
 // dual quaternion, blended) and a scale part around the bone (a 3x4 matrix,
 // blended linearly with the weights). Both are computed on the CPU per bone and
 // frame and travel in the skeleton's bone texture, together with the previous
-// frame (for motion effects) and a per-bone effect mask. skeleton.boneMatrices
+// trail pose (for motion effects) and a per-bone effect mask. skeleton.boneMatrices
 // (CPU) stays three's, so raycasting keeps working.
 import * as THREE from 'three';
 
 /** Texels per bone in the bone texture (one row per bone): current frame (dual quaternion real,
- *  dual, 3 rows of the scale matrix), the previous frame (the same five), effect mask (x: smear). */
+ *  dual, 3 rows of the scale matrix), the trail pose (the same five), effect mask (x: smear). */
 export const DQ_TEXELS = 11;
 const PREV = 5;
 const MASK = 10;
@@ -27,7 +27,7 @@ const PARS = /* glsl */ `
 vec4 dqTexel( const in float bone, const in int k ) {
   return texelFetch( boneTexture, ivec2( k, int( bone ) ), 0 );
 }
-// blend the vertex's four bones for one frame (o = 0: current, 5: previous): a unit dual
+// blend the vertex's four bones for one frame (o = 0: current, 5: trail): a unit dual
 // quaternion (r, d) applied after the scale rows s0..s2 (plain out vectors: no structs, which
 // some GPU compilers get wrong when the function is called twice)
 void dqBlend( const in int o, out vec4 r, out vec4 d, out vec4 s0, out vec4 s1, out vec4 s2 ) {
@@ -90,7 +90,7 @@ const NORMAL = /* glsl */ `
 
 const POSITION = /* glsl */ `
 #ifdef USE_SKINNING
-  vec3 dqRestPosition = transformed;   // morphed, not skinned yet (motion effects skin it with the previous frame)
+  vec3 dqRestPosition = transformed;   // morphed, not skinned yet (motion effects skin it with the trail pose)
   transformed = dqTransform( dqR, dqD, dqScale( dqS0, dqS1, dqS2, transformed ) );
 #endif
 `;
@@ -170,6 +170,8 @@ class DQSkeleton {
   private fresh = false;
   private snap = true;
   private maxStep = Infinity;
+  /** share of the gap to the current pose the trail closes this frame (1 - exp(-dt / tau)); 0: no update due */
+  private chase = 0;
   /** bone world matrices at attach time (the rest pose of a freshly loaded glTF), for checks */
   readonly restWorld: THREE.Matrix4[];
   /** largest |R*S - bindMatrixInverse * boneMatrix * bindMatrix| seen while checking (debug) */
@@ -205,17 +207,41 @@ class DQSkeleton {
     this.texture.needsUpdate = true;
   }
 
-  /** the current frame becomes the previous one (once per animation frame) */
-  tick(jump: boolean, maxStep: number): void {
+  /** a new animation frame (once): the trail pose will chase the pose computed next, by `chase`
+   *  (1 - exp(-dt / tau), so the trail does not depend on the frame rate) */
+  tick(jump: boolean, maxStep: number, chase: number): void {
     if (!this.fresh || jump) { this.snap = true; return; }
-    const d = this.data;
-    for (let b = 0, n = this.skeleton.bones.length; b < n; b++) {
-      const o = b * DQ_TEXELS * 4;
-      d.copyWithin(o + PREV * 4, o, o + PREV * 4);
-    }
     this.posPrev.set(this.pos);
     this.maxStep = maxStep;
-    this.texture.needsUpdate = true;
+    this.chase = chase;
+    if (chase >= 1) {   // a pose held for a test shot: the trail is exactly the pose computed last (previous frame)
+      const d = this.data;
+      for (let b = 0, n = this.skeleton.bones.length; b < n; b++) {
+        const o = b * DQ_TEXELS * 4;
+        d.copyWithin(o + PREV * 4, o, o + PREV * 4);
+      }
+      this.chase = 0;
+      this.texture.needsUpdate = true;
+    }
+  }
+
+  /** the trail pose of every bone moves a share `a` of the way to the current one (dual quaternion
+   *  and scale matrix are blended component-wise on the shortest path, then renormalised) */
+  private chaseTrail(a: number): void {
+    const d = this.data;
+    for (let b = 0, n = this.skeleton.bones.length; b < n; b++) {
+      const o = b * DQ_TEXELS * 4, t = o + PREV * 4;
+      const sign = d[o] * d[t] + d[o + 1] * d[t + 1] + d[o + 2] * d[t + 2] + d[o + 3] * d[t + 3] < 0 ? -1 : 1;
+      let len = 0;
+      for (let k = 0; k < 4; k++) {
+        d[t + k] += a * (sign * d[o + k] - d[t + k]);
+        d[t + 4 + k] += a * (sign * d[o + 4 + k] - d[t + 4 + k]);
+        len += d[t + k] * d[t + k];
+      }
+      len = 1 / Math.max(Math.sqrt(len), 1e-6);
+      for (let k = 0; k < 8; k++) d[t + k] *= len;
+      for (let k = 8; k < 20; k++) d[t + k] += a * (d[o + k] - d[t + k]);
+    }
   }
 
   /** current frame from the bones (three calls skeleton.update once per render() call) */
@@ -260,6 +286,10 @@ class DQSkeleton {
       }
       this.posPrev.set(this.pos);
       this.snap = false;
+      this.chase = 0;
+    } else if (this.chase > 0) {
+      this.chaseTrail(this.chase);   // the first pose of an animation frame; later passes of it keep the trail
+      this.chase = 0;
     }
     this.fresh = true;
     this.texture.needsUpdate = true;
@@ -294,7 +324,7 @@ function attachSkeleton(skeleton: THREE.Skeleton, mesh: THREE.SkinnedMesh): DQSk
 }
 
 // Per-skeleton data for the shader (rigid dual quaternion + scale matrix per bone, like Blender's
-// DQS with non-uniform scale, plus the previous frame for velocity effects). Call once after the
+// DQS with non-uniform scale, plus the trail pose for velocity effects). Call once after the
 // model is loaded, before the first render. Every mesh bound to one skeleton must share the
 // transform of the first one (true for glTF primitives and for the outline hulls).
 export function attachDualQuatSkinning(root: THREE.Object3D): void {
@@ -310,11 +340,17 @@ export function attachDualQuatSkinning(root: THREE.Object3D): void {
   });
 }
 
-/** Once per animation frame, before the first render of it: the current pose becomes the previous
- *  one. `jump`: no velocity this frame (seek, clip reset); a bone moving more than `maxStep`
- *  (mesh units) since the last frame counts as a jump too. */
-export function dqFrameTick(jump = false, maxStep = Infinity): void {
-  for (const dq of skeletons.values()) dq.tick(jump, maxStep);
+/** Time constant (s) of the trail pose that the motion effects measure velocity against. */
+export const TRAIL_TAU = 0.05;
+
+/** Once per animation frame, before the first render of it: the trail pose starts chasing the new
+ *  pose with time constant TRAIL_TAU (frame-rate independent). `jump`: no velocity this frame (seek,
+ *  clip reset; the trail snaps to the pose); a bone moving more than `maxStep` (mesh units) since the
+ *  last frame counts as a jump too. `dt`: seconds since the last animation frame; `held`: a debug
+ *  pose, whose trail is just the previous pose. */
+export function dqFrameTick(jump = false, maxStep = Infinity, dt = 1 / 60, held = false): void {
+  const chase = held ? 1 : 1 - Math.exp(-Math.max(dt, 1e-4) / TRAIL_TAU);
+  for (const dq of skeletons.values()) dq.tick(jump, maxStep, chase);
 }
 
 /** Per-bone effect mask (x: how much the smear moves that bone's skin), for every skeleton. */

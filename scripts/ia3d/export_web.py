@@ -41,6 +41,7 @@ def parse_args():
     ap.add_argument("--face-json", required=True)
     ap.add_argument("--tex", type=int, default=4096)
     ap.add_argument("--normal", type=int, default=2048)
+    ap.add_argument("--morph-normals", action="store_true", help="also export the normal deltas of the face keys")
     return ap.parse_args(argv)
 
 
@@ -253,7 +254,7 @@ def main():
         filepath=os.path.abspath(args.out), export_format="GLB", use_selection=True,
         export_yup=True, export_apply=False, export_texcoords=True, export_normals=True,
         export_tangents=False, export_materials="EXPORT", export_image_format="AUTO",
-        export_skins=True, export_morph=True, export_morph_normal=False, export_try_sparse_sk=True,
+        export_skins=True, export_morph=True, export_morph_normal=args.morph_normals, export_try_sparse_sk=True,
         export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
         export_frame_step=1, export_anim_single_armature=True, export_reset_pose_bones=True,
         export_optimize_animation_size=False, export_cameras=False, export_lights=False, export_extras=False,

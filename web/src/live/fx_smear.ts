@@ -1,9 +1,11 @@
 // Smear on fast moves: the skin on the trailing side of a fast limb is pulled back along
 // its motion, a cartoon motion blur made by the model itself (no post-processing). It
-// runs in the vertex shader of the colour and outline materials, from the previous
-// frame's skinning (dqskin.ts keeps it in the bone texture) and a per-bone mask (arms a
-// lot, the head barely). Rigid pieces glued to a bone (eye and mouth decals, lenses,
-// props) get the same displacement from their own previous matrix, so they stay on.
+// runs in the vertex shader of the colour and outline materials, from the skinning of a
+// trail pose that chases the current one with a short time constant (dqskin.ts keeps it in
+// the bone texture; frame-rate independent and smooth although the clips are sampled at
+// 30 fps) and a per-bone mask (arms a lot, the head barely). Rigid pieces glued to a bone
+// (eye and mouth decals, lenses, props) get the same displacement from their own trail
+// matrix, so they stay on.
 import * as THREE from 'three';
 
 /** The smoothed normal (outline.ts smoothNormals), declared once per shader. */
@@ -17,7 +19,7 @@ attribute vec3 outlineNormal;
 export const smearUniforms = {
   /** amount, 0 = off */
   fxSmear: { value: 0 },
-  /** (1/60 s) / frame time: velocities are measured per 60 fps frame */
+  /** current - trail pose -> velocity per 1/60 s (the lag of the trail depends on the frame time) */
   fxFrameScale: { value: 1 },
   /** x: speed where it starts, y: speed where it is full (m per 1/60 s), z: trail length (frames), w: max trail (m) */
   fxSmearParams: { value: new THREE.Vector4(0.004, 0.02, 2.0, 0.045) },
@@ -41,7 +43,8 @@ vec3 fxSmearOffset( vec3 vel, vec3 n, float mask ) {
   float speed = length( vel );
   vec3 dir = vel / max( speed, 1e-6 );
   float trailing = smoothstep( 0.0, 0.6, - dot( n, dir ) );
-  float len = min( speed * fxSmearParams.z, fxSmearParams.w ) * smoothstep( fxSmearParams.x, fxSmearParams.y, speed );
+  // a soft cap (tanh, slope 1 at 0): no kink where the trail reaches its maximum length
+  float len = fxSmearParams.w * tanh( speed * fxSmearParams.z / fxSmearParams.w ) * smoothstep( fxSmearParams.x, fxSmearParams.y, speed );
   return - dir * len * trailing * mask * fxSmear;
 }
 `;
@@ -128,19 +131,21 @@ const IDLE_RIGID = {
 
 const _rel = new THREE.Matrix4(), _inv = new THREE.Matrix4();
 
-/** Once per frame, after the pose is final: velocity of a rigid piece in model space. */
-export function updateRigidSmear(r: RigidSmear, modelInverse: THREE.Matrix4, jump: boolean): void {
+/** Once per frame, after the pose is final: the trail matrix of a rigid piece chases its current one
+ *  by `chase` (1 - exp(-dt / tau)); its velocity (current - trail) in model space. */
+export function updateRigidSmear(r: RigidSmear, modelInverse: THREE.Matrix4, jump: boolean, chase: number): void {
   _rel.multiplyMatrices(modelInverse, r.object.matrixWorld);
   const u = r.uniforms;
   const det = _rel.determinant(), detPrev = r.prev.determinant();
   const v = u.fxVelMatrix.value.elements, a = _rel.elements, b = r.prev.elements;
   // appearing or disappearing (a prop scaled from 0) is not a motion
   const still = jump || !r.hasPrev || Math.abs(det) < 1e-9 || Math.abs(detPrev) < 1e-9 || Math.abs(det / detPrev - 1) > 0.02;
+  if (still) r.prev.copy(_rel);
+  else for (let i = 0; i < 16; i++) b[i] += chase * (a[i] - b[i]);
   for (let i = 0; i < 16; i++) v[i] = still ? 0 : a[i] - b[i];
   if (Math.abs(det) > 1e-12) {
     u.fxToObject.value.setFromMatrix4(_inv.copy(_rel).invert());
     u.fxNormalMatrix.value.getNormalMatrix(_rel);
   }
-  r.prev.copy(_rel);
   r.hasPrev = true;
 }

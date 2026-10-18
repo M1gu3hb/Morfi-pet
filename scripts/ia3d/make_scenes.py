@@ -208,13 +208,15 @@ REST_WIN = 15         # frames: one resting place on the skin for a hand held on
 REST_TOL = (-0.0005, 0.0010)   # signed gap (m) a resting hand may keep: a hair in, a hair off
 
 
-def rest_on_skin(contacts, rig, action, clip, reach=0.02, steps=12):
+def rest_on_skin(contacts, rig, action, clip, reach=0.02, steps=12, target=None):
     """After the wide smoothing the resting place is an average of nearby contacts: on his round
     chin that sits a few mm inside (or off) the skin, and the per-frame re-contact can bounce
     between two fingers. Here each touch frame moves only along the skin's outward normal at the
     chosen spot, bisecting the signed gap to zero (moving out along it never brings the hand in).
-    Returns (frames moved, worst |gap| after) in m."""
+    `target` ({(side, frame): gap in m}) asks for a different signed gap on those frames: the one that
+    the FK rebake will turn back into zero. Returns (frames moved, worst |gap| after) in m."""
     moved, worst = 0, 0.0
+    target = target or {}
     for spec in getattr(clip, "contacts", []):
         if "touch" not in spec:
             continue
@@ -225,7 +227,8 @@ def rest_on_skin(contacts, rig, action, clip, reach=0.02, steps=12):
         for f in range(f0, f1 + 1):
             contacts._frame(f)
             L0 = contacts._get_loc(fcs, f)
-            sd = contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2]
+            tg = target.get((spec["side"], f), 0.0)
+            sd = contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2] - tg
             if REST_TOL[0] <= sd <= REST_TOL[1]:
                 worst = max(worst, abs(sd))
                 continue
@@ -236,7 +239,7 @@ def rest_on_skin(contacts, rig, action, clip, reach=0.02, steps=12):
                 contacts._set_loc(fcs, f, L0 + t * dloc)
                 contacts._refresh(fcs)
                 contacts._frame(f)
-                return contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2]
+                return contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2] - tg
 
             lo, hi = (0.0, reach) if sd < 0 else (-reach, 0.0)
             g_lo, g_hi = (sd, gap(hi)) if sd < 0 else (gap(lo), sd)
@@ -255,6 +258,40 @@ def rest_on_skin(contacts, rig, action, clip, reach=0.02, steps=12):
             worst = max(worst, abs(g))
             moved += 1
     return moved, worst
+
+
+RETARGET_MM = 2.0     # a touch that ends more than this off the skin after the FK rebake is solved again
+
+
+def _snapshot(act):
+    return {(fc.data_path, fc.array_index): [kp.co[1] for kp in fc.keyframe_points] for fc in act.fcurves}
+
+
+def _restore(act, snap):
+    for (path, idx), vals in snap.items():
+        fc = act.fcurves.find(path, index=idx)
+        if fc is not None and len(fc.keyframe_points) == len(vals):
+            for kp, v in zip(fc.keyframe_points, vals):
+                kp.co[1] = v
+            fc.update()
+
+
+def _touch_offsets(contacts, clip, win=5):
+    """Signed gap (m) of every touch frame on the arm as it is now (FK), smoothed over `win` frames:
+    what the IK -> FK rebake left between the hand and the skin. {(side, frame): gap}."""
+    out = {}
+    for spec in clip.contacts:
+        if "touch" not in spec:
+            continue
+        hand = bpy_objects()[f"Hand_{spec['side']}"]
+        f0, f1 = spec["frames"]
+        g = []
+        for f in range(f0, f1 + 1):
+            contacts._frame(f)
+            g.append(contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2])
+        g = np.convolve(np.pad(g, win // 2, mode="edge"), np.ones(win) / win, mode="valid")
+        out.update({(spec["side"], f0 + i): float(v) for i, v in enumerate(g)})
+    return out
 
 
 def bpy_objects():
@@ -305,7 +342,25 @@ def bake_scene(key, fast=False):
                     report["rest_on_skin"] = rest_on_skin(contacts, rig, act, clip)
                     contacts.smooth_ik(rig, act, clip, sigma=2.0, ramp=8)
             if hasattr(contacts, "rebake_arms"):
+                snap = _snapshot(act) if any("touch" in c for c in clip.contacts) else None
                 st = contacts.rebake_arms(rig, act, clip.n)
+                if snap:
+                    off = _touch_offsets(contacts, clip)
+                    report["rebake_off_mm"] = round(max(abs(v) for v in off.values()) * 1000, 2)
+                    target = {}
+                    for _ in range(3):
+                        if max(abs(v) for v in off.values()) * 1000 <= RETARGET_MM:
+                            break
+                        # the FK arm lands a few mm off the skin the IK solved: solve once more asking for
+                        # the opposite gap on those frames, then rebake again (the gap that is still left
+                        # after a pass is added to what we ask for in the next one)
+                        target = {k: target.get(k, 0.0) - v for k, v in off.items()}
+                        _restore(act, snap)
+                        with _keep_hands(contacts, rig):
+                            report["retarget"] = rest_on_skin(contacts, rig, act, clip, target=target)
+                        st = contacts.rebake_arms(rig, act, clip.n)
+                        off = _touch_offsets(contacts, clip)
+                        report.setdefault("retarget_off_mm", []).append(round(max(abs(v) for v in off.values()) * 1000, 2))
                 report["rebake"] = st
                 print("REBAKE " + ", ".join(f"{s_} stretch {v['stretch']:.3f} wrist {v['wrist_mm']:.2f} mm "
                                             f"dir {v['dir_deg']:.2f} deg" for s_, v in st.items()))

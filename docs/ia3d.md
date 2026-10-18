@@ -104,6 +104,20 @@ calcomanías de los ojos; y saca la zona de los lentes de las claves de mejillas
 holgura del lente a la piel pasó de −11.1/−6.3 mm (la atravesaba) a +4.7/+3.5 mm; 8 882 triángulos de armazón y
 2 × 1 440 de lentes. Uso: `$B -b work/ia3d/morfi_ia_look4.blend --python scripts/ia3d/fix_glasses.py -- --out
 work/ia3d/morfi_ia_look5.blend` (cadena completa en motor.md §1).
+
+**Cuerpo y cejas (look6, look7).** `fix_body.py` (look5 → look6, idempotente, `--undo` restaura el cuerpo original que
+guarda en `body_fix_orig`): (1) **cuello**: parte las 382 aristas de la costura piel/cuello de la sudadera (383
+vértices con copia del lado piel y sus shape keys), deja la piel rígida en `head` y el cuello de la sudadera rígido en
+`chest`, y reemplaza el "techo" aserrado bajo la cabeza (1 367 caras a menos de 19 cm del eje) por una "copa" de piel
+de 433 vértices rígida en la cabeza, así ya no se estira la tira entre cabeza y chamarra; (2) **puños**: muñeca
+oculta al 62 % que termina en punta tras el puño, y el borde del puño sigue a la mano al 85 % (se desvanece al
+antebrazo en 5 cm), con lo que el pulgar y la palma ya no cruzan la pared del puño (0 mm); (3) **membranas entre dedos**
+(índice–medio y medio–anular: 220 / 228 caras quitadas; entre pulgar e índice no hay nada que cortar). `fix_brows.py`
+(look6 → look7, idempotente, marca `brows_fix` en la malla): parte las aristas largas de la piel alrededor de las
+cejas (sin mover la forma de reposo) y reconstruye las 4 claves de cejas: las cejas pintadas y la costura del armazón
+conservan sus deltas exactos (0.0000 mm de diferencia), y la piel de en medio se difumina con un campo biarmónico que
+llega al doble de lejos; las aristas estiradas más de 1.8× bajan de 9–12 % a 3.3–3.6 %. El cuerpo pasa de 51 191 a
+65 511 vértices. `check_sleeves.py` mide mano y antebrazo contra manga y puño (ver motor.md §4).
 Estudio: fondo curvo, luces de área (principal, relleno, contra, cenital y de rebote) y el HDRI de estudio
 de Blender para los reflejos. Vista de color **Standard**: con AgX el azul de marca se volvía lavanda y con
 Khronos PBR Neutral, violeta.
@@ -118,7 +132,7 @@ $B -b --factory-startup --python scripts/ia3d/build_rig.py -- --glb work/ia3d/mo
 $B -b work/ia3d/morfi_ia_rig.blend --python scripts/ia3d/face_ortho.py -- --out work/ia3d/face
 python scripts/ia3d/measure_face.py --dir work/ia3d/face          # face_features.json + eye_outline.json
 python scripts/ia3d/inpaint_face.py --mesh work/ia3d/mesh.npz --tex work/ia3d/tex/glb1_1_Image_0.jpg --face work/ia3d/face --out work/ia3d/tex/base_color_clean.jpg
-# manos, controles, cara, muñecas, acciones, materiales y lentes: ver docs/motor.md §1 (morfi_ia_rig_nohands -> morfi_ia_look5)
+# manos, controles, cara, muñecas, acciones, materiales y lentes: ver docs/motor.md §1 (morfi_ia_rig_nohands -> morfi_ia_anim7 -> morfi_ia_look7)
 $B -b work/ia3d/morfi_ia_look.blend --python scripts/ia3d/render_showcase.py -- --out work/ia3d/showcase
 ```
 
@@ -128,7 +142,7 @@ Es la portada del sitio (https://morfi-pet.vercel.app). El visor técnico del mo
 sigue igual en `web/tecnico.html`, enlazado desde ambas páginas.
 Todo el detalle del laboratorio (paneles, parámetros de URL, API, archivos publicados, cómo publicar y verificar)
 está en [`docs/laboratorio.md`](laboratorio.md). Lo que depende del modelo:
-- `scripts/ia3d/export_web.py` se corre sobre el **look final** (`morfi_ia_look5.blend`: anim5 → look4 → lentes) y
+- `scripts/ia3d/export_web.py` se corre sobre el **look final** (`morfi_ia_look7.blend`: anim7 → look4 → lentes → fix_body → fix_brows) y
   exporta `work/ia3d/web/morfi_live.glb`. Lleva el cuerpo, las manos articuladas, la tablet y la calculadora, los
   40 clips horneados cuadro por cuadro (IK de piernas y brazos ya aplicados), los shape keys de cejas y del
   relleno de la boca, `Glasses_Frame` (nodo y malla propios, rígido en el hueso de la cabeza, material

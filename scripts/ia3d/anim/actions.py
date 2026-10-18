@@ -13,6 +13,7 @@ import numpy as np
 
 from . import curves as C
 from .clip import Clip
+from . import motor
 
 
 def idle():
@@ -78,12 +79,19 @@ def wave():
     c.stretch(s, [(0, 1.0), (10, 1.0), (16, 1.06), (24, 1.03), (80, 1.03), (90, 1.0), (104, 1.0)])
     # the wave: forearm rocks about the elbow, the hand flags behind it, wider away from the head
     env = C.keys(n, [(0, 0), (22, 0), (27, 1), (76, 1), (84, 0), (104, 0)])
-    w = np.sin(2 * np.pi * (f - 22) / 13.0) * env
+    w = motor.wave_drive(n, 22, 84, period=13.0, seed=5)
+    # a wave rolls through the whole arm: the elbow leads, the forearm rocks, the wrist follows it
+    # (side and flex a quarter turn apart so the hand draws a small ellipse), the palm turns a
+    # little with every swing and the fingers cascade after the wrist
     c.forearm_lift(s, -np.where(w < 0, 15.0, 8.0) * w)
-    c.wrist(s, side=C.delay(-28.0 * w, 4), flex=[(0, 0), (8, 14), (16, -10), (22, -6), (80, -6), (90, 10),
-                                                  (98, 0), (104, 0)])
-    c.palm(s, [(0, 0), (10, 0), (18, 78), (80, 74), (91, 0), (104, 0)])   # palm to the viewer
-    c.hand(s, [(0, "relaxed"), (8, "soft"), (16, "spread"), (82, "spread"), (92, "relaxed"), (104, "relaxed")])
+    c.elbow(s, 4.5 * C.delay(w, -2.0))
+    c.arm_swing(s, 3.0 * C.delay(w, -1.0))
+    c.wrist(s, side=C.delay(-26.0 * w, 3.5), flex=np.array(C.keys(n, [(0, 0), (8, 14), (16, -10), (22, -6), (80, -6),
+                                                                     (90, 10), (98, 0), (104, 0)]))
+            + 9.0 * C.delay(w, 6.0))
+    c.palm(s, C.keys(n, [(0, 0), (10, 0), (18, 78), (80, 74), (91, 0), (104, 0)]) + 9.0 * C.delay(w, 2.0))
+    c.finger_roll(s, C.delay(w, 3.0), amp=11.0, lag=1.5)
+    c.hand(s, [(0, "relaxed"), (8, "soft"), (17, "open"), (82, "open"), (94, "relaxed"), (104, "relaxed")])
     c.hand("L", [(0, "relaxed"), (14, "soft"), (88, "soft"), (104, "relaxed")])
     c.arm_raise("L", [(0, 0), (14, 6), (88, 6), (104, 0)])
     # the body answers: leans away from the hand, opens the chest to the camera, bounces on every
@@ -94,7 +102,7 @@ def wave():
     c.add("chest.rz", [(0, 0), (16, -6), (80, -5), (96, 0)])
     c.squash(8, -0.06, "head", dur=6)
     c.squash(15, 0.08, "head", dur=16)
-    bounce = np.maximum(0, np.sin(2 * np.pi * (f - 22) / 13.0)) * env
+    bounce = np.maximum(0, w)
     c.add("hips.lz", -0.004 * bounce)
     c.add("chest.rx", 1.5 * C.delay(bounce, 2))
     c.add("head.rx", -1.2 * C.delay(bounce, 3))
@@ -178,7 +186,7 @@ def happy_jump():
         c.stretch(s, [(0, 1.0), (18, 1.0), (23, 1.07), (32, 1.05), (40, 1.0)])
         c.palm(s, [(0, 0), (16, 0), (22, 70), (38, 65), (50, 0)])
         c.wrist(s, side=[(0, 0), (19, 0), (24, -18), (29, 10), (34, -8), (40, 4), (46, 0)])
-        c.hand(s, [(0, "relaxed"), (12, "fist"), (19, "spread"), (38, "spread"), (50, "soft"), (66, "relaxed")])
+        c.hand(s, [(0, "relaxed"), (9, "fist"), (20, "spread"), (38, "spread"), (50, "soft"), (66, "relaxed")])
     # a happy wiggle of the head at the top
     c.add("head.ry", [(0, 0), (22, 0), (26, 6), (31, -5), (36, 2), (44, 0)])
     c.expr([(0, "happy", 0.6), (12, "happy"), (19, "joy"), (24, "laugh"), (34, "laugh"), (40, "joy"),

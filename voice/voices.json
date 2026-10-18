@@ -10,6 +10,10 @@
     {"key": "supervm", "name": "Super VM", "id": "gQRS0Lnh5XQOAqujMqUX", "pitch": 0, "note": "Héroe amigable (239 Hz)."},
     {"key": "sebastian", "name": "Sebastián", "id": "p7cwnUviDFhhX9y8sG2Q", "pitch": 0, "note": "Adolescente latino, cálido (205 Hz)."},
     {"key": "cuentacuentos", "name": "Cuentacuentos", "id": "A2ekoyYWxhBmOk8bT2mw", "pitch": 0, "note": "Joven, ligero, rápido (178 Hz)."},
-    {"key": "mark", "name": "Mark", "id": "DUnzBkwtjRWXPr6wRbmL", "pitch": 0, "note": "Caricaturesco y muy expresivo (136 Hz)."}
+    {"key": "mark", "name": "Mark", "id": "DUnzBkwtjRWXPr6wRbmL", "pitch": 0, "note": "Caricaturesco y muy expresivo (136 Hz)."},
+    {"key": "charlee", "name": "Charlee", "id": "cQIBhnciTWugZAxX52uW", "pitch": 0, "note": "Personaje de fantasía, juguetón y alegre (222 Hz)."},
+    {"key": "hal", "name": "Hal", "id": "aLyZxRoKf8CwWlGthFYB", "pitch": 0, "note": "Amigo animado, entusiasta y claro (229 Hz)."},
+    {"key": "synchro_sam", "name": "Synchro Sam", "id": "JTpoNHy6INFLV7b5DDwt", "pitch": 0, "note": "Emociones exageradas, muy de caricatura (213 Hz)."},
+    {"key": "max", "name": "Max", "id": "467tX2b9Bky3cD6jXpNa", "pitch": 0, "note": "Personaje de caricatura, enérgico y simpático (221 Hz)."}
   ]
 }

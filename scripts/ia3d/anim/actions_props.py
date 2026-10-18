@@ -225,7 +225,7 @@ def calculator():
     c.forearm_in("R", [(0, 0), (124, 0), (136, 18), (n - 24, 18), (n - 1, 0)])
     c.palm("R", [(0, 0), (124, 0), (136, 60), (n - 24, 60), (n - 1, 0)])
     c.stretch("R", [(0, 1.0), (130, 1.0), (136, 1.06), (144, 1.03), (n - 24, 1.03), (n - 1, 1.0)])
-    c.hand("R", hand_r + [(126, "relaxed"), (130, "fist"), (135, "fist"), (137, "thumbs_up"), (n - 24, "thumbs_up"),
+    c.hand("R", hand_r + [(126, "relaxed"), (130, "fist"), (133, "fist"), (137, "thumbs_up"), (n - 24, "thumbs_up"),
                           (n - 6, "relaxed")])
     c.add("thumb.R.cx", C.pulse(n, 137, [(-1, 0), (2, -14), (6, 4), (9, 0)]))
     # eyes on the keys he presses (head down as far as his chin allows), then at the viewer

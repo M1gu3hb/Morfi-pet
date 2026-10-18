@@ -65,7 +65,7 @@ def append_actions(path, wanted):
     """Append the actions of another .blend whose name passes `wanted` (the file is only read)."""
     with bpy.data.libraries.load(path, link=False) as (src, dst):
         names = [n for n in src.actions if wanted(n)]
-        dst.actions = names
+        dst.actions = list(names)      # a copy: Blender may rewrite the list it is given
     for name, act in zip(names, dst.actions):
         if act is not None and act.name != name:
             # Blender gave it a '.001' because a same-named action is already here: that one goes

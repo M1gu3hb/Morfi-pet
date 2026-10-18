@@ -16,7 +16,7 @@ Panel lateral en pantallas anchas; hoja inferior en celular (≤ 720 px). Seccio
 
 | Sección | Qué hace |
 |---|---|
-| **Que diga algo** | Selector de voz y 12 frases (botones cortos; el texto completo va en el tooltip). Al tocar una, Morfi la dice con su voz real: boca sincronizada con el audio, expresión de la frase y un gesto del cuerpo. La voz elegida se recuerda (`localStorage` `morfi.voice`). Voz oficial: Super VM; hay 6 para comparar. |
+| **Que diga algo** | Selector de voz y 12 frases (botones cortos; el texto completo va en el tooltip). Al tocar una, Morfi la dice con su voz real: boca sincronizada con el audio, expresión de la frase y un gesto del cuerpo. La voz elegida se recuerda (`localStorage` `morfi.voice`). Voz oficial: Super VM; hay 10 voces para comparar (las 4 nuevas, parecidas a Super VM —personaje de caricatura, amigable, ni femenina ni grave—, van después de «Mark»: Charlee, Hal, Synchro Sam y Max). |
 | **Escenas** | 6 actuaciones completas con voz (presentación, calculadora, idea, ventas, susto, sueño). Duración en cada botón. Al empezar una, aparece el reproductor flotante. Interruptor **Cámara de cine** (activo por defecto; aparece cuando las escenas cargaron). |
 | **Video completo** | Lista el video del punto de venta (`POS_Video`, "Tutorial del punto de venta", "Con su voz · mm:ss"). Se oculta si no hay videos. |
 | **Animaciones** | Grupo `actions`: Reposo, Saludar, Hablar, Sí, No, Curioso, Presentar, ¡Feliz!, Caminar, Correr, Bailar. |
@@ -86,9 +86,9 @@ celular. Dos bloques, cada uno con su interruptor y sus controles, más "Restabl
   revés" (solo se ven bien por tener material de dos caras): se detectan y se voltean para el casco. Sin
   línea dentro de la cara; las calcomanías de ojos y boca y los lentes no llevan contorno; el armazón
   (`Glasses_Frame`) lleva el grosor de lentes.
-- **Barrido (smear)** (`fx_smear.ts`): empuja la piel hacia atrás de la velocidad; máscara por hueso (brazos y
+- **Barrido (smear)** (`fx_smear.ts`): empuja la piel hacia atrás, hacia una pose "estela" suavizada (`dqskin.ts`, `TRAIL_TAU` 0.05 s, independiente de los Hz de la pantalla, tope blando `tanh` de 45 mm) y no hacia el cuadro anterior: sin saltos escalonados al 100 %; máscara por hueso (brazos y
   manos 1, hombros 0.6, piernas 0.7, cabeza y tronco 0.15). Calcomanías, lentes y objetos reciben el mismo empuje
-  desde su propia matriz anterior para no despegarse.
+  desde su propia estela para no despegarse.
 - **Estirar y aplastar** (`fx_squash.ts`): resorte sobre la velocidad de la cadera, aplicado a todo el cuerpo
   (el grupo `Morfi_Squash` contiene al modelo). Medido con 0.6: Jump_Happy 0.943–1.066, Celebrate 0.929–1.072.
 - Los ajustes se guardan en `localStorage` (`morfi.style.v1`). `?lowpower` arranca con barrido 0; "reducir
@@ -171,22 +171,22 @@ Ganchos de prueba: `window.__morfiReady` (true cuando cargó todo), `window.__mo
 | `models/morfi_live_anims.json` | Curvas de cara de cada clip, las 18 expresiones y `label`/`group` de cada clip |
 | `models/morfi_live_scenes.glb` | Solo animación de las escenas (mismos nombres de hueso que `morfi_live.glb`) y `POS_Video` |
 | `models/morfi_live_scenes.json` | `{fps, scenes: {<Clip>: {title, group: "scene"\|"video", frames, audio, solo, camera: [[t, shot]…], props: {18 curvas de cara}}}}` |
-| `voice/index.json` | Voz por omisión, las 6 voces, las frases (texto, `mood`, `gesture`) y la duración de cada clip por voz |
+| `voice/index.json` | Voz por omisión, las 10 voces, las frases (texto, `mood`, `gesture`) y la duración de cada clip por voz |
 | `voice/<voz>/<frase>.mp3` y `.json` | Audio y alineación por letra (`chars`, `t0`, `t1`) y envolvente por 1/30 s (`env`) |
 | `voice/scenes/<escena>.mp3` y `.json` | Audio de cada escena (líneas + efectos) y su alineación unida; `pos_video.mp3` es el audio del video del POS |
 | `models/morfi.glb`, `models/views.json`, `refs/`, `look/` | Del visor técnico |
 
-Tamaños reales publicados (17-oct-2026, medidos):
+Tamaños reales (18-oct-2026, medidos tras `sync-live`, modelo `look7`):
 
 | Archivo | Tamaño |
 |---|---|
-| `models/morfi_live.glb` | 7.5 MB (7 524 356 B) |
-| `models/morfi_live_scenes.glb` | 1.4 MB (1 436 224 B) |
+| `models/morfi_live.glb` | 8.3 MB (8 341 328 B) |
+| `models/morfi_live_scenes.glb` | 1.7 MB (1 686 484 B) |
 | `models/morfi_live_scenes.json` | 358 KB (366 296 B) |
-| `models/morfi_live_anims.json` | 367 KB (376 255 B) |
-| `voice/scenes/*.mp3` | 139–172 KB cada una las 6 escenas (ventas 170, susto 139, sueño 156, presentación 140, idea 145, calculadora 172 KB); `pos_video.mp3` 720 KB (737 011 B) |
+| `models/morfi_live_anims.json` | 359 KB (367 050 B) |
+| `voice/scenes/*.mp3` | 139–172 KB cada una las 6 escenas (ventas 170, susto 139, sueño 156, presentación 140, idea 145, calculadora 172 KB; sin cambio); `pos_video.mp3` 720 KB (737 011 B) |
 
-Lo que baja un visitante: ~7.5 MB al entrar; las escenas (1.4 MB + 358 KB + su mp3) solo al abrir «Escenas».
+Lo que baja un visitante: ~8.3 MB al entrar; las escenas (1.7 MB + 358 KB + su mp3) solo al abrir «Escenas».
 
 Los `.glb` de `models/` van como git normal (no LFS: `.gitattributes`), así Vercel sirve el archivo real. Los mp3
 también son git normal. `/models/*` se sirve con `Cache-Control: max-age=300`: un modelo nuevo puede tardar 5
@@ -210,7 +210,7 @@ JSON deben ser iguales a los nombres de los clips del GLB; una escena sin clip s
 **Una frase.** (1) Agrégala a `voice/phrases.json` (`key`, `text` con etiquetas `[excited]`/`[laughs]`… de
 `eleven_v3`, `mood` = una expresión de `EXPRESSIONS`, `gesture` = una clave de `GESTURES` en `voice.ts`).
 (2) Genera la voz (la llave solo va en el comando):
-`XI_KEY=<llave> python voice/gen.py phrases --voices supervm` (sin `--voices` genera las 6 voces; `--force`
+`XI_KEY=<llave> python voice/gen.py phrases --voices supervm` (sin `--voices` genera las 10 voces; `--force`
 regenera lo que ya existe). Reescribe `web/public/voice/index.json`. (3) Si el texto es largo, agrega su botón
 corto en `LABELS` de `voice.ts` (si no, el botón muestra la primera oración). (4) Revisa la toma
 ([morfi-guia.md](morfi-guia.md) §3).
@@ -232,7 +232,9 @@ audio y bake con `make_scenes.py`, exportar con `export_scenes.py`.
 ## 8. Publicar
 
 Cadena completa (desde la raíz del repo; `B=/d/tools/bl.sh`; archivos intermedios en `work/ia3d/`, ignorado por
-git). Los pasos de Blender están en [motor.md](motor.md) §1; al final:
+git). Los pasos de Blender están en [motor.md](motor.md) §1 (`anim7 → build_look → look4 → fix_glasses → look5 →
+fix_body → look6 → fix_brows → look7`; `export_web.py`, `export_scenes.py` con `--scenes work/ia3d/morfi_ia_scenes3.blend`
+y `export_face_anims.py` se corren sobre `look7`); al final:
 
 ```bash
 python scripts/ia3d/export_face_anims.py --out work/ia3d/web/morfi_live_anims.json

@@ -7,7 +7,9 @@ voice, and gestures dropped in at the frame of the word they belong to.
     p = Performance(n_frames)
     p.speak(lines)                          # lip-sync + speech body language from the voiceover
     p.c.arm_raise("R", [(f0, 0), ...])      # FK gestures: additive channel keys that start and end at 0
-    p.hand("R", [(f, "point"), ...])        # hand shapes: one key list per hand (never summed)
+    p.hand("R", [(f, "point"), ...])        # hand shapes: one key list per hand (never summed); the motor
+                                            # layer (motor.hand_channels) makes them alive: cascade, spring, drift
+    p.beat("R", [f, ...], strength)         # fingers open on emphasis (also automatic on stressed words)
     p.reach("R", [(f, point | None, w)])    # IK wrist targets (prop space), one list per hand
     p.orient("R", [(f, fingers, palm)])     # IK hand orientation (world directions)
     p.look([(f, point | None)])             # head + eyes towards points
@@ -50,6 +52,8 @@ class Performance:
         self.shows = {}
         self.contacts, self.supports = [], []
         self.blinks = []
+        self.stress_frames = []              # frames of the stressed words (from speak())
+        self.beats = {"L": [], "R": []}      # explicit hand emphasis beats (frame, strength)
         self.prop_loc, self.prop_rot = tuple(prop_loc), tuple(prop_rot)
 
     # ------------------------------------------------------------ helpers
@@ -72,6 +76,10 @@ class Performance:
 
     def orient(self, side, keys):
         self.orients[side] += list(keys)
+
+    def beat(self, side, frames, strength=1.0):
+        """Emphasis beats on a hand: the fingers open and spread a little on each frame and settle."""
+        self.beats[side] += [(f, strength) for f in frames]
 
     def look(self, keys):
         self.looks += list(keys)
@@ -127,6 +135,7 @@ class Performance:
             for ws in ln.get("stress", []):
                 f0 = self.f(ln["start"] + ws)
                 if 0 <= f0 < n:
+                    self.stress_frames.append(f0)
                     nod[f0] += rng.uniform(1.6, 2.8)
                     brow[f0] += rng.uniform(0.25, 0.45)
             if ln.get("question"):
@@ -144,7 +153,18 @@ class Performance:
         self.c.prop("brow_R", br * 0.9)
 
     # ------------------------------------------------------------ build
-    def build(self, life=True, sway=1.0):
+    def _free(self, side, f):
+        """True when no contact or palm support of this hand is active around frame f."""
+        for spec in list(self.contacts) + list(self.supports):
+            if spec["side"] == side:
+                a, b = spec["frames"]
+                if a - 14 <= f <= b + 14:
+                    return False
+        return True
+
+    def build(self, life=True, sway=1.0, auto_beats=True):
+        """auto_beats: a hand that is free (no touch or support near it, not pointing or holding a
+        shape that must stay exact) opens its fingers a little on the stressed words, alternating hands."""
         c = self.c
         if life:
             extra = list(range(int(self.fps * 2.4), self.n, int(self.fps * 3.3)))
@@ -161,6 +181,15 @@ class Performance:
                 c.reach_rot(side, rx, ry, rz)
             if self.hands[side]:
                 c.hand(side, sorted(self.hands[side], key=lambda k: k[0]))
+        if auto_beats:
+            for k, f0 in enumerate(sorted(self.stress_frames)):
+                side = "R" if k % 2 == 0 else "L"
+                shape = [s for t, s in sorted(self.hands[side], key=lambda x: x[0]) if t <= f0]
+                if self._free(side, f0) and (not shape or shape[-1] in ("relaxed", "soft", "open", "spread", "rest", "stop")):
+                    self.beats[side].append((f0 + 1, 0.45))
+        for side in ("L", "R"):
+            for f0, st in self.beats[side]:
+                c.hand_beat(side, [f0], strength=st)
         if self.looks:
             c.look_at(sorted(self.looks, key=lambda k: k[0]), head=0.45, neck=0.12, max_nod=6.0)
         if self.exprs:

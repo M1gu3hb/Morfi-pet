@@ -56,8 +56,8 @@ def count_123():
     # each number: the hand dips, then pops up as the finger shoots out, and settles
     for b in beats:
         c.add("hand_ik.R.lz", C.pulse(n, b, [(-6, 0.0), (-2, -0.014), (2, 0.016), (6, 0.008), (10, 0.0)]))
-    c.hand("R", [(0, "relaxed"), (12, "fist"), (beats[0] - 1, "fist"), (beats[0] + 1, "count1"), (beats[1] - 1, "count1"),
-                 (beats[1] + 1, "count2"), (beats[2] - 1, "count2"), (beats[2] + 1, "count3"), (104, "count3"),
+    c.hand("R", [(0, "relaxed"), (12, "fist"), (beats[0] - 3, "fist"), (beats[0] + 1, "count1"), (beats[1] - 3, "count1"),
+                 (beats[1] + 1, "count2"), (beats[2] - 3, "count2"), (beats[2] + 1, "count3"), (104, "count3"),
                  (116, "relaxed")])
     for b, fing in zip(beats, ("index", "middle", "ring")):       # the new finger overshoots straight
         for seg in (1, 2, 3):
@@ -99,7 +99,7 @@ def thumbs_up():
     for t in (46, 56):                                           # thumb pumps
         c.add("hand_ik.R.lz", C.pulse(n, t, [(-4, 0.0), (-1, -0.012), (2, 0.012), (6, 0.0)]))
         c.add("hand_ik.R.ly", C.pulse(n, t, [(-4, 0.0), (2, -0.01), (6, 0.0)]))
-    c.hand("R", [(0, "relaxed"), (8, "fist"), (15, "fist"), (17, "thumbs_up"), (72, "thumbs_up"), (84, "relaxed")])
+    c.hand("R", [(0, "relaxed"), (8, "fist"), (13, "fist"), (17, "thumbs_up"), (72, "thumbs_up"), (84, "relaxed")])
     c.add("thumb.R.cx", C.pulse(n, 17, [(-1, 0), (2, -14), (6, 4), (9, 0)]))
     c.hand("L", [(0, "relaxed"), (14, "fist"), (70, "fist"), (84, "relaxed")])
     c.elbow("L", [(0, 0), (12, 30), (70, 28), (84, 0)])
@@ -133,7 +133,7 @@ def point_side():
                                    (17, (1.0, -0.25, 0.1), (0.0, 0.2, -1.0))])
     c.reach_rot("L", rx, ry, rz)
     c.add("shoulder.L.rz", [(0, 0), (12, 8), (18, -10), (96, -8), (110, 0)])
-    c.hand("L", [(0, "relaxed"), (10, "fist"), (16, "fist"), (18, "point_pop"), (24, "point"), (62, "point"),
+    c.hand("L", [(0, "relaxed"), (10, "fist"), (14, "fist"), (18, "point_pop"), (24, "point"), (62, "point"),
                  (66, "point_pop"), (72, "point"), (98, "point"), (110, "relaxed")])
     c.hand("R", [(0, "relaxed"), (16, "soft"), (100, "soft"), (112, "relaxed")])
     c.prop("gaze_x", [(0, 0), (8, 0), (10, -0.4), (16, 0.85), (40, 0.75), (42, -0.1), (56, -0.1), (58, 0.8),
@@ -184,7 +184,7 @@ def idea():
     rx, ry, rz = orient_keys("R", [(0, (-0.1, -0.1, 1.0), FRONT)])
     c.reach_rot("R", rx, ry, rz)
     c.add("shoulder.R.rz", [(0, 0), (34, 0), (40, 10), (88, 10), (100, 0)])
-    c.hand("R", [(0, "relaxed"), (8, "soft"), (30, "soft"), (35, "fist"), (39, "point_pop"), (46, "count1"),
+    c.hand("R", [(0, "relaxed"), (8, "soft"), (26, "soft"), (35, "fist"), (39, "point_pop"), (46, "count1"),
                  (90, "count1"), (100, "relaxed")])
     c.hand("L", [(0, "relaxed"), (36, "relaxed"), (42, "spread"), (60, "soft"), (90, "relaxed")])
     c.arm_raise("L", [(0, 0), (36, 0), (42, 24), (52, 14), (70, 6), (90, 0)])
@@ -449,6 +449,7 @@ def scared():
         c.add(f"hand_ik.{s}.lz", 0.006 * tremble)
         c.add(f"hand_ik.{s}.lx", 0.004 * C.delay(tremble, 1))
         c.hand(s, [(0, "relaxed"), (8, "spread"), (20, "claw"), (84, "claw"), (98, "relaxed")])
+        c.hand_flutter(s, 1.0, env)                                    # the fingers tremble with the fear
         c.shrug(s, [(0, 0), (8, 12), (18, 8), (84, 7), (98, -2), (106, 0)])
         c.foot(s, turn=-6.0 * sg * env + 4.0 * sg * knock)             # knees in, knocking
     c.expr([(0, "neutral"), (4, "surprised"), (12, "scared"), (84, "scared"), (94, "calm"), (106, "happy"),
@@ -505,7 +506,9 @@ def celebrate():
         c.forearm_lift(s, [(0, 0), (16, 0), (20, 52), (42, 50), (58, 0)])
         c.elbow(s, [(0, 0), (11, 30), (18, 10), (22, 22), (25, 10), (29, 22), (32, 10), (56, 0)])  # fist pumps
         c.stretch(s, [(0, 1.0), (14, 1.0), (19, 1.07), (34, 1.05), (42, 1.04), (56, 1.0)])
-        c.hand(s, [(0, "relaxed"), (10, "fist"), (56, "fist"), (68, "relaxed")])
+        o = 0 if s == "L" else 1                       # the hands pump a frame apart
+        c.hand(s, [(0, "relaxed"), (10, "fist"), (19 + o, "grip"), (23 + o, "fist"), (28 + o, "grip"), (33 + o, "fist"),
+                   (44, "grip"), (56, "fist"), (68, "relaxed")])
     c.add("chest.rx", [(0, 0), (11, 5), (17, -6), (34, -4), (40, 4), (52, 0)])
     c.expr([(0, "happy"), (10, "determined", 0.5), (17, "joy"), (21, "laugh"), (40, "joy"), (n - 1, "happy")])
     c.prop("mouth_open", [(0, 0), (12, -0.4), (18, 0.3), (40, 0.2), (n - 1, 0)])
@@ -526,7 +529,7 @@ def shrug():
         c.elbow(s, k([(0, 0), (10, 8), (18, 66), (22, 60), (52, 60), (64, 0)]))
         c.forearm_lift(s, k([(0, 0), (12, 0), (20, 38), (52, 34), (64, 0)]))
         c.palm(s, k([(0, 0), (12, 0), (20, -78), (52, -74), (64, 0)]))
-        c.hand(s, k([(0, "relaxed"), (14, "spread"), (52, "open"), (64, "relaxed")]))
+        c.hand(s, k([(0, "relaxed"), (14, "palm_up"), (34, "palm_up"), (52, "soft"), (66, "relaxed")]))
     c.sy("neck", [(0, 1.0), (12, 1.0), (19, 0.92), (24, 0.95), (50, 0.95), (62, 1.0)])
     c.add("head.ry", [(0, 0), (14, 0), (22, -4), (26, -3), (52, -3), (64, 0)])     # a tilt
     c.add("head.rx", [(0, 0), (12, 2), (20, -4), (52, -3), (64, 0)])

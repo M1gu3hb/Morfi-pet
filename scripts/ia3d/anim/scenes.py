@@ -28,8 +28,14 @@ import numpy as np
 from . import curves as C
 from .acting import Acting
 from .clip import FPS, Clip
-from .motor import PROP_REST, prop_world, rot_matrix
+from .motor import HAND_SHAPES, PROP_REST, prop_world, rot_matrix
 from .performance import CLOSED, NARROW, TALK_BASE, VOWEL, Performance
+
+
+def exact(name):
+    """A shape the hand layer keeps at its exact angles: the fingers that touch his skin must land."""
+    return dict(HAND_SHAPES[name], _loose=0.05)
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
@@ -482,7 +488,7 @@ class Scene:
                                 "region": [f"hand.{side}", f"index.01.{side}", f"middle.01.{side}",
                                            f"ring.01.{side}"]})
         self.add(f"shoulder.{side}.rz", [(t0 - ramp + 0.1, 0), (t0, -15 * sg), (t1, -15 * sg), (t1 + ramp, 0)])
-        self.hand(side, [(t0 - 0.2, "hold_flat"), (t1, "hold_flat"), (t1 + ramp, "relaxed")])
+        self.hand(side, [(t0 - 0.2, exact("hold_flat")), (t1, exact("hold_flat")), (t1 + ramp, "relaxed")])
 
     def cheeks(self, t0, t1, ramp=0.3):
         """Both palms on his cheeks ('¡no puede ser!')."""
@@ -517,7 +523,7 @@ class Scene:
                                         "region": ["index.02.R", "index.03.R"]})
         self.add("shoulder.R.rz", [(t0 - ramp, 0), (t0, 26), (t1, 26), (t1 + ramp, 0)])
         self.c.shrug("R", self.k([(t0 - ramp, 0), (t0, 8), (t1, 8), (t1 + ramp, 0)]))
-        self.hand("R", [(t0 - ramp, "relaxed"), (t0 - 0.15, "point"), (t1, "point"), (t1 + ramp, "relaxed")])
+        self.hand("R", [(t0 - ramp, "relaxed"), (t0 - 0.15, exact("point")), (t1, exact("point")), (t1 + ramp, "relaxed")])
 
     def present(self, side, t0, t1, raise_=40.0, swing=34.0, palm=-55.0):
         """Arm out to his side, palm up: 'look at this'."""
@@ -603,7 +609,7 @@ class Scene:
                                         "frames": (self.F(a), self.F(b)), "ramp": 3,
                                         "region": ["index.02.R", "index.03.R"]})
         self.c.shrug("R", self.k([(t0 - ramp, 0), (t0, 8), (t1, 8), (t1 + ramp, 0)]))
-        self.hand("R", [(t0 - ramp, "relaxed"), (t0 - 0.12, "point"), (t1, "point"), (t1 + ramp, "relaxed")])
+        self.hand("R", [(t0 - ramp, "relaxed"), (t0 - 0.12, exact("point")), (t1, exact("point")), (t1 + ramp, "relaxed")])
 
     def fan(self, side, t0, t1, ramp=0.22):
         """Fans his face with an open hand ('¡qué calor, qué día!'), the palm towards it (IK)."""
@@ -712,6 +718,19 @@ def finish(p):
         if f"prop.{k}" in clip.ch:
             clip.ch[f"prop.{k}"] = np.clip(clip.ch[f"prop.{k}"], lo, hi)
     clip.max_reach = getattr(p, "max_reach", None)
+    # a hand resting on his skin keeps its wrist still: the wrist's follow-through would tilt the palm
+    # off the skin (a few mm), so it fades out over each touch and back in after it
+    for c in p.contacts:
+        if "touch" not in c:
+            continue
+        f0, f1 = c["frames"]
+        r = int(c.get("ramp", 6))
+        w = np.clip(np.minimum((np.arange(clip.n) - (f0 - r)) / max(r, 1), ((f1 + r) - np.arange(clip.n)) / max(r, 1)),
+                    0.0, 1.0)
+        for ax in ("rx", "ry", "rz"):
+            key = f"hand.{c['side']}.{ax}"
+            if key in clip.ch:
+                clip.ch[key] = clip.ch[key] * (1.0 - w)
     return clip
 
 

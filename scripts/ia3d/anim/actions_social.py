@@ -88,6 +88,9 @@ def talk():
         nod += pulse * (1.0 if k % 3 else 1.6)
         if k % 2 == 0:
             c.dip(t0, depth=0.009, chest=2.0, dur=12)
+    for k, t0 in enumerate(stress):
+        if 24 <= t0 <= n - 26:
+            c.hand_beat("R" if k % 2 == 0 else "L", [t0 + 1], strength=0.8)
     c.elbow("R", beat_r * 14.0)
     c.elbow("L", beat_l * 14.0)
     c.arm_raise("R", beat_r * 5.0)
@@ -273,10 +276,10 @@ def dance():
         c.elbow(s, C.ease(n, elb[s], loop=True))
         c.arm_fwd(s, C.ease(n, fwd[s], loop=True))
         c.wrist(s, side=C.delay(C.sine(n, beat, 10.0), 3, loop=True))
-    c.hand("R", [(0, "point"), (12, "point"), (15, "fist"), (28, "fist"), (30, "fist"), (44, "fist"), (46, "spread"),
-                 (57, "spread"), (59, "point")])
-    c.hand("L", [(0, "fist"), (13, "fist"), (15, "point"), (28, "point"), (30, "fist"), (44, "fist"), (46, "spread"),
-                 (57, "spread"), (59, "fist")])
+    c.hand("R", [(0, "point"), (10, "point"), (15, "fist"), (28, "fist"), (30, "fist"), (42, "fist"), (46, "spread"),
+                 (57, "spread"), (61, "point")])
+    c.hand("L", [(0, "fist"), (10, "fist"), (15, "point"), (28, "point"), (32, "fist"), (42, "fist"), (46, "spread"),
+                 (57, "spread"), (61, "fist")])
     c.palm("R", [(0, 30), (15, 0), (45, 60), (59, 30)])
     c.palm("L", [(0, 0), (15, 30), (45, 60), (59, 0)])
     c.expr([(0, "joy")], scale=0.9)

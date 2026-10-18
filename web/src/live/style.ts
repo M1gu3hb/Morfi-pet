@@ -12,7 +12,7 @@
 //   seek / clip reset without a crossfade (optional): style.cut()
 import * as THREE from 'three';
 import './style.css';
-import { dqFrameTick, setDualQuatMask } from '../dqskin';
+import { TRAIL_TAU, dqFrameTick, setDualQuatMask } from '../dqskin';
 import { Outline, outlineUniforms, smoothNormals, type OutlineTarget } from './outline';
 import { rigidSmear, smearUniforms, updateRigidSmear, useSmear, type RigidSmear } from './fx_smear';
 import { SquashStretch } from './fx_squash';
@@ -230,7 +230,7 @@ export function createStyle(o: StyleOptions): Style {
     const capturePrev = () => {
       model.updateMatrixWorld(true);
       _modelInv.copy(model.matrixWorld).invert();
-      for (const r of rigid) updateRigidSmear(r, _modelInv, false);
+      for (const r of rigid) updateRigidSmear(r, _modelInv, false, 1);
     };
     import('./fx_debug').then((d) => { hooks = d.installDebug({ model, renderer: o.renderer, camera: o.camera, style: api, capturePrev, squash }); })
       .catch((err: unknown) => console.error(err));
@@ -254,11 +254,14 @@ export function createStyle(o: StyleOptions): Style {
       model.updateMatrixWorld(true);
       if (jump) squash.reset();
       squash.update(fixed ? 1 / 60 : Math.max(dt, 1e-4), s.fx ? s.squash : 0, s.sensitivity);
-      // velocities: the pose of the last rendered frame becomes the previous one
-      dqFrameTick(jump, TELEPORT * step * 60);
+      // velocities: the trail pose chases the new pose (same time constant at any frame rate)
+      // (a held debug pose has its previous pose in the trail: chase 0 for the rigid pieces, scale 1)
+      const chase = fixed ? 0 : 1 - Math.exp(-Math.max(step, 1e-4) / TRAIL_TAU);
+      dqFrameTick(jump, TELEPORT * step * 60, step, fixed);
       _modelInv.copy(model.matrixWorld).invert();
-      for (const r of rigid) updateRigidSmear(r, _modelInv, jump);
-      smearUniforms.fxFrameScale.value = jump ? 0 : THREE.MathUtils.clamp(1 / 60 / step, 0.1, 4);
+      for (const r of rigid) updateRigidSmear(r, _modelInv, jump, chase);
+      // at constant speed the trail lags by v * step * (1 - chase) / chase: that gap -> speed per 1/60 s
+      smearUniforms.fxFrameScale.value = jump ? 0 : fixed ? 1 : chase / ((1 - chase) * Math.max(step, 1e-4) * 60);
     },
     beforeContact(): void {
       outline?.setVisible(false);

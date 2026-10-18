@@ -95,6 +95,18 @@ class Clip:
         from . import motor
         motor.hand_channels(self, s, keys)
 
+    def finger_roll(self, s, drive, amp=9.0, lag=1.4):
+        from . import motor
+        motor.finger_roll(self, s, drive, amp, lag)
+
+    def hand_flutter(self, s, strength=1.0, when=None):
+        from . import motor
+        motor.hand_flutter(self, s, strength, when)
+
+    def hand_beat(self, s, frames, strength=1.0):
+        from . import motor
+        motor.hand_beat(self, s, frames, strength)
+
     def expr(self, keys, scale=1.0):
         from . import motor
         motor.expr_channels(self, keys, scale)
@@ -264,17 +276,15 @@ class Clip:
                 self.add(f"upper_arm.{s}.{ax}", lag)
             self.add(f"head.{ax}", np.clip(C.jiggle(a, freq=2.6, damping=0.35, gain=gain * 0.5, fps=self.fps,
                                                     loop=loop), -3, 3))
-        for s in ("L", "R"):
-            for ax in ("rx", "rz"):
-                a = C.accel(self.get(f"forearm.{s}.{ax}") + self.get(f"upper_arm.{s}.{ax}"), self.fps, loop)
-                self.add(f"hand.{s}.{ax}", np.clip(C.jiggle(a, freq=3.0, damping=0.30, gain=0.003, fps=self.fps,
-                                                           loop=loop), -6, 6))
+        from . import motor
+        motor.hand_follow(self)
 
     def life(self, seed=0, breath=1.0, sway=1.0, blinks=None, arms=True, hands=True):
         """The always-on layer that keeps him alive: breathing, the weight drifting from one foot
         to the other, a torso that is never quite square, a head that is never still, arms and
         fingers that drift, and blinks. Every action starts from this."""
         n, loop = self.n, self.loop
+        self.seed = seed
         period = 80.0                       # ~22 breaths a minute: calm
         if loop:                            # a period that divides the loop
             period = n / max(1, round(n / 80))
@@ -303,8 +313,8 @@ class Clip:
                 self.arm_swing(s, C.noise(n, 90, 2.0 * sway, seed + 13 + k, loop))
                 self.elbow(s, 12.0 + C.noise(n, 60, 3.0 * sway, seed + 15 + k, loop))
                 self.wrist(s, flex=6.0 + C.noise(n, 50, 3.0 * sway, seed + 17 + k, loop))
-                if hands:                   # actions that pose the fingers use the motor instead
-                    self.curl(s, 8.0 + C.noise(n, 40, 5.0 * sway, seed + 19 + k, loop))
+                # fingers: Clip.secondary gives every hand nobody keyed its own relaxed, drifting
+                # fingers (curl gradient and drift per finger, never in unison)
         if blinks:
             b = C.blink_track(n, blinks)
             self.prop("blink_L", b)
