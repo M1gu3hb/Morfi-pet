@@ -108,8 +108,12 @@ work/ia3d/morfi_ia_look5.blend` (cadena completa en motor.md §1).
 **Cuerpo y cejas (look6, look7).** `fix_body.py` (look5 → look6, idempotente, `--undo` restaura el cuerpo original que
 guarda en `body_fix_orig`): (1) **cuello**: parte las 382 aristas de la costura piel/cuello de la sudadera (383
 vértices con copia del lado piel y sus shape keys), deja la piel rígida en `head` y el cuello de la sudadera rígido en
-`chest`, y reemplaza el "techo" aserrado bajo la cabeza (1 367 caras a menos de 19 cm del eje) por una "copa" de piel
-de 433 vértices rígida en la cabeza, así ya no se estira la tira entre cabeza y chamarra; (2) **puños**: muñeca
+`chest`, así ya no se estira la tira entre cabeza y chamarra. Agrega un **tubo de cuello** liso que mezcla `chest` →
+`head` (z 0.43–0.49) y entra a la cabeza, y **cierra la cabeza por debajo** con un piso regular (anillos + centro,
+289 vértices, rígido en la cabeza, color plano de piel, 2 mm sobre el techo original). También quita los pliegues
+aserrados que miraban hacia arriba y los dientes sueltos que quedaban bajo el piso, y sella el borde del techo contra
+el piso. Antes, la capucha cerraba la cabeza por abajo; al soltar la costura quedaba un hueco que se veía al voltear
+o desde abajo. Ahora ningún rayo ve el interior de la cabeza. (2) **puños**: muñeca
 oculta al 62 % que termina en punta tras el puño, y el borde del puño sigue a la mano al 85 % (se desvanece al
 antebrazo en 5 cm), con lo que el pulgar y la palma ya no cruzan la pared del puño (0 mm); (3) **membranas entre dedos**
 (índice–medio y medio–anular: 220 / 228 caras quitadas; entre pulgar e índice no hay nada que cortar). `fix_brows.py`
@@ -117,7 +121,7 @@ antebrazo en 5 cm), con lo que el pulgar y la palma ya no cruzan la pared del pu
 cejas (sin mover la forma de reposo) y reconstruye las 4 claves de cejas: las cejas pintadas y la costura del armazón
 conservan sus deltas exactos (0.0000 mm de diferencia), y la piel de en medio se difumina con un campo biarmónico que
 llega al doble de lejos; las aristas estiradas más de 1.8× bajan de 9–12 % a 3.3–3.6 %. El cuerpo pasa de 51 191 a
-65 511 vértices. `check_sleeves.py` mide mano y antebrazo contra manga y puño (ver motor.md §4).
+65 800 vértices. `check_sleeves.py` mide mano y antebrazo contra manga y puño (ver motor.md §4).
 Estudio: fondo curvo, luces de área (principal, relleno, contra, cenital y de rebote) y el HDRI de estudio
 de Blender para los reflejos. Vista de color **Standard**: con AgX el azul de marca se volvía lavanda y con
 Khronos PBR Neutral, violeta.

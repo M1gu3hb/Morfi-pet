@@ -47,7 +47,7 @@ archivo, publicar, verificar): [laboratorio.md](laboratorio.md) §5-8.
 build_look → look2 → fix_wrists → look3` (26 clips, sin el arreglo de contactos FK ni los lentes nuevos). Quedan
 como están; para un video nuevo se parte de `look7`.
 
-**Orden de `fix_body.py` y `fix_brows.py`**: `fix_body` cambia la topología de `Morfi_Body` (separa la costura del cuello, añade la "copa" bajo la cabeza, quita las membranas entre dedos), por lo que los polígonos ya no son todos triángulos; `fix_brows` va después y trabaja con triángulos y cuadriláteros (triangula en abanico para calcular el campo de las cejas). Comprobado en `look7`: vértices = claves de forma = UV = pesos sin vértices sin peso, 0 caras degeneradas, 0 UV volteados.
+**Orden de `fix_body.py` y `fix_brows.py`**: `fix_body` cambia la topología de `Morfi_Body` (separa la costura del cuello, añade el tubo del cuello y el piso que cierra la cabeza por debajo, quita las membranas entre dedos), por lo que los polígonos ya no son todos triángulos; `fix_brows` va después y trabaja con triángulos y cuadriláteros (triangula en abanico para calcular el campo de las cejas). Comprobado en `look7`: vértices = claves de forma = UV = pesos sin vértices sin peso, 0 caras degeneradas, 0 UV volteados.
 
 **Hornear en paralelo.** El bake completo toca contactos cuadro por cuadro: una sola corrida de los 40 clips
 tarda más de una hora. Se parte en grupos con `--only` (cada uno a su archivo, varios Blender a la vez, ~35
@@ -344,7 +344,7 @@ Estado al 18-oct-2026 (`morfi_ia_anim7.blend` -> `morfi_ia_look7.blend`, 40 clip
 - Vistas previas de los clips y hojas de contacto: se revisaron todas a ojo (Eevee, tres cuartos frontal).
 
 **Integración final de la ronda 2 (`anim7` → `look7`, `scenes3`, 18-oct-2026; `--step 3` en los 40 clips + 6 escenas).**
-- `look7`: 65 511 vértices, 123 162 caras (122 874 triángulos y 288 cuadrados), 0 sin peso, 0 caras degeneradas, 0 giros de UV; muñecas con
+- `look7`: 65 800 vértices, 122 920 caras, 0 sin peso, 0 caras degeneradas, 0 giros de UV; muñecas con
   Copy Rotation + Limit Rotation; marcas `brows_fix`, `body_fix_orig`, `glasses_fix_orig`; `Glasses_Frame` y `Lens_L/R`; 40 clips.
 - `check_sleeves`: cruces de pulgar, dedos y palma de la pared del puño y piel fuera de la manga = **0 mm** en los 46; mano fuera de la manga:
   `Blow_Kiss` (D) 10.0 mm, `Sneak` (I) 6.0, `Shiver` (I) 4.9, todos los demás (incluidas las 6 escenas) 0.0.
