@@ -3,3 +3,5 @@
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 # the web viewer's compressed model is served by Vercel as a plain file (no LFS)
 web/public/models/*.glb -filter binary
+# the "Prueba" section's compressed GLBs too (a glob's * does not cross folders)
+web/public/models/tests/*.glb -filter binary
