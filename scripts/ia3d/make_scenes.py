@@ -21,7 +21,6 @@ import argparse
 import glob
 import json
 import os
-import re
 import subprocess
 import sys
 import time
@@ -30,9 +29,9 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+from anim import audiomix as AM  # noqa: E402
 from anim import scenes as S  # noqa: E402
 
-SR = 44100
 SCENE_ACTION = "Scene_{}"
 
 
@@ -49,6 +48,7 @@ def args_():
     ap.add_argument("--parts", nargs="*", default=[])
     ap.add_argument("--src", default="")
     ap.add_argument("--fast", action="store_true", help="bake without the contact solvers (pose checks)")
+    ap.add_argument("--fk-passes", action="store_true", help="also the FK sleeve / contact / body passes (make_actions.py)")
     ap.add_argument("--res", type=int, default=50, help="preview resolution percent of 1280x720")
     ap.add_argument("--step", type=int, default=1)
     ap.add_argument("--start", type=int, default=0)
@@ -65,116 +65,16 @@ def keys_of(a):
 
 
 # ================================================================ audio
-def decode(path):
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
-                         capture_output=True, check=True).stdout
-    return np.frombuffer(raw, np.float32).copy()
-
-
-def loudness(x):
-    """Integrated loudness (LUFS) and true peak (dBTP) of a mono float signal (ffmpeg ebur128)."""
-    p = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-",
-                        "-af", "ebur128=peak=true", "-f", "null", "-"], input=x.astype(np.float32).tobytes(),
-                       capture_output=True)
-    log = p.stderr.decode("utf-8", "replace")
-    tail = log[log.rfind("Summary:"):]
-    i = float(re.search(r"I:\s+(-?[\d.]+) LUFS", tail).group(1))
-    pk = float(re.search(r"Peak:\s+(-?[\d.]+) dBFS", tail).group(1))
-    return i, pk
-
-
-def _bell(f0, dur=1.3, partials=((1.0, 1.0, 0.9), (2.32, 0.45, 0.42), (4.25, 0.22, 0.22), (6.63, 0.10, 0.12))):
-    t = np.arange(int(dur * SR)) / SR
-    x = np.zeros_like(t)
-    for ratio, amp, tau in partials:
-        f = f0 * ratio
-        x += amp * (np.sin(2 * np.pi * f * t) + 0.35 * np.sin(2 * np.pi * f * 1.004 * t)) * np.exp(-t / tau)
-    x *= np.minimum(1.0, t / 0.002)                     # 2 ms strike
-    return x / np.abs(x).max()
-
-
-def sfx(kind):
-    """Small synthesised effects (no samples, no services): a counter bell, a door chime, a pop."""
-    if kind == "bell":                                  # the cash register's bell: ding!
-        return 0.32 * _bell(2093.0)
-    if kind == "bell2":                                 # again, a little softer: ding-ding
-        a = _bell(2093.0, 1.0)
-        out = np.zeros(len(a) + int(0.16 * SR))
-        out[:len(a)] += a
-        out[int(0.16 * SR):] += 0.8 * a
-        return 0.22 * out / np.abs(out).max()
-    if kind == "chime":                                 # shop door chime: ding-dong
-        soft = ((1.0, 1.0, 1.1), (2.0, 0.25, 0.5), (3.0, 0.08, 0.25))
-        a, b = _bell(659.3, 1.4, soft), _bell(523.3, 1.6, soft)
-        out = np.zeros(int(0.42 * SR) + len(b))
-        out[:len(a)] += a
-        out[int(0.42 * SR):] += b
-        return 0.34 * out / np.abs(out).max()
-    if kind == "pop":                                   # it appears: bloop + a sparkle
-        t = np.arange(int(0.35 * SR)) / SR
-        f = 260 + 900 * np.clip(t / 0.07, 0, 1)
-        blo = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.05)
-        spk = np.sin(2 * np.pi * 3136 * t) * np.exp(-np.maximum(t - 0.05, 0) / 0.09) * (t > 0.05)
-        return 0.30 * blo + 0.10 * spk
-    raise KeyError(kind)
-
-
-def envelope(x, fps=30):
-    hop = SR / fps
-    n = int(len(x) / hop) + 1
-    env = np.array([np.sqrt(np.mean(x[int(i * hop):int((i + 1) * hop)] ** 2)) if int(i * hop) < len(x) else 0.0
-                    for i in range(n)])
-    ref = np.percentile(env[env > 1e-3], 95) if np.any(env > 1e-3) else 1.0
-    return np.clip(env / ref, 0, 1.3)
-
-
 def audio(a):
+    """Scene audio: the lines with their pauses + the effects, levelled (anim/audiomix.py, shared with
+    compose_audio.py)."""
     os.makedirs(S.OUT, exist_ok=True)
     for key in keys_of(a):
         tl = S.timeline(key)
-        n = int(round(tl["dur"] * SR)) + 1
-        voice = np.zeros(n, np.float32)
-        lufs = []
-        for ln in tl["lines"]:
-            x = decode(os.path.join(S.VOICE, ln["key"] + ".mp3"))
-            lufs.append(loudness(x)[0])
-            f = int(0.004 * SR)                         # 4 ms fades: no clicks at the joins
-            x[:f] *= np.linspace(0, 1, f)
-            x[-f:] *= np.linspace(1, 0, f)
-            i0 = int(round(ln["start"] * SR))
-            seg = x[:max(0, n - i0)]
-            voice[i0:i0 + len(seg)] += seg
-        fx = np.zeros(n, np.float32)
-        for s in tl["sounds"]:
-            if s["kind"] in ("bell", "bell2", "chime", "pop"):
-                y = sfx(s["kind"])
-                i0 = int(round(s["t0"] * SR))
-                seg = y[:max(0, n - i0)]
-                fx[i0:i0 + len(seg)] += seg
-        target = float(np.mean(lufs))
-        got, _ = loudness(voice)
-        gain = 10 ** ((target - got) / 20)
         mp3 = os.path.join(S.OUT, key + ".mp3")
-        for _ in range(3):                              # the encoder's low-pass costs a few tenths of a dB
-            mix = (voice + fx) * gain
-            # the lines were normalised to a -1.5 dBTP ceiling: a limiter keeps the scene under it
-            p = subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-",
-                                "-af", "alimiter=limit=0.83:attack=4:release=60:level=false",
-                                "-c:a", "libmp3lame", "-b:a", "96k", "-ar", str(SR), mp3],
-                               input=mix.astype(np.float32).tobytes())
-            if p.returncode:
-                raise SystemExit(f"ffmpeg failed for {mp3}")
-            out = decode(mp3)
-            i_out, pk_out = loudness(out)
-            if abs(i_out - target) < 0.15:
-                break
-            gain *= 10 ** ((target - i_out) / 20)
-        al = S.merged_alignment(tl, envelope(voice * gain))
-        al["loudness"] = {"lufs": round(i_out, 1), "true_peak": round(pk_out, 1), "lines_lufs": round(target, 1)}
-        json.dump(al, open(os.path.join(S.OUT, key + ".json"), "w", encoding="utf-8"), ensure_ascii=False,
-                  separators=(",", ":"))
-        print(f"AUDIO {key}: {tl['dur']:.2f} s, {len(tl['lines'])} lines, {i_out:.1f} LUFS (lines {target:.1f}), "
-              f"peak {pk_out:.1f} dBTP -> {mp3}")
+        _, st = AM.mix(tl, mp3, os.path.join(S.OUT, key + ".json"))
+        print(f"AUDIO {key}: {tl['dur']:.2f} s, {len(tl['lines'])} lines, {st['lufs']:.1f} LUFS (lines "
+              f"{st['lines_lufs']:.1f}), peak {st['true_peak']:.1f} dBTP -> {mp3}")
 
 
 # ================================================================ Blender side
@@ -183,208 +83,22 @@ def _bpy():
     return bpy
 
 
-def _reach(contacts, limit):
-    """The reach cap for the next solves (contacts.set_max_reach when the motor has it)."""
-    if hasattr(contacts, "set_max_reach"):
-        contacts.set_max_reach(limit)
-    else:
-        contacts.MAX_REACH = limit or 1.08
-
-
-class _keep_hands:
-    """contacts.hands_keep_size when the motor has it (the hands do not inherit the IK stretch)."""
-
-    def __init__(self, contacts, rig):
-        self.cm = contacts.hands_keep_size(rig) if hasattr(contacts, "hands_keep_size") else None
-
-    def __enter__(self):
-        return self.cm.__enter__() if self.cm else self
-
-    def __exit__(self, *exc):
-        return self.cm.__exit__(*exc) if self.cm else False
-
-
-REST_WIN = 15         # frames: one resting place on the skin for a hand held on his face
-REST_TOL = (-0.0005, 0.0010)   # signed gap (m) a resting hand may keep: a hair in, a hair off
-
-
-def rest_on_skin(contacts, rig, action, clip, reach=0.02, steps=12, target=None):
-    """After the wide smoothing the resting place is an average of nearby contacts: on his round
-    chin that sits a few mm inside (or off) the skin, and the per-frame re-contact can bounce
-    between two fingers. Here each touch frame moves only along the skin's outward normal at the
-    chosen spot, bisecting the signed gap to zero (moving out along it never brings the hand in).
-    `target` ({(side, frame): gap in m}) asks for a different signed gap on those frames: the one that
-    the FK rebake will turn back into zero. Returns (frames moved, worst |gap| after) in m."""
-    moved, worst = 0, 0.0
-    target = target or {}
-    for spec in getattr(clip, "contacts", []):
-        if "touch" not in spec:
-            continue
-        bone = f"hand_ik.{spec['side']}"
-        fcs = contacts._loc_curves(action, bone)
-        hand = bpy_objects()[f"Hand_{spec['side']}"]
-        f0, f1 = spec["frames"]
-        for f in range(f0, f1 + 1):
-            contacts._frame(f)
-            L0 = contacts._get_loc(fcs, f)
-            tg = target.get((spec["side"], f), 0.0)
-            sd = contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2] - tg
-            if REST_TOL[0] <= sd <= REST_TOL[1]:
-                worst = max(worst, abs(sd))
-                continue
-            _, n = contacts._body_target(spec)
-            dloc = np.linalg.solve(contacts._jacobian(rig, bone), n)    # 1 m along the normal
-
-            def gap(t):
-                contacts._set_loc(fcs, f, L0 + t * dloc)
-                contacts._refresh(fcs)
-                contacts._frame(f)
-                return contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2] - tg
-
-            lo, hi = (0.0, reach) if sd < 0 else (-reach, 0.0)
-            g_lo, g_hi = (sd, gap(hi)) if sd < 0 else (gap(lo), sd)
-            if g_lo > 0 or g_hi < 0:                   # no zero in reach: keep the frame as it was
-                gap(0.0)
-                worst = max(worst, abs(sd))
-                continue
-            for _ in range(steps):
-                mid = 0.5 * (lo + hi)
-                g = gap(mid)
-                if g < 0:
-                    lo = mid
-                else:
-                    hi = mid
-            g = gap(hi)                                # end just on / off the skin, never in it
-            worst = max(worst, abs(g))
-            moved += 1
-    return moved, worst
-
-
-RETARGET_MM = 2.0     # a touch that ends more than this off the skin after the FK rebake is solved again
-
-
-def _snapshot(act):
-    return {(fc.data_path, fc.array_index): [kp.co[1] for kp in fc.keyframe_points] for fc in act.fcurves}
-
-
-def _restore(act, snap):
-    for (path, idx), vals in snap.items():
-        fc = act.fcurves.find(path, index=idx)
-        if fc is not None and len(fc.keyframe_points) == len(vals):
-            for kp, v in zip(fc.keyframe_points, vals):
-                kp.co[1] = v
-            fc.update()
-
-
-def _touch_offsets(contacts, clip, win=5):
-    """Signed gap (m) of every touch frame on the arm as it is now (FK), smoothed over `win` frames:
-    what the IK -> FK rebake left between the hand and the skin. {(side, frame): gap}."""
-    out = {}
-    for spec in clip.contacts:
-        if "touch" not in spec:
-            continue
-        hand = bpy_objects()[f"Hand_{spec['side']}"]
-        f0, f1 = spec["frames"]
-        g = []
-        for f in range(f0, f1 + 1):
-            contacts._frame(f)
-            g.append(contacts._touch_error(spec, hand, step=2, slide_gain=0.0)[2])
-        g = np.convolve(np.pad(g, win // 2, mode="edge"), np.ones(win) / win, mode="valid")
-        out.update({(spec["side"], f0 + i): float(v) for i, v in enumerate(g)})
-    return out
-
-
-def bpy_objects():
-    return _bpy().data.objects
-
-
-def bake_scene(key, fast=False):
-    """One scene -> action Scene_<Key>, with the video pipeline's contact passes (as make_actions.py
-    and videos/morfi-pos/tools/scene.py): bake -> reach cap -> hands out of the body -> smooth_ik
-    -> touches (contacts.solve) -> smooth_touches -> hands out of the body again -> reach cap ->
-    smooth_ik -> a wide smooth_touches (one resting place per touch) -> rest_on_skin -> smooth_ik;
-    then the arms are rebaked to FK with a volume-kept stretch (contacts.rebake_arms), a held prop
-    rides in the final hand (hold_prop, last) and everything is verified."""
+def bake_scene(key, fast=False, fk_passes=False):
+    """One scene -> action Scene_<Key>, with the video pipeline's contact passes (anim/bakeclip.py,
+    shared with bake_perf.py; as make_actions.py and videos/morfi-pos/tools/scene.py): bake -> reach cap
+    -> hands out of the body -> smooth_ik -> touches (contacts.solve) -> smooth_touches -> hands out of
+    the body again -> reach cap -> smooth_ik -> a wide smooth_touches (one resting place per touch) ->
+    rest_on_skin -> smooth_ik; then the arms are rebaked to FK with a volume-kept stretch
+    (contacts.rebake_arms), a held prop rides in the final hand (hold_prop, last) and everything is
+    verified. fk_passes adds the FK sleeve / contact / body passes of make_actions.py (off for the
+    lab's scenes, as they were baked)."""
     bpy = _bpy()
-    from anim import contacts, rigmap
-    t_start = time.time()
+    from anim import bakeclip
     tl = S.timeline(key)
     p = S.build(key, tl)
     clip = S.finish(p)
     rig = bpy.data.objects["Morfi_Rig"]
-    rigmap.ensure_props(rig)
-    name = action_name(key)
-    act = rigmap.bake(rig, name, clip.channels(), clip.n)
-    act["scene"] = json.dumps(S.meta(tl), ensure_ascii=False)
-    print(f"BAKED {name}: {clip.n} frames, {len(clip.ch)} channels")
-    held = list(clip.supports)
-    clip.supports = []                                 # held props ride in the hand (hold_prop)
-    touch_frames = [tuple(c["frames"]) for c in clip.contacts]
-    report = {"key": key, "frames": clip.n, "max_reach": getattr(clip, "max_reach", None)}
-    _reach(contacts, getattr(clip, "max_reach", None))  # a cartoon stretch the scene may ask for
-    try:
-        if not fast:
-            with _keep_hands(contacts, rig):
-                report["reach_pulled"] = contacts.clamp_reach(rig, act, clip.n)
-                report["body_pushed"] = contacts.resolve_body(rig, act, clip.n, skip=touch_frames)
-                contacts.smooth_ik(rig, act, clip)
-                if clip.contacts:
-                    contacts.solve(rig, act, clip)
-                    contacts.smooth_touches(rig, act, clip)
-                report["body_after"] = contacts.resolve_body(rig, act, clip.n, skip=touch_frames)
-                report["reach_after"] = contacts.clamp_reach(rig, act, clip.n)
-                contacts.smooth_ik(rig, act, clip, sigma=2.0, ramp=8)
-                if clip.contacts:
-                    # a hand held on his face for seconds while he talks: the per-frame solve can
-                    # switch between fingers resting on the skin (the hand hops 2 cm sideways and
-                    # back); one wide pass keeps one resting place, then the ramps are blended again
-                    contacts.smooth_touches(rig, act, clip, win=REST_WIN)
-                    report["rest_on_skin"] = rest_on_skin(contacts, rig, act, clip)
-                    contacts.smooth_ik(rig, act, clip, sigma=2.0, ramp=8)
-            if hasattr(contacts, "rebake_arms"):
-                snap = _snapshot(act) if any("touch" in c for c in clip.contacts) else None
-                st = contacts.rebake_arms(rig, act, clip.n)
-                if snap:
-                    off = _touch_offsets(contacts, clip)
-                    report["rebake_off_mm"] = round(max(abs(v) for v in off.values()) * 1000, 2)
-                    target = {}
-                    for _ in range(3):
-                        if max(abs(v) for v in off.values()) * 1000 <= RETARGET_MM:
-                            break
-                        # the FK arm lands a few mm off the skin the IK solved: solve once more asking for
-                        # the opposite gap on those frames, then rebake again (the gap that is still left
-                        # after a pass is added to what we ask for in the next one)
-                        target = {k: target.get(k, 0.0) - v for k, v in off.items()}
-                        _restore(act, snap)
-                        with _keep_hands(contacts, rig):
-                            report["retarget"] = rest_on_skin(contacts, rig, act, clip, target=target)
-                        st = contacts.rebake_arms(rig, act, clip.n)
-                        off = _touch_offsets(contacts, clip)
-                        report.setdefault("retarget_off_mm", []).append(round(max(abs(v) for v in off.values()) * 1000, 2))
-                report["rebake"] = st
-                print("REBAKE " + ", ".join(f"{s_} stretch {v['stretch']:.3f} wrist {v['wrist_mm']:.2f} mm "
-                                            f"dir {v['dir_deg']:.2f} deg" for s_, v in st.items()))
-        # last: a held prop takes the hand's final path (anything that moved the hand after the
-        # grip would leave the prop behind)
-        for h in held:
-            g0, g1 = contacts.hold_prop(rig, act, h["bone"], h["prop"], h["side"], h["frames"], h["ref"])
-            report[f"held_{h['prop']}"] = [g0, g1]
-            print(f"HELD {h['prop']}: palm gap {g0 * 1000 if g0 is not None else 'n/a'} mm -> "
-                  f"{g1 * 1000 if g1 is not None else 'n/a'} mm")
-        if not fast:
-            clip.supports = [{"side": h["side"], "prop": h["prop"], "frames": h["frames"]} for h in held]
-            ok, worst, _ = contacts.verify(rig, act, clip)
-            report["contacts_ok"], report["worst"] = bool(ok), {k: float(v) for k, v in worst.items()}
-            print(f"CONTACTS {name}: ok={ok} overlap {max(worst['pen'], 0) * 1000:.1f} mm press "
-                  f"{worst['press'] * 1000:.1f} mm support {worst['support'] * 1000:.1f} mm "
-                  f"touch {worst['touch'] * 1000:.1f} mm")
-    finally:
-        _reach(contacts, None)
-    act["contacts"] = json.dumps({"contacts": clip.contacts, "supports": [
-        {k: v for k, v in h.items()} for h in held]}, default=float)
-    report["seconds"] = round(time.time() - t_start, 1)
-    print(f"REPORT {json.dumps(report, default=float)}")
-    return act
+    return bakeclip.bake_clip(rig, action_name(key), clip, meta=S.meta(tl), fast=fast, fk_passes=fk_passes)
 
 
 def bake(a):
@@ -394,7 +108,7 @@ def bake(a):
         sys.exit("--out must differ from the input .blend")
     keys = keys_of(a)
     for key in keys:
-        bake_scene(key, a.fast)
+        bake_scene(key, a.fast, a.fk_passes)
     rig = bpy.data.objects["Morfi_Rig"]
     rigmap.assign(rig, bpy.data.actions[action_name(keys[0])])
     bpy.context.scene.render.fps = 30
@@ -450,116 +164,16 @@ def merge(a):
 
 def verify(a):
     """Per scene: contacts.verify, the hands' signed gap to head and torso on every frame outside
-    the touches (KD-tree, like check_clearance.py), and the hands' jitter (zig-zag acceleration)."""
+    the touches (KD-tree, like check_clearance.py), and the hands' jitter (anim/checks.py)."""
     bpy = _bpy()
-    from scipy.spatial import cKDTree
-    from types import SimpleNamespace
-    from mathutils import Vector
-    from mathutils.bvhtree import BVHTree
-    from anim import contacts, rigmap
-    rig = bpy.data.objects["Morfi_Rig"]
-    body = bpy.data.objects["Morfi_Body"]
-    hands = {s: bpy.data.objects[f"Hand_{s}"] for s in ("L", "R")}
-
-    def mask(ob, names, thr):
-        idx = {g.index for g in ob.vertex_groups if g.name in names}
-        m = np.zeros(len(ob.data.vertices), bool)
-        for v in ob.data.vertices:
-            m[v.index] = sum(g.weight for g in v.groups if g.group in idx) >= thr
-        return m
-
-    def coords(ob):
-        dg = bpy.context.evaluated_depsgraph_get()
-        ev = ob.evaluated_get(dg)
-        me = ev.to_mesh()
-        co = np.empty(len(me.vertices) * 3, np.float32)
-        no = np.empty(len(me.vertices) * 3, np.float32)
-        me.vertices.foreach_get("co", co)
-        me.vertices.foreach_get("normal", no)
-        ev.to_mesh_clear()
-        M = np.array(ob.matrix_world)
-        return co.reshape(-1, 3) @ M[:3, :3].T + M[:3, 3], no.reshape(-1, 3) @ M[:3, :3].T
-
-    faced = contacts._faced(body)
-    parts = {"head": mask(body, {"head"}, 0.95) & faced, "torso": mask(body, {"hips", "spine", "chest"}, 0.8) & faced}
+    from anim import checks
+    ck = checks.Checker()
     out = {}
     for key in keys_of(a):
-        name = action_name(key)
-        act = bpy.data.actions.get(name)
+        act = bpy.data.actions.get(action_name(key))
         if act is None:
             continue
-        rigmap.assign(rig, act)
-        spec = json.loads(act.get("contacts", "{}") or "{}")
-        n = int(act.frame_end) + 1
-        clip = SimpleNamespace(n=n, contacts=[dict(c, frames=tuple(c["frames"]), point=tuple(c["point"]))
-                                              if "point" in c else dict(c, frames=tuple(c["frames"]))
-                                              for c in spec.get("contacts", [])],
-                               supports=[dict(s, frames=tuple(s["frames"])) for s in spec.get("supports", [])])
-        t0 = time.time()
-        ok, worst, rows = contacts.verify(rig, act, clip)
-        touching = {s: np.zeros(n, bool) for s in ("L", "R")}
-        for c in clip.contacts:
-            if "touch" in c:
-                f0, f1 = c["frames"]
-                r = c.get("ramp", 6)
-                touching[c["side"]][max(0, f0 - r):min(n, f1 + r + 1)] = True
-        gaps = {f"{s}_{p}": [] for s in ("L", "R") for p in parts}
-        tips = {s: [] for s in ("L", "R")}
-        polys = contacts._body_parts(body)
-        for f in range(0, n, a.step):
-            contacts._frame(f)
-            P, N = coords(body)
-            trees = {k: BVHTree.FromPolygons([tuple(v) for v in P], polys[k]) for k in parts}
-            for s, h in hands.items():
-                H, _ = coords(h)
-                H = H[::3]
-                tips[s].append(np.array(rig.matrix_world @ rig.pose.bones[f"hand.{s}"].tail))
-                for pname, m in parts.items():
-                    # nearest vertex for the distance; for the points that come close, the side of the
-                    # skin they are on from the nearest FACE (vertex normals lie a few cm away)
-                    d, _ = cKDTree(P[m]).query(H)
-                    g = float(d.min())
-                    for q in H[d < 0.03]:
-                        loc, nrm, _, dist = trees[pname].find_nearest(Vector(q), 0.03)
-                        if loc is not None and (Vector(q) - loc).dot(nrm) < 0:
-                            g = min(g, -dist)
-                    gaps[f"{s}_{pname}"].append((f, g, bool(touching[s][f])))
-        per = []                                          # each touch on its own: the worst gap and where
-        for c in clip.contacts:
-            if "touch" not in c:
-                continue
-            f0, f1 = c["frames"]
-            hand = hands[c["side"]]
-            gs = []
-            for f in range(f0, f1 + 1, 2):
-                contacts._frame(f)
-                gs.append((abs(contacts._touch_error(c, hand, step=2)[2]), f))
-            g, fw = max(gs)
-            per.append({"side": c["side"], "touch": c["touch"], "frames": [f0, f1], "worst_mm": round(g * 1000, 1),
-                        "at": fw, "mean_mm": round(float(np.mean([x for x, _ in gs])) * 1000, 1)})
-        res = {"touches": per}
-        res.update({"contacts_ok": bool(ok), "overlap_mm": round(max(worst["pen"], 0) * 1000, 2),
-               "press_mm": round(worst["press"] * 1000, 2), "support_mm": round(worst["support"] * 1000, 2),
-               "touch_mm": round(worst["touch"] * 1000, 2)})
-        for k, rows_ in gaps.items():
-            free = [g for f, g, t in rows_ if not t]
-            inside = [(f, round(g * 1000, 1)) for f, g, t in rows_ if not t and g < -0.002]
-            runs = []                                     # (first frame, last frame, deepest mm)
-            for f, g in inside:
-                if runs and f - runs[-1][1] <= a.step:
-                    runs[-1] = [runs[-1][0], f, min(runs[-1][2], g)]
-                else:
-                    runs.append([f, f, g])
-            res[k] = {"min_mm_free": round(min(free) * 1000, 1) if free else None, "inside_frames": len(inside),
-                      "runs": runs}
-        for s, P in tips.items():
-            P = np.array(P)
-            acc = np.linalg.norm(P[2:] - 2 * P[1:-1] + P[:-2], axis=1) * 1000
-            d = np.diff(P, axis=0)
-            flip = np.einsum("ij,ij->i", d[1:], d[:-1]) < 0
-            res[f"jitter_{s}"] = {"max_acc_mm_f2": round(float(acc.max()), 1),
-                                  "zig_frames": int((flip & (acc > 1.5)).sum())}
-        res["seconds"] = round(time.time() - t0, 1)
+        res = ck.run(act, a.step)
         out[key] = res
         print(f"VERIFY {key} {json.dumps(res)}")
     if a.out:
@@ -657,7 +271,7 @@ def sketch(a):
     """Bake in memory (on the file opened, e.g. look3, never saved) and render: quick pose checks."""
     cam = _studio(a)
     for key in keys_of(a):
-        bake_scene(key, a.fast)
+        bake_scene(key, a.fast, a.fk_passes)
         render_scene(key, a, cam)
 
 

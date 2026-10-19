@@ -13,6 +13,7 @@
     "test:e2e": "node scripts/smoke-test.mjs",
     "validate": "node scripts/validate-gltf.mjs",
     "sync-live": "node scripts/sync-live.mjs",
+    "sync-tests": "node scripts/sync-tests.mjs",
     "test:live": "node scripts/live-test.mjs"
   },
   "dependencies": {

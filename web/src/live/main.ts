@@ -17,6 +17,7 @@ import { Director, type FaceAnims } from './director';
 import { createStyle, type Style } from './style';
 import { VoicePlayer, phraseLabel, plainText, type VoiceIndex } from './voice';
 import { ScenePlayer } from './scenes';
+import { setupTests, type TestsSection } from './tests';
 import { CinemaCamera, type Frame } from './cinema';
 
 const params = new URLSearchParams(location.search);
@@ -123,6 +124,7 @@ let director: Director | null = null;
 let style: Style | null = null;
 let voice: VoicePlayer | null = null;
 let scenes: ScenePlayer | null = null;
+let tests: TestsSection | null = null;
 let cinema: CinemaCamera | null = null;
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const loadGLB = (url: string) => new Promise<GLTF>((res, rej) => loader.load(url, res, undefined, rej));
@@ -354,6 +356,7 @@ function setupScenes(d: Director, cam: CinemaCamera): void {
   const later = () => window.setTimeout(load, 3000);
   if ('requestIdleCallback' in window) window.requestIdleCallback(later, { timeout: 4000 }); else later();
   sp.onBlocked = (on) => showSoundHint('scene', on);
+  tests = setupTests(sp, BASE + 'tests/', $('tests-box') as HTMLDetailsElement, $('tests'), $('tests-hint'));
   sp.onChange = () => {
     const s = sp.state;
     player.hidden = !s;
@@ -570,6 +573,9 @@ const api = {
   /** play a full scene (loads them the first time); resolves false if there is no such scene */
   scene: async (name: string) => (scenes && typeof name === 'string' && (await scenes.load()) ? scenes.play(name) : false),
   get scenes() { return scenes?.list ?? []; },
+  /** the "Prueba" performances (after the section was opened) and a way to play one by id */
+  get tests() { return tests?.list ?? []; },
+  test: async (id: string) => (tests && typeof id === 'string' ? tests.play(id) : false),
   /** stop talking or acting, back to Idle */
   stop: () => { voice?.stop(); scenes?.stop(); },
   /** what he is doing now (for a host page or a test) */

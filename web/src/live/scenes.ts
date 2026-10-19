@@ -4,6 +4,8 @@
 // same bone names as morfi_live.glb, so its clips bind to the rig already on screen). Both are
 // loaded the first time someone looks at the section. The body's time is the audio's time, so a
 // pause, a seek or a slow network never leaves the mouth behind the voice.
+// The "Prueba" performances (one animation-only GLB + JSON each, models/tests/<id>.*) play through the same
+// player: addTest() registers an entry, playTest() loads its GLB the first time it is played.
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Director } from './director';
 import type { CinemaCamera, Cue } from './cinema';
@@ -11,8 +13,10 @@ import { MediaClock } from './voice';
 
 export interface SceneInfo {
   title: string;
-  group: 'scene' | 'video';
+  group: 'scene' | 'video' | 'test';
   frames: number;
+  /** only the test entries carry their own rate (the scenes file has one for all) */
+  fps?: number;
   /** relative to the site root: voice/scenes/<file>.mp3 */
   audio?: string;
   /** he talks to himself (not to the camera) */
@@ -21,10 +25,24 @@ export interface SceneInfo {
   camera?: Cue[];
 }
 export interface ScenesFile { fps: number; scenes: Record<string, SceneInfo> }
+export interface TestCosts { creation: number | null; review: number | null; publish: number | null; total: number | null }
+/** models/tests/<id>.json: a scene entry plus who made it and what it cost (USD; null = not known yet) */
+export interface TestEntry extends SceneInfo {
+  id: string;
+  /** the clip's name in its GLB (Test_<Id>) and the key the player uses */
+  action: string;
+  model?: string | null;
+  costs?: Partial<TestCosts> | null;
+  changes?: number | null;
+  /** what happened in the run, e.g. a phase cut short by the API credits running out */
+  note?: string | null;
+}
 export interface SceneItem { key: string; title: string; group: 'scene' | 'video'; dur: number }
 export interface SceneState { key: string; title: string; t: number; dur: number; paused: boolean; waiting: boolean }
 
 const INTERACTIVE = 'button, input, select, textarea, a, label';
+// a silent clip, played inside a tap to unlock the audio element (see unlock)
+const SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 // titles if the export did not give one
 const TITLES: Record<string, string> = { POS_Video: 'Tutorial del punto de venta' };
 
@@ -34,6 +52,11 @@ export class ScenePlayer {
   private file: ScenesFile | null = null;
   private items: SceneItem[] = [];
   private loading: Promise<boolean> | null = null;
+  /** the "Prueba" performances: their entries (by clip name), GLB urls and the loads in flight */
+  private extra = new Map<string, SceneInfo>();
+  private testGlb = new Map<string, string>();
+  private testLoads = new Map<string, Promise<boolean>>();
+  private unlocking = 0;
   private now: { key: string; info: SceneInfo; silent: boolean; t: number; paused: boolean; waiting: boolean; blocked: boolean; dur: number } | null = null;
   /** the browser blocked the sound until the visitor touches the page */
   onBlocked: (blocked: boolean) => void = () => {};
@@ -110,13 +133,50 @@ export class ScenePlayer {
     return this.loading;
   }
 
+  /** Register a test performance (its JSON, already read); the GLB at `glbUrl` loads on the first play. */
+  addTest(entry: TestEntry, glbUrl: string): void {
+    this.extra.set(entry.action, entry);
+    this.testGlb.set(entry.action, glbUrl);
+  }
+
+  /** Load the GLB of a registered test (once); true when its clip is ready to play. */
+  loadTest(key: string): Promise<boolean> {
+    if (this.director.hasScene(key)) return Promise.resolve(true);
+    const info = this.extra.get(key), url = this.testGlb.get(key);
+    if (!info || !url) return Promise.resolve(false);
+    let p = this.testLoads.get(key);
+    if (!p) {
+      p = this.loadGLB(url).then((gltf) => this.director.addScenes(gltf.animations, { [key]: { frames: info.frames, props: info.props } }).includes(key))
+        .catch(() => false);
+      this.testLoads.set(key, p);
+      void p.then((ok) => { if (!ok) this.testLoads.delete(key); });      // a failed load is tried again next time
+    }
+    return p;
+  }
+
+  /** Play a test from the start (inside a tap): loads its GLB the first time, then plays like a scene. */
+  async playTest(key: string): Promise<boolean> {
+    if (!this.director.hasScene(key)) this.unlock();
+    if (!(await this.loadTest(key))) return false;
+    return this.play(key);
+  }
+
+  /** Inside a tap: let this audio element play later (iOS only starts sound a tap has allowed) while the GLB loads. */
+  private unlock(): void {
+    const a = this.audio, id = ++this.unlocking;
+    a.muted = true;
+    a.src = SILENCE;
+    void a.play().then(() => { if (!this.now && this.unlocking === id) a.pause(); }, () => {}).finally(() => { if (!this.now) a.muted = false; });
+  }
+
   /** Play a scene from the start (inside a tap, so the audio may start). */
   play(key: string): boolean {
-    const info = this.file?.scenes[key];
+    const info = this.infoOf(key);
     if (!info || !this.director.hasScene(key)) return false;
     this.beforePlay();
     this.stop(false);
-    const fps = this.file!.fps || 30;
+    this.audio.muted = false;
+    const fps = info.fps || this.file?.fps || 30;
     const silent = !info.audio;
     this.now = { key, info, silent, t: 0, paused: false, waiting: !silent, blocked: false, dur: info.frames / fps };
     if (!silent) {
@@ -222,8 +282,12 @@ export class ScenePlayer {
     return n.silent ? n.t : this.clock.now();
   }
 
+  private infoOf(key: string): SceneInfo | undefined {
+    return this.file?.scenes[key] ?? this.extra.get(key);
+  }
+
   private title(key: string): string {
-    const s = this.file?.scenes[key];
+    const s = this.infoOf(key);
     return s ? this.titleOf(key, s) : key;
   }
 

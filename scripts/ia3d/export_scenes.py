@@ -130,6 +130,31 @@ def encode_audio(src, dst):
                    check=True)
 
 
+def export_glb(rig, keep, out):
+    """Animation-only GLB of the actions `keep` (just the rig's bone nodes, as morfi_live.glb names them)."""
+    # bind each action's slot to the rig (Blender 4.4+ only exports used slots), rest pose, export bones only
+    rig.animation_data_create()
+    for act in keep:
+        rig.animation_data.action = act
+        if hasattr(rig.animation_data, "action_slot") and getattr(act, "slots", None):
+            rig.animation_data.action_slot = act.slots[0]
+    rig.animation_data.action = None
+    for pb in rig.pose.bones:
+        pb.matrix_basis.identity()
+    bpy.ops.object.select_all(action="DESELECT")
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.context.scene.render.fps = 30
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    bpy.ops.export_scene.gltf(
+        filepath=os.path.abspath(out), export_format="GLB", use_selection=True, export_yup=True,
+        export_apply=False, export_materials="NONE", export_skins=True, export_morph=False,
+        export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True, export_frame_step=1,
+        export_anim_single_armature=True, export_reset_pose_bones=True, export_optimize_animation_size=False,
+        export_cameras=False, export_lights=False, export_extras=False,
+    )
+
+
 def main():
     a = parse_args()
     rig = bpy.data.objects["Morfi_Rig"]
@@ -164,30 +189,11 @@ def main():
     missing = [s["audio"] for s in out["scenes"].values() if not os.path.exists(os.path.join(public, s["audio"]))]
     if missing:
         sys.exit(f"missing audio files: {missing}")
-    # bind each action's slot to the rig (Blender 4.4+ only exports used slots), rest pose, export bones only
-    rig.animation_data_create()
-    for act in keep:
-        rig.animation_data.action = act
-        if hasattr(rig.animation_data, "action_slot") and getattr(act, "slots", None):
-            rig.animation_data.action_slot = act.slots[0]
-    rig.animation_data.action = None
-    for pb in rig.pose.bones:
-        pb.matrix_basis.identity()
-    bpy.ops.object.select_all(action="DESELECT")
-    rig.select_set(True)
-    bpy.context.view_layer.objects.active = rig
-    bpy.context.scene.render.fps = 30
-    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
-    bpy.ops.export_scene.gltf(
-        filepath=os.path.abspath(a.out), export_format="GLB", use_selection=True, export_yup=True,
-        export_apply=False, export_materials="NONE", export_skins=True, export_morph=False,
-        export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True, export_frame_step=1,
-        export_anim_single_armature=True, export_reset_pose_bones=True, export_optimize_animation_size=False,
-        export_cameras=False, export_lights=False, export_extras=False,
-    )
+    export_glb(rig, keep, a.out)
     with open(os.path.abspath(a.json), "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
     print("DONE", a.out, round(os.path.getsize(a.out) / 1e6, 2), "MB;", a.json, os.path.getsize(a.json) // 1024, "KB")
 
 
-main()
+if __name__ == "__main__":
+    main()

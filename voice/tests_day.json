@@ -1,0 +1,34 @@
+{
+  "_doc": "Guion de la prueba de modelos: 'Un día de ventas de Morfi' (1.5-2 min). Las mismas líneas para todos los modelos (voz oficial Super VM). Cada modelo decide cuándo entra cada línea, las pausas y TODA la actuación. Generar: XI_KEY=<key> python voice/gen.py lines voice/tests_day.json --voice supervm",
+  "story": [
+    "1. En su casita, Morfi despierta y se estira.",
+    "2. Camina al negocio (una caminata normal: brazo contrario a la pierna).",
+    "3. Llega y saluda a todos.",
+    "4. Ve llegar a los primeros clientes.",
+    "5. Abre la caja.",
+    "6. Le cobra a un cliente su sitio web.",
+    "7. Platica con el cliente.",
+    "8. Hora de comer: finge que come algo.",
+    "9. Otra venta: una tarjeta NFC.",
+    "10. Cierra la caja: le faltan cien pesos... los había contado mal, todo bien.",
+    "11. Se va a su casita y se duerme."
+  ],
+  "lines": [
+    {"key": "td_01", "text": "[yawns] Aaay... ¿ya es de día?"},
+    {"key": "td_02", "text": "¡Buenos días, mundo!"},
+    {"key": "td_03", "text": "Mmm... ¡qué rico estirarse!"},
+    {"key": "td_04", "text": "¡A trabajar! Hoy va a ser un gran día."},
+    {"key": "td_05", "text": "[excited] ¡Buenos días a todos! ¡Hola, hola!"},
+    {"key": "td_06", "text": "¡Uy, ya llegaron los primeros clientes!"},
+    {"key": "td_07", "text": "Abrimos la caja... ¡y listos para vender!"},
+    {"key": "td_08", "text": "¿Su página web? ¡Quedó increíble! ¿Cobramos?"},
+    {"key": "td_09", "text": "¿Y cómo le va al negocio? ¡Qué bien! Con su página, más gente lo va a encontrar."},
+    {"key": "td_10", "text": "Hora de comer... ¡Mmm, qué rico!"},
+    {"key": "td_11", "text": "¿Una tarjeta NFC? ¡Claro! La acerca al celular... ¡y listo, ahí está toda su información!"},
+    {"key": "td_12", "text": "Hora de cerrar la caja... a ver..."},
+    {"key": "td_13", "text": "[gasps] ¿Qué? ¡Me faltan cien pesos!"},
+    {"key": "td_14", "text": "A ver, a ver... uno, dos, tres... ¡Ah, los había contado mal! [laughs] Todo bien."},
+    {"key": "td_15", "text": "¡Qué buen día! Ya me voy a mi casita."},
+    {"key": "td_16", "text": "[yawns] Buenas noches..."}
+  ]
+}

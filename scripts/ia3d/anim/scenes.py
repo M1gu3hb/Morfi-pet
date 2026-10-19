@@ -179,21 +179,21 @@ def _sounds(words, env, tags):
     return [{"kind": kind, "t0": round(a, 3), "t1": round(b, 3)} for a, b in out]
 
 
-def load_line(key):
-    d = json.load(open(os.path.join(VOICE, key + ".json"), encoding="utf-8"))
+def load_line(key, voice_dir=VOICE):
+    d = json.load(open(os.path.join(voice_dir, key + ".json"), encoding="utf-8"))
     chars = d["chars"] if isinstance(d["chars"], str) else "".join(d["chars"])
     t0, t1 = refine(chars, d["t0"], d["t1"], d["env"])
     return {"key": key, "dur": d["dur"], "chars": chars, "t0": t0, "t1": t1, "env": d["env"], "text": d["text"]}
 
 
-def timeline(key):
-    """The scene's lines on its timeline, in the shape Performance.speak / Acting.talk expect,
-    plus duration, sounds and camera cues."""
-    plan = PLAN[key]
-    rows = line_keys(key)
+def build_timeline(key, rows, starts, sfx, cams, info, tail, voice_dir=VOICE, min_dur=0.0, extra=None):
+    """Voice lines placed on a timeline: rows = [{"key", "text"}] (text with the [audio tags]), starts =
+    start second of each, sfx = [[kind, t], ...]. The shape Performance.speak / Acting.talk expect,
+    plus duration, sounds and camera cues. `min_dur` keeps the take at least that long (s); `extra`
+    adds keys to the result."""
     lines, sounds = [], []
-    for row, st in zip(rows, plan["starts"]):
-        d = load_line(row["key"])
+    for row, st in zip(rows, starts):
+        d = load_line(row["key"], voice_dir)
         ws = _words(d["chars"], d["t0"], d["t1"])
         words = [{"w": w["w"], "start": round(st + w["a"], 3), "end": round(st + w["b"], 3),
                   "start_rel": w["a"], "end_rel": w["b"]} for w in ws]
@@ -208,22 +208,138 @@ def timeline(key):
                       "t0": d["t0"], "t1": d["t1"], "env": d["env"], "tags": tags, "question": "?" in d["text"],
                       "words": [{k: w[k] for k in ("w", "start", "end")} for w in words], "stress": stress,
                       "speech": (words[0]["start"], words[-1]["end"]) if words else (st, st)})
-    for kind, t in plan["sfx"]:
+    for kind, t in sfx:
         sounds.append({"kind": kind, "t0": t, "t1": t + 0.6})
-    end = max(max(ln["start"] + ln["dur"] for ln in lines), lines[-1]["speech"][1] + plan["tail"])
+    end = max(max(ln["start"] + ln["dur"] for ln in lines), lines[-1]["speech"][1] + tail, min_dur)
     dur = round(end, 3)
-    return {"key": key, "lines": lines, "sounds": sorted(sounds, key=lambda s: s["t0"]), "dur": dur,
-            "frames": int(round(dur * FPS)), "cams": plan["cams"], "info": scene_info(key)}
+    tl = {"key": key, "lines": lines, "sounds": sorted(sounds, key=lambda s: s["t0"]), "dur": dur,
+          "frames": int(round(dur * FPS)), "cams": cams, "info": info, "voice_dir": voice_dir}
+    tl.update(extra or {})
+    return tl
+
+
+def timeline(key):
+    """The scene's lines on its timeline (see build_timeline) from PLAN and voice/scenes.json."""
+    plan = PLAN[key]
+    return build_timeline(key, line_keys(key), plan["starts"], plan["sfx"], plan["cams"], scene_info(key), plan["tail"])
+
+
+# ---------------------------------------------------------------- performance tests (timeline JSON)
+TEST_SCRIPTS = (os.path.join(REPO, "voice", "tests_day.json"), SCRIPT)   # where the lines' text (with tags) lives
+SFX_KINDS = ("bell", "bell2", "chime", "pop")
+SHOTS = ("wide", "medium", "close", "face")
+VOICED_MIN = 0.06        # envelope above this = a sound (a yawn or a laugh counts, not only words)
+MIN_GAP = 0.04           # lines may not sound closer than this (s)
+
+
+class TimelineError(ValueError):
+    """A timeline JSON the audio cannot be composed from (the message says what to change)."""
+
+
+def line_text(key, scripts=TEST_SCRIPTS):
+    """Text with audio tags of a voice line, from the script files (voice/tests_day.json, voice/scenes.json)."""
+    for path in scripts:
+        if os.path.exists(path):
+            for ln in json.load(open(path, encoding="utf-8")).get("lines", []):
+                if ln["key"] == key:
+                    return ln["text"]
+    return None
+
+
+def voiced_span(start, env):
+    """(first, last) second a line makes any sound at, from its envelope (a yawn is not a word)."""
+    on = [i for i, v in enumerate(env) if v is not None and v > VOICED_MIN]
+    return (start + on[0] / FPS, start + (on[-1] + 1) / FPS) if on else (start, start)
+
+
+def check_spec(spec, scripts=TEST_SCRIPTS):
+    """Validate a timeline spec {"voice": "supervm", "lines": [["td_01", 0.6], ...], "sfx": [[kind, t]], "tail": s,
+    "dur": s}; raises TimelineError listing every problem. Returns (voice_dir, rows, starts, spans)."""
+    bad = []
+    if not isinstance(spec, dict):
+        raise TimelineError("the timeline must be a JSON object {\"voice\": ..., \"lines\": [[key, start_s], ...]}")
+    voice = spec.get("voice", "supervm")
+    voice_dir = os.path.join(REPO, "web", "public", "voice", str(voice))
+    if not os.path.isdir(voice_dir):
+        bad.append(f"voice {voice!r}: no folder {voice_dir}")
+    items = spec.get("lines")
+    if not isinstance(items, list) or not items:
+        raise TimelineError("\"lines\" must be a non-empty list of [line key, start in seconds]")
+    rows, starts, spans, seen = [], [], [], set()
+    for n, it in enumerate(items):
+        if not (isinstance(it, (list, tuple)) and len(it) == 2 and isinstance(it[0], str)
+                and isinstance(it[1], (int, float)) and not isinstance(it[1], bool)):
+            bad.append(f"lines[{n}] = {it!r}: expected [\"td_01\", 0.6] (line key, start second)")
+            continue
+        key, st = it
+        if st < 0:
+            bad.append(f"{key}: start {st} s is negative")
+        if key in seen:
+            bad.append(f"{key}: used twice (each line plays once)")
+        seen.add(key)
+        mp3, js = os.path.join(voice_dir, key + ".mp3"), os.path.join(voice_dir, key + ".json")
+        if not (os.path.exists(mp3) and os.path.exists(js)):
+            bad.append(f"{key}: no voice line {key}.mp3 / {key}.json in {voice_dir}")
+            continue
+        data = json.load(open(js, encoding="utf-8"))
+        text = line_text(key, scripts)
+        rows.append({"key": key, "text": data["text"] if text is None else text})   # no tags known: plain text
+        starts.append(float(st))
+        v0, v1 = voiced_span(float(st), data["env"])
+        spans.append((key, v0, min(v1, float(st) + data["dur"]), float(st) + data["dur"]))
+    for kind_t in spec.get("sfx", []):
+        if not (isinstance(kind_t, (list, tuple)) and len(kind_t) == 2 and kind_t[0] in SFX_KINDS):
+            bad.append(f"sfx {kind_t!r}: expected [kind, second] with kind in {SFX_KINDS}")
+    order = sorted(spans, key=lambda s: s[1])
+    for a, b in zip(order, order[1:]):
+        if b[1] < a[2] + MIN_GAP:
+            bad.append(f"{a[0]} and {b[0]} overlap: {a[0]} sounds until {a[2]:.2f} s and {b[0]} starts sounding at "
+                       f"{b[1]:.2f} s (leave at least {MIN_GAP} s between lines)")
+    if bad:
+        raise TimelineError("timeline problems:\n  - " + "\n  - ".join(bad))
+    return voice_dir, rows, starts, spans
+
+
+def timeline_from_spec(spec, key, meta=None, scripts=TEST_SCRIPTS):
+    """tl of a performance test: the same dict as timeline() builds for the scenes. `meta` is the
+    module's META: title, solo, camera cues [[t, shot], ...] and the public path of the audio."""
+    meta = meta or {}
+    voice_dir, rows, starts, _ = check_spec(spec, scripts)
+    cams = [[float(t), s] for t, s in meta.get("camera", [[0.0, "medium"]])]
+    for t, s in cams:
+        if s not in SHOTS:
+            raise TimelineError(f"camera cue [{t}, {s!r}]: shot must be one of {SHOTS}")
+    info = {"title": meta.get("title", key), "solo": bool(meta.get("solo", False))}
+    extra = {"voice": spec.get("voice", "supervm")}
+    if meta.get("audio"):
+        extra["audio"] = meta["audio"]
+    return build_timeline(key, rows, starts, [list(x) for x in spec.get("sfx", [])], cams, info,
+                          float(spec.get("tail", 1.2)), voice_dir, float(spec.get("dur", 0.0)), extra)
+
+
+def timeline_from_file(path, meta=None, key=None):
+    """Read a timeline JSON (the compose_audio.py input) and build its tl. `key`: the performance id."""
+    spec = json.load(open(path, encoding="utf-8"))
+    return timeline_from_spec(spec, key or os.path.splitext(os.path.basename(path))[0], meta)
 
 
 class Words:
-    """W(i, "word") -> start (s) of a word of line i (0-based); W.end(i, "word"); W.line(i)."""
+    """W(i, "word") -> start (s) of a word of line i (0-based index, or its key: W("td_05", "hola"));
+    W.end(i, "word"); W.line(i)."""
 
     def __init__(self, tl):
         self.tl = tl
 
+    def _line(self, i):
+        if isinstance(i, str):
+            hits = [ln for ln in self.tl["lines"] if ln["key"] == i]
+            if not hits:
+                raise KeyError(f"line {i!r} is not in this timeline: {[ln['key'] for ln in self.tl['lines']]}")
+            return hits[0]
+        return self.tl["lines"][i]
+
     def _hit(self, i, word, k):
-        ln = self.tl["lines"][i]
+        ln = self._line(i)
         hits = [w for w in ln["words"] if w["w"].lower().strip("¿?¡!.,:;").startswith(word.lower())]
         if not hits:
             raise KeyError(f"{word!r} not in line {i}: {ln['text']}")
@@ -236,7 +352,7 @@ class Words:
         return self._hit(i, word, k)["end"]
 
     def line(self, i):
-        return self.tl["lines"][i]["speech"]
+        return self._line(i)["speech"]
 
     def sound(self, kind, k=0):
         hits = [s for s in self.tl["sounds"] if s["kind"] == kind]
@@ -247,8 +363,9 @@ def meta(tl):
     """JSON stored on the baked action (and next to the audio) for the export and the web player."""
     info = tl["info"]
     return {"key": tl["key"], "title": info["title"], "solo": bool(info["solo"]),
-            "audio": f"voice/scenes/{tl['key']}.mp3", "align": f"voice/scenes/{tl['key']}.json",
-            "voice": "supervm", "fps": FPS, "frames": tl["frames"], "dur": tl["dur"],
+            "audio": tl.get("audio", f"voice/scenes/{tl['key']}.mp3"),
+            "align": tl.get("align", f"voice/scenes/{tl['key']}.json"),
+            "voice": tl.get("voice", "supervm"), "fps": FPS, "frames": tl["frames"], "dur": tl["dur"],
             "camera": tl["cams"],
             "lines": [{"key": ln["key"], "text": ln["text"], "start": ln["start"],
                        "t0": ln["speech"][0], "t1": ln["speech"][1]} for ln in tl["lines"]]}

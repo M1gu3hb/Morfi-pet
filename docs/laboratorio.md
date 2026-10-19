@@ -6,7 +6,7 @@ un panel de estilo. También es un personaje incrustable (API `window.morfi` y `
 del modelo procedural anterior sigue aparte en `web/tecnico.html` (carga `models/morfi.glb`).
 
 Código: `web/src/live/` (`main.ts` arma todo; `director.ts` mezcla clips; `face.ts` ojos y boca en GLSL;
-`voice.ts` frases con voz; `scenes.ts` escenas; `cinema.ts` cámara; `style.ts`, `outline.ts`, `fx_smear.ts`,
+`voice.ts` frases con voz; `scenes.ts` escenas; `tests.ts` la prueba de modelos (§10); `cinema.ts` cámara; `style.ts`, `outline.ts`, `fx_smear.ts`,
 `fx_squash.ts`, `style_panel.ts` el estilo) y `web/src/dqskin.ts` (skinning). Estilos: `live.css` y
 `style.css`. Qué hace el motor de animación y cómo se hornean los clips: [motor.md](motor.md).
 
@@ -19,6 +19,7 @@ Panel lateral en pantallas anchas; hoja inferior en celular (≤ 720 px). Seccio
 | **Que diga algo** | Selector de voz y 12 frases (botones cortos; el texto completo va en el tooltip). Al tocar una, Morfi la dice con su voz real: boca sincronizada con el audio, expresión de la frase y un gesto del cuerpo. La voz elegida se recuerda (`localStorage` `morfi.voice`). Voz oficial: Super VM; hay 10 voces para comparar (las 4 nuevas, parecidas a Super VM —personaje de caricatura, amigable, ni femenina ni grave—, van después de «Mark»: Charlee, Hal, Synchro Sam y Max). |
 | **Escenas** | 6 actuaciones completas con voz (presentación, calculadora, idea, ventas, susto, sueño). Duración en cada botón. Al empezar una, aparece el reproductor flotante. Interruptor **Cámara de cine** (activo por defecto; aparece cuando las escenas cargaron). |
 | **Video completo** | Lista el video del punto de venta (`POS_Video`, "Tutorial del punto de venta", "Con su voz · mm:ss"). Se oculta si no hay videos. |
+| **Prueba** | Sección plegable (empieza cerrada; no baja nada hasta que se abre): la misma actuación "Un día de ventas de Morfi" hecha por cada modelo de IA (§10). Cada tarjeta trae el botón de reproducir (mismo reproductor, voz y cámara de cine que las escenas), el modelo, los costos en USD ("Creación $x · Revisión $y · Publicación $z · Total $t") y "Cambios en la revisión: N" (— mientras no se sepan). Lo que aún no está publicado dice "En preparación". |
 | **Animaciones** | Grupo `actions`: Reposo, Saludar, Hablar, Sí, No, Curioso, Presentar, ¡Feliz!, Caminar, Correr, Bailar. |
 | **Emociones** | Grupo `emotions`: Reír, Sorpresa, Triste, Enojado, Miedo, Tranquilo, Festejar, No sé. |
 | **Gestos y trabajo** | Grupo `work`: Tablet (tutorial), Calculadora, Contar 1-2-3, Señalar, Pulgar arriba, ¡Idea!, Pensar. |
@@ -174,6 +175,9 @@ Ganchos de prueba: `window.__morfiReady` (true cuando cargó todo), `window.__mo
 | `voice/index.json` | Voz por omisión, las 10 voces, las frases (texto, `mood`, `gesture`) y la duración de cada clip por voz |
 | `voice/<voz>/<frase>.mp3` y `.json` | Audio y alineación por letra (`chars`, `t0`, `t1`) y envolvente por 1/30 s (`env`) |
 | `voice/scenes/<escena>.mp3` y `.json` | Audio de cada escena (líneas + efectos) y su alineación unida; `pos_video.mp3` es el audio del video del POS |
+| `models/tests/index.json` | `[{id, label}]` de la prueba de modelos (opus, sonnet, haiku1, haiku2, haiku3) |
+| `models/tests/<id>.json` y `.glb` | Entrada de escena de una prueba (`{fps, id, action, title, group: "test", frames, audio, solo, camera, props, model, costs, changes}`) y su animación (solo huesos, comprimida) |
+| `voice/tests/<id>.mp3` | Audio compuesto de la prueba |
 | `models/morfi.glb`, `models/views.json`, `refs/`, `look/` | Del visor técnico |
 
 Tamaños reales (18-oct-2026, medidos tras `sync-live`, modelo `look7`):
@@ -283,3 +287,67 @@ subir el GLB crudo de `work/` (16 MB) ni el `_resampled`.
   a la cara caen en la mandíbula o debajo: de frente, `Facepalm` se lee como "la cabeza descansa en la mano".
 - `check_feet.py` usa la velocidad esperada de `Walk` para `Run` y `Sneak`, así que sus cifras para esos dos son
   incorrectas.
+
+## 10. Prueba de modelos
+
+Experimento: 5 modelos (Opus, Sonnet, 3 × Haiku) actúan la misma toma "Un día de ventas de Morfi" (1.5-2 min) con las
+mismas 16 líneas de voz (`voice/tests_day.json`, audio en `web/public/voice/supervm/td_01..td_16`), cada uno con su
+propia coreografía sobre el motor ([motor.md](motor.md)). Las herramientas son las mismas para todos; el manual de
+trabajo (comandos, interfaz del módulo) está en `D:/tmp/delegate/ctx/experiment_tools.md`.
+
+```bash
+# 1. audio: líneas + pausas -> mp3 al nivel de las escenas + alineación unida (Python + ffmpeg, sin Blender)
+python scripts/ia3d/compose_audio.py --timeline <dir>/timeline.json          # {"voice": "supervm", "lines": [["td_01", 0.6], ...]}
+# 2. módulo de actuación (<dir>/perf.py: META + build(tl)) y hornear con las pasadas de producción de las escenas
+python scripts/ia3d/bake_perf.py check   --module <dir>/perf.py --action Test_Opus     # rápido, sin Blender
+python scripts/ia3d/bake_perf.py bake    --module <dir>/perf.py --action Test_Opus --out <dir>/perf.blend [--fast]
+python scripts/ia3d/bake_perf.py verify  --blend <dir>/perf.blend --action Test_Opus [--sleeves]
+python scripts/ia3d/bake_perf.py preview --blend <dir>/perf.blend --action Test_Opus --out <dir>/prev [--view cues|hands|face|...]
+# 3. publicar: GLB sin comprimir en work/ia3d/web/tests/, JSON y audio al sitio, GLB comprimido a public/models/tests/
+python scripts/ia3d/export_test.py --perf <dir>/perf.blend --action Test_Opus --model "<modelo>"
+python scripts/ia3d/test_costs.py --id opus --creation 1.20 --review 0.40 --publish 0.10 --changes 7   # costos (USD) y cambios
+```
+
+- **Un solo camino a la web.** `export_test.py` abre `look7` (solo lectura), agrega la acción del `.blend` de `bake_perf.py`
+  y escribe `work/ia3d/web/tests/<id>.glb` (crudo), `web/public/models/tests/<id>.json` y `web/public/voice/tests/<id>.mp3`;
+  después corre `node web/scripts/sync-tests.mjs <id>` (resample + meshopt, igual que `sync-live`), que deja el GLB
+  comprimido en `web/public/models/tests/<id>.glb`. `npm run sync-live` también comprime todos los tests que encuentre.
+  Publicar otra vez cambia la animación pero conserva `model`, `costs` y `changes` del JSON.
+- **Pasadas del horneado** (`anim/bakeclip.py`, el mismo código de `make_scenes.py`): tope de alcance, manos fuera del
+  cuerpo, toques resueltos y suavizados, reposo sobre la piel, brazos IK -> FK con estirón de volumen constante, objeto
+  en la mano; más (por omisión en `bake_perf.py`, `--no-fk-passes` las quita) las pasadas FK de `make_actions.py`: giro de
+  manga, refinar contactos y pasada de cuerpo. `make_scenes.py bake` conserva su comportamiento (agrega `--fk-passes`
+  para probarlas en las escenas). Medido: la escena `susto` (346 cuadros, 2 toques a la cara) tarda 19.6 min (el 78 % es el
+  solucionador de toques); planea 1-2.5 h para 2 minutos y usa `--fast` (sin solucionadores, segundos) para iterar poses.
+- **En el visor** (`tests.ts`, `scenes.ts`): `<details id="tests-box">`; al abrirlo lee `models/tests/index.json` y el JSON de
+  cada id (los que falten dicen "En preparación"); el GLB de una entrada baja la primera vez que se toca su botón
+  (`ScenePlayer.playTest`: también "desbloquea" el audio dentro del toque para iOS). API: `morfi.tests` (tras abrir la
+  sección) y `await morfi.test('opus')`. La cámara de cine no sigue el movimiento de `root`: las tomas caminan en el sitio.
+- **Probar** con tu propio servidor: `cd web && npx vite --port <puerto> --strictPort` y, con él corriendo,
+  `node scripts/prueba-test.mjs --url http://localhost:<puerto>/ --ready opus,sonnet` (qué ids deben estar listos; revisa
+  carga perezosa, tarjetas, costos, objetivos de 44 px, reproducción y cero errores de consola).
+- Limpiar una prueba: borrar `web/public/models/tests/<id>.{json,glb}`, `web/public/voice/tests/<id>.mp3` y
+  `work/ia3d/web/tests/<id>.glb` (dejar `index.json`).
+- `test_costs.py --note "<texto>"` pone una nota en la tarjeta (p. ej. una fase cortada); `export_test.py` la conserva.
+- Varios trabajadores comparten la PC: `anim/launch.py` deja correr como máximo 4 Blender a la vez en toda la máquina
+  (`MORFI_BLENDER_SLOTS`, candados en `D:/tmp/morfi/blender_slots`); el que llega de más espera su turno.
+
+### Resultado (18-oct-2026)
+
+Cada modelo corrió por la API en tres fases separadas (creación, revisión cuadro por cuadro, publicación). Los créditos de
+la API se acabaron a media revisión, así que ninguna revisión terminó y ninguna publicación la hizo el modelo: el supervisor
+(sin costo de API) horneó lo que quedó escrito, verificó y publicó; la nota de cada tarjeta dice qué hizo el modelo y qué el supervisor.
+
+| Modelo | Creación | Revisión | Total (USD) | Cambios | Verificación del supervisor |
+|---|---|---|---|---|---|
+| Opus 5.5 | 26.11 | 2.27 (cortada) | 28.38 | 0 | la de su creación: contactos ok, 0 mangas |
+| Sonnet 5.5 | 8.94 (cortada en el horneado final) | — | 8.94 | — | 2 toques despegados un instante, brazo a 1.175 |
+| Haiku 5.5 (1) | 0.96 (cortada en el horneado final) | — | 0.96 | — | mano dentro de cabeza/torso 68.5-70.7 s |
+| Haiku 5.5 (2) | 2.23 | 0.24 (cortada) | 2.47 | 5 | 0 problemas, 0 mangas |
+| Haiku 5.5 (3) | 2.67 | 0.14 (cortada) | 2.81 | 5 | 3 cuadros sueltos, 0 mangas |
+
+Total del experimento: 43.56 USD. Lo que más costó fue **esperar**: la caché dura 5 min y un trabajador que sondea su
+horneado cada ~10 min reescribe todo su contexto en cada consulta (Opus: ~20 de sus 26 USD de creación). Haiku 1 sondeaba
+cada ~5 min y gastó 0.96. Precios deducidos (por millón de tokens de entrada): Opus 4, Sonnet 2, Haiku 0.5 USD; escritura de
+caché 1.25x, lectura 0.05x, salida 5x. Opus y Sonnet se reanudaron una vez (un error del delegador los dejó esperando al
+usuario): su costo de creación incluye releer su contexto al reanudar.

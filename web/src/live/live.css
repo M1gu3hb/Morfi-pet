@@ -151,6 +151,33 @@ button.on { background: var(--brand); color: #fff; box-shadow: 0 6px 14px rgba(7
   .scene.video:hover, .scene.on:hover { background: #12286f; }
 }
 
+/* "Prueba": the same performance acted by each model; the card shows who, what it cost and the review's changes */
+.panel summary {
+  display: flex; align-items: baseline; gap: 8px; min-height: var(--tap); margin: 8px 0 0; padding: 0 2px; cursor: pointer;
+  list-style: none; border-radius: 12px; -webkit-tap-highlight-color: transparent;
+}
+.panel summary::-webkit-details-marker { display: none; }
+.panel summary span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.panel summary small { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); opacity: 0.8; }
+.panel summary::after {
+  content: ""; flex: none; align-self: center; width: 8px; height: 8px; margin: 0 6px 0 0; border: solid var(--muted);
+  border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-2px, -2px); transition: transform 0.2s var(--ease);
+}
+.panel details[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.panel summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.tests { display: flex; flex-direction: column; gap: 14px; margin-top: 2px; }
+.test { display: flex; flex-direction: column; gap: 3px; }
+.test .scene.video { margin-bottom: 3px; }
+.test.pending {
+  flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 10px 14px;
+  border-radius: 12px; background: var(--btn); color: var(--muted);
+}
+.test.pending .stitle { color: var(--ink); }
+.tstate { flex: none; font-size: 12px; }
+.tmodel { margin: 0 4px; font-size: 12px; font-weight: 600; color: var(--ink); }
+.tcost { margin: 0 4px; font-size: 12px; line-height: 1.4; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tnote { font-style: italic; }
+
 /* switches (checkboxes that look and feel like a phone's) */
 .switch[hidden] { display: none; }
 .switch { display: flex; align-items: center; gap: 12px; min-height: var(--tap); font-size: 14px; cursor: pointer; margin: 2px 0; }
